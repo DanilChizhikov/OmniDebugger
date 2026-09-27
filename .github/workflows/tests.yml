@@ -1,0 +1,116 @@
+name: Unity Tests
+
+on:
+  push:
+    branches:
+      - master
+      - develop
+  pull_request:
+    branches:
+      - master
+      - develop
+
+jobs:
+  testPlayMode:
+    name: Test EditMode
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        projectPath:
+          - empty-unity-project
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Clone empty Unity project
+        run: |
+          git clone https://DanilChizhikov:${{ secrets.PRIVATE_REPO_TOKEN }}@github.com/DanilChizhikov/empty-unity-project.git empty-unity-project
+
+      - name: Copy source into Unity project
+        run: |
+          mkdir -p ${{ matrix.projectPath }}/Assets/sources
+
+          shopt -s dotglob
+
+          for item in *; do
+            case "$item" in
+              ${{ matrix.projectPath }}|.git|.github|.gitignore|.gitattributes)
+                echo "Skipping $item"
+                ;;
+              *)
+                cp -R "$item" ${{ matrix.projectPath }}/Assets/sources/
+                ;;
+            esac
+          done
+
+      - name: Enable OMNI_DEBUGGER define
+        shell: bash
+        env:
+          PROJECT_PATH: ${{ matrix.projectPath }}
+        run: |
+          python3 - <<'PY'
+          import os, pathlib, sys
+
+          DEFINE = "OMNI_DEBUGGER"
+          TARGET = "Standalone"
+          path = pathlib.Path(os.environ["PROJECT_PATH"]) / "ProjectSettings" / "ProjectSettings.asset"
+          lines = path.read_text(encoding="utf-8").splitlines()
+
+          key = next((i for i, l in enumerate(lines)
+                      if l.startswith("  scriptingDefineSymbols:")), None)
+          if key is None:
+              sys.exit("scriptingDefineSymbols not found in ProjectSettings.asset")
+
+          # collect the block-mapping entries that follow the key, if any
+          end = key + 1
+          entries = []
+          while end < len(lines) and lines[end].startswith("    ") and ":" in lines[end]:
+              name, _, existing = lines[end].partition(":")
+              entries.append((name.strip(), [d for d in existing.strip().split(";") if d]))
+              end += 1
+
+          if not any(name == TARGET for name, _ in entries):
+              entries.insert(0, (TARGET, []))
+
+          for _, defs in entries:
+              if DEFINE not in defs:
+                  defs.append(DEFINE)
+
+          block = ["  scriptingDefineSymbols:"]
+          block += [f"    {name}: {';'.join(defs)}" for name, defs in entries]
+          lines[key:end] = block
+
+          path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          print("\n".join(lines[key:key + len(block) + 1]))
+          PY
+
+      - name: Run Unity Tests
+        id: tests
+        uses: game-ci/unity-test-runner@v4
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion: 6000.0.63f1
+          projectPath: ${{ matrix.projectPath }}
+          testMode: editmode
+          customParameters: -buildTarget StandaloneLinux64
+
+      - name: Assert tests actually ran
+        if: always()
+        shell: bash
+        run: |
+          file=$(find artifacts -name '*-results.xml' | head -n 1)
+          if [ -z "$file" ]; then
+            echo "No test results XML produced"
+            exit 1
+          fi
+          total=$(grep -o 'total="[0-9]*"' "$file" | head -n 1 | grep -o '[0-9]*')
+          echo "results=$file total=${total:-0}"
+          if [ "${total:-0}" -lt 1 ]; then
+            echo "0 tests ran -> OMNI_DEBUGGER gate excluded the test assembly"
+            exit 1
+          fi
