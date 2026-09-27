@@ -1,0 +1,16 @@
+{
+    "name": "com.dtech.omnidebugger",
+    "rootNamespace": "DTech",
+    "references": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "OMNI_DEBUGGER"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
