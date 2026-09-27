@@ -1,16 +1,16 @@
 {
-    "name": "com.dtech.omnidebugger",
+    "name": "com.dtech.omnidebugger.editor",
     "rootNamespace": "DTech",
     "references": [],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
-    "defineConstraints": [
-        "OMNI_DEBUGGER"
-    ],
+    "defineConstraints": [],
     "versionDefines": [],
     "noEngineReferences": false
 }
