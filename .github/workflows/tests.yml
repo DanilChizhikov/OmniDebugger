@@ -10,6 +10,10 @@ on:
       - master
       - develop
 
+permissions:
+  checks: write
+  contents: read
+
 jobs:
   testPlayMode:
     name: Test EditMode
