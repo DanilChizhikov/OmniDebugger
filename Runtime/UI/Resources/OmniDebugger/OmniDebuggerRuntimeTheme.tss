@@ -1,0 +1,9 @@
+/*
+ * The panel-level theme for the runtime panel, and nothing more: it exists only so Unity's built-in
+ * controls render at all outside the editor. The panel's own look, and every consumer theme, are
+ * plain .uss sheets added to the panel root — a .tss is marked as a default style sheet by Unity and
+ * loses every specificity tie, which makes it useless as an override.
+ */
+@import url("unity-theme://default");
+
+VisualElement {}
