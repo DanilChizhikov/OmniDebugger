@@ -18,6 +18,19 @@ namespace DTech.OmniDebugger
 			_current = default;
 		}
 
+		public static int CountTerms(ReadOnlySpan<char> text)
+		{
+			TermScanner scanner = new TermScanner(text);
+			int count = 0;
+
+			while (scanner.MoveNext())
+			{
+				count++;
+			}
+
+			return count;
+		}
+
 		public bool MoveNext()
 		{
 			while (_cursor < _text.Length && !char.IsLetterOrDigit(_text[_cursor]))
@@ -42,20 +55,7 @@ namespace DTech.OmniDebugger
 			_current = _text.Slice(start, _cursor - start);
 			return true;
 		}
-		
-		public static int CountTerms(ReadOnlySpan<char> text)
-		{
-			TermScanner scanner = new TermScanner(text);
-			int count = 0;
 
-			while (scanner.MoveNext())
-			{
-				count++;
-			}
-
-			return count;
-		}
-		
 		private static bool IsBreak(ReadOnlySpan<char> text, int index)
 		{
 			char current = text[index];

@@ -116,7 +116,10 @@ namespace DTech.OmniDebugger
 				AddSlot(fallback, termStamp, generation, result);
 			}
 		}
-		
+
+		private static int Key(char first, char second, char third) =>
+			((first & 0x3FF) << 20) | ((second & 0x3FF) << 10) | (third & 0x3FF);
+
 		private int RarestSlot(ReadOnlySpan<char> token, bool requireEveryWindow)
 		{
 			int best = -1;
@@ -203,8 +206,5 @@ namespace DTech.OmniDebugger
 			slot = -1;
 			return false;
 		}
-
-		private static int Key(char first, char second, char third) =>
-			((first & 0x3FF) << 20) | ((second & 0x3FF) << 10) | (third & 0x3FF);
 	}
 }

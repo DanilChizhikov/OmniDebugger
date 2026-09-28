@@ -35,14 +35,12 @@ namespace DTech.OmniDebugger
 		/// removed or the owning <see cref="IOmniDebugger"/> is disposed.
 		/// </summary>
 		/// <returns><c>false</c> when the object was already registered or contributed nothing.</returns>
-		/// <exception cref="ArgumentNullException"><paramref name="source"/> is null.</exception>
 		bool AddSource(object source);
 
 		/// <summary>
 		/// Removes exactly the commands this source contributed, without re-scanning it.
 		/// </summary>
 		/// <returns><c>false</c> when the object was not registered.</returns>
-		/// <exception cref="ArgumentNullException"><paramref name="source"/> is null.</exception>
 		bool RemoveSource(object source);
 
 		/// <summary>Registers one command directly, bypassing sources entirely.</summary>

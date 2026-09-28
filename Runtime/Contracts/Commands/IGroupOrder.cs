@@ -1,5 +1,3 @@
-using System;
-
 namespace DTech.OmniDebugger
 {
 	/// <summary>
@@ -15,7 +13,6 @@ namespace DTech.OmniDebugger
 		int DefaultOrder { get; }
 
 		/// <summary>Sets the order of a group. Lower values are listed first.</summary>
-		/// <exception cref="ArgumentException"><paramref name="groupName"/> is null or whitespace.</exception>
 		void SetOrder(string groupName, int order);
 
 		/// <summary>Reads a group's order, or <see cref="DefaultOrder"/> when it has none.</summary>

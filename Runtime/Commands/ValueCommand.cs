@@ -15,7 +15,6 @@ namespace DTech.OmniDebugger
 
 		public CommandDefinition Definition { get; }
 
-		/// <exception cref="ArgumentException">The definition is not <see cref="CommandKind.Value"/>.</exception>
 		public ValueCommand(CommandDefinition definition, Func<object> getter, Action<object> setter)
 		{
 			if (definition == null)

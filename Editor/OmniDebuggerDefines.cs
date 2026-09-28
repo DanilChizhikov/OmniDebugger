@@ -12,10 +12,10 @@ namespace DTech.OmniDebugger.Editor
 
 		private static readonly char[] _defineSeparators = { ';' };
 
-		private static List<NamedBuildTarget> _knownTargets;
-
 		public static NamedBuildTarget ActiveTarget =>
 			NamedBuildTarget.FromBuildTargetGroup(EditorUserBuildSettings.selectedBuildTargetGroup);
+
+		private static List<NamedBuildTarget> _knownTargets;
 
 		public static bool IsEnabled(NamedBuildTarget target)
 		{

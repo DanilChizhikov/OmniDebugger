@@ -53,7 +53,6 @@ namespace DTech.OmniDebugger
 		/// Replaces everything in the index. Indexing happens here, so call it when the set
 		/// changes wholesale — not on every keystroke, and not for a single addition.
 		/// </summary>
-		/// <exception cref="ArgumentNullException"><paramref name="items"/> is null.</exception>
 		public void Rebuild(IReadOnlyList<T> items)
 		{
 			MainThreadGuard.Verify(nameof(Rebuild));
@@ -105,7 +104,6 @@ namespace DTech.OmniDebugger
 		/// Adds one item and returns the id it can be found by. Cheap: the item lands in the
 		/// small piece of the index, and only a later fold touches the large one.
 		/// </summary>
-		/// <exception cref="ArgumentNullException"><paramref name="item"/> is null.</exception>
 		public int Add(T item)
 		{
 			MainThreadGuard.Verify(nameof(Add));

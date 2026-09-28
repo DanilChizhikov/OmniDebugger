@@ -9,13 +9,11 @@ namespace DTech.OmniDebugger
 	/// </summary>
 	public static class CommandKey
 	{
-		/// <summary>Separates the group name from the command name.</summary>
 		private const char Separator = '/';
 
 		/// <summary>
 		/// Joins a group name and a command name into a key.
 		/// </summary>
-		/// <exception cref="ArgumentException">Either part is null, empty, or whitespace.</exception>
 		public static string Create(string groupName, string commandName)
 		{
 			if (string.IsNullOrWhiteSpace(groupName))
