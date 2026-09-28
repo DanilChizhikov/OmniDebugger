@@ -82,15 +82,16 @@ namespace DTech.OmniDebugger
 			}
 
 			IReadOnlyList<string> tags = member.GetCustomAttribute<DebugTagsAttribute>()?.Tags;
+			CommandIcon icon = member.GetCustomAttribute<DebugIconAttribute>()?.Icon ?? default;
 
 			switch (member)
 			{
 				case PropertyInfo property:
-					binding = BindProperty(property, command, tags);
+					binding = BindProperty(property, command, tags, icon);
 					return true;
 
 				case MethodInfo method:
-					binding = BindMethod(method, command, tags);
+					binding = BindMethod(method, command, tags, icon);
 					return true;
 
 				default:
@@ -102,7 +103,8 @@ namespace DTech.OmniDebugger
 		private static MemberBinding BindProperty(
 			PropertyInfo property,
 			DebugCommandAttribute command,
-			IReadOnlyList<string> tags)
+			IReadOnlyList<string> tags,
+			CommandIcon icon)
 		{
 			MethodInfo getter = property.GetGetMethod();
 			if (getter == null)
@@ -129,7 +131,8 @@ namespace DTech.OmniDebugger
 				sortOrder: command.SortOrder,
 				arguments: arguments,
 				tags: tags,
-				description: command.Description);
+				description: command.Description,
+				icon: icon);
 
 			return MemberBinding.Valid(property, definition);
 		}
@@ -137,7 +140,8 @@ namespace DTech.OmniDebugger
 		private static MemberBinding BindMethod(
 			MethodInfo method,
 			DebugCommandAttribute command,
-			IReadOnlyList<string> tags)
+			IReadOnlyList<string> tags,
+			CommandIcon icon)
 		{
 			if (method.IsStatic)
 			{
@@ -191,7 +195,8 @@ namespace DTech.OmniDebugger
 				sortOrder: command.SortOrder,
 				arguments: arguments,
 				tags: tags,
-				description: command.Description);
+				description: command.Description,
+				icon: icon);
 
 			return MemberBinding.Valid(method, definition);
 		}

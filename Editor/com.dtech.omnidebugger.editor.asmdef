@@ -1,7 +1,9 @@
 {
     "name": "com.dtech.omnidebugger.editor",
     "rootNamespace": "DTech",
-    "references": [],
+    "references": [
+        "GUID:d0e1d48ae829462db18d59ae56168241"
+    ],
     "includePlatforms": [
         "Editor"
     ],

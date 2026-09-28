@@ -20,8 +20,6 @@ namespace DTech.OmniDebugger
 		/// <summary>Whether a caller may omit this argument.</summary>
 		public bool IsOptional { get; }
 
-		/// <exception cref="ArgumentException"><paramref name="name"/> is null or whitespace.</exception>
-		/// <exception cref="ArgumentNullException"><paramref name="type"/> is null.</exception>
 		public ArgumentDefinition(string name, Type type, object defaultValue = null, bool isOptional = false)
 		{
 			if (string.IsNullOrWhiteSpace(name))

@@ -1,0 +1,47 @@
+/*
+ * Graphite + Teal, light. Only colours are redefined — spacing, shape, type and metrics are
+ * inherited from the dark token sheet underneath, which is the point of layering rather than
+ * duplicating.
+ *
+ * A consumer theme that wants a light base lists this sheet first and its own tweaks after it.
+ */
+.od-root {
+    --od-color-bg: rgb(243, 245, 247);
+    --od-color-header: rgb(255, 255, 255);
+    --od-color-tabbar: rgb(234, 238, 241);
+    --od-color-card: rgb(255, 255, 255);
+    --od-color-card-inset: rgb(243, 245, 247);
+    --od-color-control: rgb(228, 232, 236);
+    --od-color-control-hover: rgb(217, 223, 228);
+    --od-color-control-selected: rgb(205, 239, 234);
+    --od-color-accent: rgb(15, 148, 136);
+    --od-color-accent-soft: rgb(11, 111, 102);
+    --od-color-accent-text: rgb(255, 255, 255);
+    --od-color-text: rgb(26, 31, 36);
+    --od-color-text-muted: rgb(95, 107, 118);
+    --od-color-text-faint: rgb(154, 164, 173);
+    --od-color-divider: rgba(0, 0, 0, 0.08);
+    --od-color-input: rgb(247, 249, 250);
+    --od-color-input-border: rgba(0, 0, 0, 0.12);
+    --od-color-focus: rgb(15, 148, 136);
+    --od-color-selection: rgba(15, 148, 136, 0.22);
+    --od-color-success: rgb(30, 158, 87);
+    --od-color-danger: rgb(217, 58, 58);
+    --od-color-warning: rgb(183, 121, 31);
+    --od-color-destructive: rgb(217, 58, 58);
+    --od-color-log-stripe-log: rgb(159, 184, 191);
+    --od-color-log-stripe-warning: rgb(226, 184, 88);
+    --od-color-log-stripe-error: rgb(224, 122, 128);
+    --od-color-log-filter-log: rgb(220, 232, 235);
+    --od-color-log-filter-warning: rgb(246, 231, 196);
+    --od-color-log-filter-error: rgb(247, 217, 219);
+    --od-color-window-bg: rgba(255, 255, 255, 0.95);
+    --od-color-window-header: rgb(228, 232, 236);
+    --od-color-window-border: rgba(15, 148, 136, 0.4);
+    --od-color-scrim: rgba(20, 31, 36, 0.35);
+    --od-color-open-button-fill: rgb(255, 255, 255);
+    --od-color-open-button-border: rgb(26, 31, 36);
+    --od-color-open-button-indicator: rgb(15, 148, 136);
+    --od-color-alert: rgb(229, 54, 74);
+    --od-color-scrollbar-thumb: rgba(0, 0, 0, 0.22);
+}

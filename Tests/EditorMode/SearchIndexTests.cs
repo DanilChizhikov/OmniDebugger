@@ -290,6 +290,14 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		private static string Zone(int value) =>
 			$"zon{(char)('a' + value / 26)}{(char)('a' + value % 26)}";
 
+		private static void Drain<T>(SearchSession<T> session)
+			where T : class, ISearchIndexable
+		{
+			while (session.Advance(long.MaxValue))
+			{
+			}
+		}
+
 		private int FirstIdOf(string term)
 		{
 			SearchSession<CommandDefinition> session = _index.BeginQuery(term, default);
@@ -318,14 +326,6 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			}
 
 			return keys;
-		}
-
-		private static void Drain<T>(SearchSession<T> session)
-			where T : class, ISearchIndexable
-		{
-			while (session.Advance(long.MaxValue))
-			{
-			}
 		}
 
 		private sealed class Phrase : ISearchIndexable

@@ -13,7 +13,6 @@ namespace DTech.OmniDebugger
 
 		public CommandDefinition Definition { get; }
 
-		/// <exception cref="ArgumentException">The definition is not <see cref="CommandKind.ReadonlyValue"/>.</exception>
 		public ReadonlyValueCommand(CommandDefinition definition, Func<object> getter)
 		{
 			if (definition == null)

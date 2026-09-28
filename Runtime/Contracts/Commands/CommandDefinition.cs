@@ -12,8 +12,9 @@ namespace DTech.OmniDebugger
 	{
 		/// <summary>Sort order applied when a command does not state one.</summary>
 		public const int DefaultSortOrder = 100;
-
-		private static readonly ArgumentDefinition[] NoArguments = Array.Empty<ArgumentDefinition>();
+		
+		private static readonly ArgumentDefinition[] _noArguments = Array.Empty<ArgumentDefinition>();
+		private static readonly string[] _noTags = Array.Empty<string>();
 
 		private readonly string[] _searchTags;
 
@@ -42,7 +43,12 @@ namespace DTech.OmniDebugger
 		/// </summary>
 		public IReadOnlyList<ArgumentDefinition> Arguments { get; }
 
-		/// <exception cref="ArgumentException"><paramref name="name"/> or <paramref name="groupName"/> is null or whitespace.</exception>
+		/// <summary>Tags declared with <see cref="DebugTagsAttribute"/>, without the name and group. Never null.</summary>
+		public IReadOnlyList<string> Tags { get; }
+
+		/// <summary>The icon declared with <see cref="DebugIconAttribute"/>; empty when there is none.</summary>
+		public CommandIcon Icon { get; }
+
 		public CommandDefinition(
 			string name,
 			string groupName,
@@ -50,7 +56,8 @@ namespace DTech.OmniDebugger
 			int sortOrder = DefaultSortOrder,
 			IReadOnlyList<ArgumentDefinition> arguments = null,
 			IEnumerable<string> tags = null,
-			string description = null)
+			string description = null,
+			CommandIcon icon = default)
 		{
 			if (string.IsNullOrWhiteSpace(name))
 			{
@@ -67,16 +74,14 @@ namespace DTech.OmniDebugger
 			Kind = kind;
 			SortOrder = sortOrder;
 			Description = string.IsNullOrWhiteSpace(description) ? null : description;
-			Arguments = arguments ?? NoArguments;
+			Arguments = arguments ?? _noArguments;
+			Icon = icon;
 			Key = CommandKey.Create(groupName, name);
+			Tags = CollectDeclaredTags(tags);
 			_searchTags = CollectDefaultTerms(name, groupName, tags);
 		}
 		
 		/// <inheritdoc/>
-		/// <remarks>
-		/// Offers <see cref="Name"/> and <see cref="GroupName"/> first, then any declared
-		/// tags, so a command is found by its own name as readily as by the group it lives in.
-		/// </remarks>
 		public void CollectIndexTerms(ICollection<string> terms)
 		{
 			for (int i = 0; i < _searchTags.Length; i++)
@@ -86,6 +91,33 @@ namespace DTech.OmniDebugger
 		}
 
 		public override string ToString() => $"{Key} ({Kind})";
+
+		private static string[] CollectDeclaredTags(IEnumerable<string> tags)
+		{
+			if (tags == null)
+			{
+				return _noTags;
+			}
+
+			List<string> result = null;
+
+			foreach (string tag in tags)
+			{
+				if (string.IsNullOrWhiteSpace(tag))
+				{
+					continue;
+				}
+
+				result ??= new List<string>();
+
+				if (!result.Contains(tag))
+				{
+					result.Add(tag);
+				}
+			}
+
+			return result == null ? _noTags : result.ToArray();
+		}
 
 		private static string[] CollectDefaultTerms(string name, string groupName, IEnumerable<string> tags)
 		{

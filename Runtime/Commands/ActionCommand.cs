@@ -14,7 +14,6 @@ namespace DTech.OmniDebugger
 
 		public CommandDefinition Definition { get; }
 
-		/// <exception cref="ArgumentException">The definition is not <see cref="CommandKind.Action"/>.</exception>
 		public ActionCommand(CommandDefinition definition, Action<object[]> action)
 		{
 			if (definition == null)

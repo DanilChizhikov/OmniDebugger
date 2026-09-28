@@ -14,8 +14,13 @@ Annotate a method or a property, hand the object over, and it becomes a debug co
 public void AddCoins(int amount = 100) => _wallet.Coins += amount;
 ```
 
-> **Current state:** the command core and the search engine are in place. The UI Toolkit panel is not built yet,
-> so today this is the API a panel — or a console, or a test harness — is driven through.
+Then show it, on device or in a dockable editor window — the same panel either way:
+
+```csharp
+_debugger = new OmniDebugger();
+_debugger.Catalog.AddSource(this);
+OmniDebuggerPanel.Create(_debugger);
+```
 
 ## Table of Contents
 - [Getting Started](#getting-started)
@@ -28,6 +33,17 @@ public void AddCoins(int amount = 100) => _wallet.Coins += amount;
     - [Commands Without Attributes](#commands-without-attributes)
     - [Running Commands](#running-commands)
     - [Searching](#searching)
+- [The Panel](#the-panel)
+    - [At Runtime](#at-runtime)
+    - [Opening It](#opening-it)
+    - [Tabs](#tabs)
+    - [Floating Windows](#floating-windows)
+    - [Command Icons](#command-icons)
+    - [In the Editor](#in-the-editor)
+- [Themes](#themes)
+- [Extending the Panel](#extending-the-panel)
+    - [Your Own Tab](#your-own-tab)
+    - [Your Own Argument Field](#your-own-argument-field)
 - [Code Stripping](#code-stripping)
 - [License](#license)
 
@@ -225,6 +241,201 @@ it without throwing the index away, and `Dispose` retires it for good — every 
 
 Like the catalog, the index is main-thread only, `RebuildAsync`'s worker excepted, and says so by throwing rather
 than by misbehaving quietly.
+
+## The Panel
+
+The panel is one view (`OmniDebuggerView`) mounted in two places: over the running game, and in an editor
+window. Both show the same tabs and themes; they differ only in where they draw and where they save choices.
+
+The theme and favourites are the only choices the panel saves. Pins, the open tab and group, and where the open
+button was dragged to survive the panel being rebuilt, but not a restart.
+
+### At Runtime
+
+Constructing the debugger in play mode is all it takes. It builds the panel, the open button and the log capture
+itself, and takes them down again on `Dispose`:
+
+```csharp
+#if OMNI_DEBUGGER
+private OmniDebugger _debugger;
+
+private void Awake()
+{
+    _debugger = new OmniDebugger();
+    _debugger.Catalog.AddSource(this);
+}
+
+private void OnDestroy() => _debugger?.Dispose();
+#endif
+```
+
+Pass `OmniDebuggerOptions` to change how it looks and opens:
+
+```csharp
+OmniDebuggerOptions options = new OmniDebuggerOptions();
+options.Panel.ScaleMode = OmniDebuggerScaleMode.ScreenSize;   // Auto, ScreenSize or PhysicalSize
+options.Panel.Scale = 1.2f;
+options.Panel.Open.ButtonClicks = 3;                             // three taps in a row open it
+options.Panel.Open.Shortcuts.Add(new OmniDebuggerShortcut(KeyCode.LeftControl, KeyCode.BackQuote));
+
+_debugger = new OmniDebugger(options);
+```
+
+Set `CreatePanel = false` to build the panel yourself instead: drop `OmniDebuggerPanel` on a GameObject and call
+`Bind(debugger)`. Its inspector carries the same options. Everything else on the component is optional: leave the
+`UIDocument` empty and one is created, leave the panel settings empty and the shipped asset is cloned (never
+edited).
+
+**Scaling.** Every size is written for a portrait phone 360 units wide. `ScreenSize` scales that with the screen,
+so the panel looks the same on every phone and leans towards the height in landscape instead of tripling in size.
+`PhysicalSize` reads the same units as desktop pixels at 96 DPI. `Auto`, the default, picks `ScreenSize` on mobile
+platforms and `PhysicalSize` elsewhere. `OmniDebuggerPanel.SetScale` changes it on the spot.
+
+**Layout.** Held upright, the tabs run along the top; turned sideways, they move into a sidebar. Card grids switch
+to two columns once there is room. The panel keeps out of the notch and the home indicator, and the header paints
+the notch in its own colour.
+
+**Input after an EventSystem is rebuilt.** With uGUI in the project, UI Toolkit routes taps through an object Unity
+parents under the EventSystem. The panel owns that object itself and re-asserts it every frame, so destroying the
+EventSystem and creating a new one does not leave it deaf to taps.
+
+### Opening It
+
+| Way in | Configured by |
+|---|---|
+| The floating button — tap it, or tap it `ButtonClicks` times in a row | `Open.ShowButton`, `Open.ButtonClicks`, `Open.MultiClickWindow`, `Open.ButtonAnchor` |
+| A keyboard shortcut — one key, or a chord that fires when its last key goes down; each toggles the panel | `Open.Shortcuts` |
+| Code | `OmniDebuggerPanel.Open()` / `Close()` / `Toggle()` |
+
+Hold the button for a second and corner brackets slide out: now it can be dragged. It stays where it was dropped
+for the session, and inside the safe area when the screen turns. It blinks red for a minute whenever an error is logged, until
+it is tapped. Hide it at runtime with `SetOpenButtonVisible(false)`, or replace it with
+`SetGesture(IOmniDebuggerGesture)`.
+
+Shortcuts are `KeyCode`s whichever input backend runs: the Input System package is used when it is installed and
+active, the legacy Input Manager otherwise. Nothing is required: with neither, shortcuts stay silent and the
+button still works.
+
+### Tabs
+
+| Tab | What it does |
+|---|---|
+| **Info** | Build, application, display, device, and live runtime figures (FPS, frame time, memory, battery, network) |
+| **Commands** | A grid of groups, favourites first; open one for its commands. Each card shows the icon, tags, id, an ⓘ for the description, a pin and a star, then the controls: arguments and *Execute*, a value to edit, or a live read-only value |
+| **Search** | Finds commands by name, group or tag, optionally case-sensitive; tap a result to run it |
+| **Logs** | Unity's console, captured since the debugger was built: type toggles with counts, text search over messages and stack traces, `[Tag]` prefixes to filter by (all or any), copy one or everything, clear. It follows new logs while scrolled to the bottom and loads older ones at the top |
+| **Windows** | Every floating window, to show or hide it |
+
+Favourites are saved; pins last for the session only. The captured log is also readable in code through
+`debugger.Logs` (`ILogFeed`).
+
+### Floating Windows
+
+Windows float over the game while the panel is closed — a live readout, or a few commands to hit while playing.
+Drag one by its header, collapse it, close it; it turns opaque while you use it.
+
+```csharp
+debugger.Windows.RegisterCustom("stats", "Stats", content => content.Add(new Label("…")), open: true);
+debugger.Windows.RegisterCommands("cheats", "Cheats", new[] { "Economy/AddCoins", "Economy/Coins" });
+debugger.Windows.Open("cheats");
+debugger.Windows.Unregister("stats");
+```
+
+Pinning a command collects it in the built-in *Pinned* window.
+
+### Command Icons
+
+```csharp
+[DebugCommand("Economy"), DebugIcon(DebugIconSource.Resources, "Icons/Coin")]
+public void AddCoins(int amount) { … }
+```
+
+`Resources` keys load a sprite or texture from a `Resources` folder. `Catalog` keys are looked up in
+`OmniDebuggerIconCatalog` assets (**Create → DTech → OmniDebugger → Icon Catalog**) found in a
+`Resources/OmniDebugger` folder or passed to `debugger.Icons.AddCatalog`. Register an
+`IOmniDebuggerIconProvider` to serve icons from anywhere else.
+
+### In the Editor
+
+`Window → DTech → OmniDebugger` opens the same panel in a dockable window. It binds on its own to the newest live
+debugger — every `OmniDebugger` announces itself on construction.
+
+The window saves its theme and favourites in `EditorPrefs` while the game saves its own in `PlayerPrefs`, so the
+two never move each other. Floating windows and pins belong to the runtime panel only.
+
+## Themes
+
+A theme is an `OmniDebuggerTheme` asset holding an ordered list of plain `.uss` sheets. The panel applies its own
+skin first, then a complete set of dark tokens, then your sheets — last, so your values win. Because the token
+set underneath is always complete, a theme that redefines one variable is perfectly valid.
+
+```css
+/* Assets/UI/OceanTheme.uss */
+.od-root {
+    --od-color-bg: rgb(15, 23, 36);
+    --od-color-card: rgb(22, 33, 51);
+    --od-color-text: rgb(226, 236, 248);
+    --od-color-accent: rgb(56, 189, 248);
+    --od-color-control-selected: rgb(12, 74, 110);
+    --od-radius-lg: 10px;
+}
+```
+
+1. **Create → DTech → OmniDebugger → Theme**, name it, drag the `.uss` into *Style Sheets*.
+2. Put the asset in any `Resources/OmniDebugger` folder, or call `debugger.Themes.Register(theme)`.
+3. The theme button in the panel's header steps through it, and the editor window's settings list it. No code.
+
+Assigning a theme on `OmniDebuggerPanel` (`Options.Theme`) fixes the runtime panel to it instead: the built-in
+themes are no longer offered, the theme button is hidden and no choice is saved.
+
+Every colour, spacing, radius, font size and metric the panel draws with is a `--od-*` variable; the full list is
+in `Runtime/UI/Resources/OmniDebugger/OmniDebuggerTokensDark.uss`. Want a light base? List the package's
+`OmniDebuggerTokensLight.uss` first in your theme, then your own sheet. One variable is read from C# and must
+stay unitless: `--od-value-refresh-ms` (how often read-only values are re-read). The built-in palettes are
+Graphite + Teal, dark and light.
+
+Use `.uss`, not `.tss`: Unity marks a theme style sheet as a default sheet, and default sheets lose every
+specificity tie, so overrides in a `.tss` would silently do nothing. The one `.tss` the package ships is the
+panel-level theme a runtime panel needs for Unity's own controls to render at all.
+
+## Extending the Panel
+
+### Your Own Tab
+
+```csharp
+internal sealed class SavesTabFactory : IOmniDebuggerTabFactory
+{
+    public string Id => "saves";
+    public string DisplayName => "Saves";
+    public int Order => 35;   // built-ins: Info 0, Commands 10, Search 20, Logs 30, Windows 40
+
+    public IOmniDebuggerTab CreateTab(in OmniDebuggerTabContext context) => new SavesTab(context);
+}
+
+debugger.Tabs.Register(new SavesTabFactory());
+```
+
+The context hands you the debugger, the preference store, the origin string to invoke with, and a state object
+that outlives your elements — park anything that must survive a rebuild in `context.State` rather than in a
+field. `OnOpen` / `OnClose` tell you when to start and stop timers; a tab that keeps ticking while hidden is how
+a debug panel drains a battery.
+
+### Your Own Argument Field
+
+```csharp
+internal sealed class Vector3FieldHandler : IArgumentFieldHandler
+{
+    public int Priority => 10;                                    // above the built-ins
+    public bool CanHandle(Type valueType) => valueType == typeof(Vector3);
+    public IArgumentField Create(in ArgumentFieldRequest request) => new Vector3ArgumentField(request);
+}
+
+debugger.Fields.Register(new Vector3FieldHandler());
+```
+
+Built in already: `bool`, every enum, every numeric type, `char`, `string`, anything else convertible from text,
+and `Nullable<T>` of all of them. A type nobody claims still renders — as a disabled field saying so — and the
+command stays runnable when that argument is optional.
 
 ## Code Stripping
 

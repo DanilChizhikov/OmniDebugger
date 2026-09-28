@@ -14,9 +14,6 @@ namespace DTech.OmniDebugger
 		private readonly Dictionary<object, IDebugCommand[]> _sources = new (ReferenceComparer.Instance);
 		private readonly ILogSink _log;
 
-		private IReadOnlyList<CommandDefinition> _snapshot = _noDefinitions;
-		private bool _disposed;
-
 		public IReadOnlyList<CommandDefinition> Commands
 		{
 			get
@@ -26,6 +23,9 @@ namespace DTech.OmniDebugger
 				return _snapshot;
 			}
 		}
+
+		private IReadOnlyList<CommandDefinition> _snapshot = _noDefinitions;
+		private bool _disposed;
 
 		public CommandCatalog(ILogSink log)
 		{

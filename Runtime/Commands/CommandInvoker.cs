@@ -87,38 +87,6 @@ namespace DTech.OmniDebugger
 			return Execute(command, request);
 		}
 
-		private bool Execute(IDebugCommand command, in InvocationRequest request)
-		{
-			CommandDefinition definition = command.Definition;
-
-			if (command is not IExecutableCommand executable)
-			{
-				_log.Error($"Command cannot be executed. Key: {definition.Key}; Kind: {definition.Kind}; Origin: {request.Origin}.");
-
-				return false;
-			}
-
-			BindCommandResponse response = CommandArguments.TryBind(definition, request.Arguments);
-			if (!response.Success)
-			{
-				_log.Error($"Command arguments are invalid. Key: {definition.Key}; Origin: {request.Origin}; Reason: {response.Error}.");
-				return false;
-			}
-
-			_log.Info(FormatInvocation(definition, request.Origin, response.Bound));
-
-			try
-			{
-				executable.Execute(response.Bound);
-				return true;
-			}
-			catch (Exception exception)
-			{
-				_log.Exception($"Command threw an exception. Key: {definition.Key}; Origin: {request.Origin}.", Unwrap(exception));
-				return false;
-			}
-		}
-
 		private static Exception Unwrap(Exception exception) =>
 			exception is TargetInvocationException reflectionException && reflectionException.InnerException != null
 				? reflectionException.InnerException
@@ -155,5 +123,37 @@ namespace DTech.OmniDebugger
 			IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
 			_ => value.ToString(),
 		};
+
+		private bool Execute(IDebugCommand command, in InvocationRequest request)
+		{
+			CommandDefinition definition = command.Definition;
+
+			if (command is not IExecutableCommand executable)
+			{
+				_log.Error($"Command cannot be executed. Key: {definition.Key}; Kind: {definition.Kind}; Origin: {request.Origin}.");
+
+				return false;
+			}
+
+			BindCommandResponse response = CommandArguments.TryBind(definition, request.Arguments);
+			if (!response.Success)
+			{
+				_log.Error($"Command arguments are invalid. Key: {definition.Key}; Origin: {request.Origin}; Reason: {response.Error}.");
+				return false;
+			}
+
+			_log.Info(FormatInvocation(definition, request.Origin, response.Bound));
+
+			try
+			{
+				executable.Execute(response.Bound);
+				return true;
+			}
+			catch (Exception exception)
+			{
+				_log.Exception($"Command threw an exception. Key: {definition.Key}; Origin: {request.Origin}.", Unwrap(exception));
+				return false;
+			}
+		}
 	}
 }

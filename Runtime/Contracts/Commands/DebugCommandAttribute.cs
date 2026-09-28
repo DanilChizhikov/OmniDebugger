@@ -20,7 +20,6 @@ namespace DTech.OmniDebugger
 		/// <summary>Optional explanation shown next to the command.</summary>
 		public string Description { get; set; }
 
-		/// <exception cref="ArgumentException"><paramref name="groupName"/> is null or whitespace.</exception>
 		public DebugCommandAttribute(
 			string groupName,
 			string name = null,

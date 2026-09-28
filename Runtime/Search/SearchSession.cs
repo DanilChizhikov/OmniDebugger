@@ -75,6 +75,8 @@ namespace DTech.OmniDebugger
 		private bool _disposed;
 		private QuerySettings _settings;
 
+		internal int TokenCount => _tokenCount;
+
 		internal SearchSession(SearchIndex<T> owner)
 		{
 			_owner = owner;
@@ -175,8 +177,6 @@ namespace DTech.OmniDebugger
 				? SearchStage.Done
 				: SearchStage.Exact;
 		}
-
-		internal int TokenCount => _tokenCount;
 
 		internal ReadOnlySpan<char> Token(int index) =>
 			new ReadOnlySpan<char>(_tokenChars, _tokenStart[index], _tokenLength[index]);

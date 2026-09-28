@@ -13,6 +13,11 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		public const string SetSpeedKey = Group + "/Set Speed";
 		public const string SetSeverityKey = Group + "/Set Severity";
 		public const string PrivateSetterKey = Group + "/Private Setter";
+		public const string BoomMessage = "boom";
+
+		public const int ExpectedCommandCount = 8;
+
+		public const int ExpectedSkippedCount = 3;
 
 		public int Coins { get; private set; }
 
@@ -22,15 +27,23 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 
 		public SampleSeverity Severity { get; private set; } = SampleSeverity.One;
 
-		[DebugCommand(Group, "Add Coins", 10, Description = "Adds coins to the wallet.")]
-		[DebugTags("economy", "wallet")]
-		public void AddCoins(int amount = 100) => Coins += amount;
-
 		[DebugCommand(Group, "God Mode", 20)]
 		public bool GodMode { get; set; }
 
 		[DebugCommand(Group, "Build Version", 30)]
 		public string BuildVersion => "1.0.0";
+
+		[DebugCommand(Group, "Private Setter", 70)]
+		public int PrivateSetter { get; private set; } = 7;
+
+		[DebugCommand(Group, "Static", 80)]
+		public static void StaticCommand()
+		{
+		}
+
+		[DebugCommand(Group, "Add Coins", 10, Description = "Adds coins to the wallet.")]
+		[DebugTags("economy", "wallet")]
+		public void AddCoins(int amount = 100) => Coins += amount;
 
 		[DebugCommand(Group, "Boom", 40)]
 		public void Boom()
@@ -50,30 +63,16 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		{
 		}
 
-		[DebugCommand(Group, "Private Setter", 70)]
-		public int PrivateSetter { get; private set; } = 7;
-
-		[DebugCommand(Group, "Static", 80)]
-		public static void StaticCommand()
-		{
-		}
-
 		[DebugCommand(Group, "Returns", 90)]
 		public int ReturnsValue() => 1;
-
-		[DebugCommand(Group, "Hidden", 100)]
-		private void HiddenCommand()
-		{
-		}
 
 		public void NotACommand()
 		{
 		}
 
-		public const string BoomMessage = "boom";
-
-		public const int ExpectedCommandCount = 8;
-
-		public const int ExpectedSkippedCount = 3;
+		[DebugCommand(Group, "Hidden", 100)]
+		private void HiddenCommand()
+		{
+		}
 	}
 }
