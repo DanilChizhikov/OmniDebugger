@@ -1,0 +1,2023 @@
+/*
+ * Structure and skin — Glass HUD. Every colour and length here is a token, never a literal — that
+ * is what makes a theme a handful of variables instead of a fork of this file. A literal colour in
+ * this sheet is a bug:
+ *
+ *     grep -nE "rgb|rgba|#[0-9a-f]{3,8}" OmniDebuggerPanel.uss   must print nothing.
+ *
+ * The block right after the shell neutralises Unity's built-in control styling, because the editor
+ * default theme and the runtime default theme skin the same controls differently and the panel must
+ * look identical in both mounts. It comes first so every component rule after it, at equal
+ * specificity, wins over it. The default theme is a .tss and loses ties, but it wins where its
+ * selector is more specific — its hover and checked rules — so the rules that must hold in those
+ * states repeat the state themselves.
+ *
+ * Glows and shadows are drawn by the Halo manipulator from two custom properties: --od-halo-color
+ * and a unitless --od-halo-size. C# reads custom properties only from rules that match the element
+ * itself, never inherited from an ancestor, so every state sets them on the glowing element; .od-halo
+ * zeroes the size first.
+ *
+ * USS has no :first-child or :last-child. Lists part their items with a top divider and C# marks the
+ * first item with .od-first.
+ */
+
+/* ---------- shell ---------- */
+
+/*
+ * The root stays in the tree even while the panel is closed: it carries the style sheets, and the
+ * open button and floating windows live inside it. It never takes input itself, so a closed panel
+ * does not swallow a tap meant for the game, and neither does the game around a floating panel.
+ */
+.od-root {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    color: var(--od-color-text);
+    font-size: var(--od-font-size-md);
+}
+
+.od-halo {
+    --od-halo-size: 0;
+}
+
+.od-root--closed .od-stage {
+    display: none;
+}
+
+/*
+ * The desk holds the stage and the floating windows as siblings, so the one touched last is drawn on
+ * top: C# brings a window forward when it is pressed, and the stage when the panel is.
+ */
+.od-desk {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+}
+
+/*
+ * The stage is the screen, minus the safe area C# writes into its offsets while the panel floats. It
+ * never takes input either: a tap around a floating panel falls through to the game.
+ */
+.od-stage {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+.od-root--floating .od-stage {
+    padding: var(--od-panel-inset);
+}
+
+.od-panel {
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    background-color: var(--od-color-bg);
+}
+
+.od-root--landscape .od-panel {
+    flex-direction: row;
+}
+
+/*
+ * Over the game the panel is glass. Edge to edge — portrait, and landscape set to Full Screen — it
+ * reaches the screen's edges and C# moves the safe area into its padding.
+ */
+.od-root--overlay .od-panel {
+    background-color: var(--od-color-glass);
+}
+
+/*
+ * Floating, it is a window with a lit edge and a shadow. C# sizes it inline for the floating scale
+ * and moves it with translate; the caps here hold its unscaled size. It never shrinks: below scale 1
+ * C# sizes it past the stage, and the stage's column would squash its height back to the stage's.
+ */
+.od-root--floating .od-panel {
+    flex-shrink: 0;
+    max-width: var(--od-panel-max-width);
+    max-height: var(--od-panel-max-height);
+    border-width: var(--od-border-width);
+    border-top-color: var(--od-color-glass-edge);
+    border-left-color: var(--od-color-glass-edge);
+    border-right-color: var(--od-color-glass-edge-dim);
+    border-bottom-color: var(--od-color-glass-edge-dim);
+    border-radius: var(--od-radius-panel);
+    --od-halo-color: var(--od-color-shadow);
+    --od-halo-size: var(--od-shadow-size);
+}
+
+/* ---------- neutralising Unity's own control styling ---------- */
+
+/*
+ * unset, never inherit: Unity resolves only initial and unset as global keywords. inherit reaches the
+ * colour reader as a raw keyword, logs an error on every restyle and leaves the label transparent at
+ * font size zero. Both properties are inherited, so unset takes the parent's value.
+ */
+.unity-label {
+    color: unset;
+    font-size: unset;
+    padding: 0;
+    margin: 0;
+}
+
+.od-root .unity-button {
+    min-height: var(--od-control-height);
+    margin: 0;
+    padding-left: var(--od-space-5);
+    padding-right: var(--od-space-5);
+    background-color: var(--od-color-control);
+    border-width: 0;
+    border-radius: var(--od-radius-md);
+    color: var(--od-color-text);
+    font-size: var(--od-font-size-md);
+    transition-property: background-color, scale, opacity;
+    transition-duration: var(--od-transition-duration), var(--od-transition-duration), var(--od-transition-duration);
+}
+
+.od-root .unity-button:hover {
+    background-color: var(--od-color-control-hover);
+}
+
+.od-root .unity-button:disabled {
+    opacity: var(--od-opacity-disabled);
+}
+
+.od-root .unity-base-field {
+    margin: 0;
+    min-height: var(--od-control-height);
+}
+
+.od-root .unity-base-field__label {
+    padding: 0;
+    color: var(--od-color-text-muted);
+}
+
+/*
+ * Only text inputs get the well: toggles, sliders and the scrollers' own sliders share
+ * .unity-base-field__input and must stay bare.
+ */
+.od-root .unity-base-text-field > .unity-base-field__input,
+.od-root .unity-base-text-field:hover > .unity-base-field__input {
+    background-color: var(--od-color-input);
+    border-width: var(--od-border-width);
+    border-color: var(--od-color-input-border);
+    border-radius: var(--od-radius-md);
+    color: var(--od-color-text);
+}
+
+.od-root .unity-base-text-field:focus > .unity-base-field__input {
+    border-color: var(--od-color-focus);
+}
+
+.od-root .unity-base-text-field__input {
+    padding-left: var(--od-space-4);
+    padding-right: var(--od-space-4);
+    color: var(--od-color-text);
+    --unity-cursor-color: var(--od-color-text);
+    --unity-selection-color: var(--od-color-selection);
+}
+
+/*
+ * Unity's text element inside an input is one line high and clips itself, cutting the descenders of
+ * g, p and y. The input around it is a whole control high and still clips a long, scrolled value.
+ */
+.od-root .unity-text-element--inner-input-field-component {
+    font-size: var(--od-font-size-md);
+    overflow: visible;
+}
+
+.od-root .unity-toggle > .unity-toggle__input,
+.od-root .unity-toggle:hover > .unity-toggle__input {
+    background-color: transparent;
+    border-width: 0;
+}
+
+.od-root .unity-toggle > .unity-toggle__input > .unity-toggle__checkmark,
+.od-root .unity-toggle:hover > .unity-toggle__input > .unity-toggle__checkmark {
+    width: var(--od-icon-size);
+    height: var(--od-icon-size);
+    background-color: var(--od-color-input);
+    border-width: var(--od-border-width);
+    border-color: var(--od-color-input-border);
+    border-radius: var(--od-radius-sm);
+    -unity-background-image-tint-color: var(--od-color-accent);
+}
+
+/*
+ * Every box of the scroller is pinned here, not only its width: the slider moves the thumb by the
+ * drag area's height and never counts the thumb's margins, so any offset left over from Unity's own
+ * theme pushes the thumb past the bottom and right edge of the view.
+ */
+.od-root .unity-scroller {
+    margin: 0;
+    padding: 0;
+    background-color: transparent;
+    border-width: 0;
+}
+
+.od-root .unity-scroller--vertical {
+    width: 6px;
+    min-width: 6px;
+    margin-right: var(--od-space-1);
+}
+
+.od-root .unity-scroller--horizontal {
+    height: 6px;
+    min-height: 6px;
+    margin-bottom: var(--od-space-1);
+}
+
+.od-root .unity-scroller .unity-repeat-button {
+    display: none;
+}
+
+.od-root .unity-scroller .unity-base-slider__input,
+.od-root .unity-scroller .unity-base-slider__drag-container {
+    margin: 0;
+    padding: 0;
+}
+
+.od-root .unity-scroller .unity-base-slider__tracker {
+    background-color: transparent;
+    border-width: 0;
+}
+
+.od-root .unity-scroller .unity-base-slider__dragger-border {
+    display: none;
+}
+
+.od-root .unity-scroller .unity-base-slider__dragger {
+    margin: 0;
+    background-color: var(--od-color-scrollbar-thumb);
+    border-width: 0;
+    border-radius: var(--od-scrollbar-radius);
+}
+
+.od-root .unity-scroller--vertical .unity-base-slider__dragger {
+    top: 0;
+    width: 4px;
+    left: 1px;
+}
+
+.od-root .unity-scroller--horizontal .unity-base-slider__dragger {
+    left: 0;
+    height: 4px;
+    top: 1px;
+}
+
+.od-root .unity-scroller--vertical > .unity-slider {
+    margin: 0;
+    padding: 0;
+    width: 6px;
+    min-width: 6px;
+    border-width: 0;
+}
+
+.od-root .unity-scroller--horizontal > .unity-slider {
+    margin: 0;
+    padding: 0;
+    height: 6px;
+    min-height: 6px;
+    border-width: 0;
+}
+
+.od-root .unity-collection-view__item--selected {
+    background-color: transparent;
+}
+
+.od-root .unity-list-view__item:hover {
+    background-color: transparent;
+}
+
+.od-root .unity-scroll-view__content-viewport {
+    background-color: transparent;
+}
+
+/* ---------- rail: brand, tabs, footer ---------- */
+
+/* Portrait stacks the rail on top of the page; landscape turns it into a sidebar. */
+.od-rail {
+    flex-direction: column;
+    flex-shrink: 0;
+    border-bottom-width: var(--od-border-width);
+    border-bottom-color: var(--od-color-divider);
+}
+
+.od-root--landscape .od-rail {
+    width: var(--od-sidebar-width);
+    padding-bottom: var(--od-space-4);
+    background-color: var(--od-color-rail);
+    border-bottom-width: 0;
+    border-right-width: var(--od-border-width);
+    border-right-color: var(--od-color-divider);
+}
+
+/* The panel does not clip, so the sidebar's own tint follows the floating panel's corners. */
+.od-root--floating .od-rail {
+    border-top-left-radius: var(--od-radius-panel);
+    border-bottom-left-radius: var(--od-radius-panel);
+}
+
+.od-brand {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: var(--od-bar-height);
+    padding-left: var(--od-space-6);
+    padding-right: var(--od-space-4);
+}
+
+.od-brand__title {
+    flex-shrink: 1;
+    font-size: var(--od-font-size-title);
+    -unity-font-style: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.od-spacer {
+    flex-grow: 1;
+}
+
+.od-actions {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.od-root .od-actions .od-icon-button,
+.od-root .od-actions .od-actions__theme-picker {
+    margin-left: var(--od-space-2);
+}
+
+/*
+ * The button clips a long theme name, not the label: an ellipsis on the label cut the descenders of
+ * g, p and y. The button is a whole control high, so only its sides ever clip.
+ */
+.od-root .od-actions .od-actions__theme-picker {
+    flex-grow: 0;
+    flex-shrink: 1;
+    min-width: 0;
+    max-width: var(--od-picker-max-width);
+    overflow: hidden;
+}
+
+.od-actions__theme-picker .od-enum-button__text {
+    margin-right: var(--od-space-2);
+}
+
+.od-tabbar {
+    flex-shrink: 0;
+    height: var(--od-strip-height);
+}
+
+.od-root--landscape .od-tabbar {
+    flex-grow: 1;
+    flex-shrink: 1;
+    height: auto;
+    min-height: 0;
+}
+
+.od-tabbar__scroll {
+    flex-grow: 1;
+}
+
+/*
+ * Unity nests the viewport inside a content-and-scroller container, so no child selector from the
+ * scroll view reaches the content; the tab bar and every page scroll tag their content container
+ * with a class of their own instead. The padding leaves room for the selected tab's glow, which the
+ * viewport would clip.
+ */
+.od-tabbar__content {
+    flex-direction: row;
+    align-items: center;
+    padding: var(--od-space-4) var(--od-space-5);
+}
+
+.od-root--landscape .od-tabbar__content {
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--od-space-2) var(--od-space-5);
+}
+
+.od-root .od-tab {
+    flex-shrink: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: var(--od-tab-tile-width);
+    height: var(--od-tab-tile-height);
+    min-height: 0;
+    margin: 0 var(--od-space-1);
+    padding: 0;
+    background-color: transparent;
+    border-width: var(--od-border-width);
+    border-color: transparent;
+    border-radius: var(--od-radius-lg);
+    color: var(--od-color-text-muted);
+    transition-property: background-color, border-color, color, scale, opacity;
+    transition-duration: var(--od-transition-duration), var(--od-transition-duration), var(--od-transition-duration), var(--od-transition-duration), var(--od-transition-duration);
+}
+
+.od-root .od-tab:hover {
+    background-color: var(--od-color-control);
+    color: var(--od-color-text);
+}
+
+.od-tab__image {
+    width: var(--od-icon-size);
+    height: var(--od-icon-size);
+    flex-shrink: 0;
+    -unity-background-scale-mode: scale-to-fit;
+    -unity-background-image-tint-color: var(--od-color-text-muted);
+}
+
+.od-tab__label {
+    max-width: 100%;
+    margin-top: var(--od-space-2);
+    font-size: var(--od-font-size-sm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -unity-text-align: middle-center;
+}
+
+.od-root .od-tab--selected,
+.od-root .od-tab--selected:hover {
+    background-color: var(--od-color-accent);
+    border-color: var(--od-color-accent-edge);
+    color: var(--od-color-accent-text);
+    --od-halo-color: var(--od-color-glow);
+    --od-halo-size: var(--od-glow-size-sm);
+}
+
+.od-tab--selected .od-tab__image {
+    -unity-background-image-tint-color: var(--od-color-accent-text);
+}
+
+.od-root--landscape .od-tab {
+    flex-direction: row;
+    justify-content: flex-start;
+    width: auto;
+    height: var(--od-tab-height);
+    margin: var(--od-space-1) 0;
+    padding: 0 var(--od-space-5);
+    border-radius: var(--od-radius-md);
+}
+
+.od-root--landscape .od-tab__label {
+    flex-shrink: 1;
+    margin-top: 0;
+    margin-left: var(--od-space-5);
+    font-size: var(--od-font-size-md);
+    -unity-text-align: middle-left;
+}
+
+.od-root--landscape .od-tab--selected,
+.od-root--landscape .od-tab--selected:hover {
+    background-color: var(--od-color-control-selected);
+    color: var(--od-color-text);
+}
+
+.od-root--landscape .od-tab--selected .od-icon {
+    color: var(--od-color-accent);
+}
+
+.od-root--landscape .od-tab--selected .od-tab__image {
+    -unity-background-image-tint-color: var(--od-color-accent);
+}
+
+.od-rail__footer {
+    display: none;
+    flex-shrink: 0;
+    padding: var(--od-space-4) var(--od-space-6) 0 var(--od-space-6);
+}
+
+.od-root--landscape .od-rail__footer {
+    display: flex;
+}
+
+.od-rail__version {
+    color: var(--od-color-text-faint);
+    font-size: var(--od-font-size-xs);
+    letter-spacing: var(--od-letter-spacing-label);
+}
+
+/* ---------- main: page bar, tab body ---------- */
+
+.od-main {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
+.od-page-bar {
+    display: none;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: var(--od-bar-height);
+    padding-left: var(--od-space-6);
+    padding-right: var(--od-space-4);
+    border-bottom-width: var(--od-border-width);
+    border-bottom-color: var(--od-color-divider);
+}
+
+.od-root--landscape .od-page-bar {
+    display: flex;
+}
+
+.od-page-bar__icon {
+    flex-shrink: 0;
+    margin-right: var(--od-space-4);
+    color: var(--od-color-accent);
+}
+
+.od-page-bar__icon .od-tab__image {
+    -unity-background-image-tint-color: var(--od-color-accent);
+}
+
+.od-page-bar__title {
+    flex-shrink: 1;
+    font-size: var(--od-font-size-title);
+    -unity-font-style: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.od-keycap {
+    flex-shrink: 0;
+    margin-left: var(--od-space-5);
+    padding: var(--od-space-1) var(--od-space-3);
+    background-color: var(--od-color-card-inset);
+    border-width: var(--od-border-width);
+    border-bottom-width: 2px;
+    border-color: var(--od-color-card-edge);
+    border-radius: var(--od-radius-sm);
+    color: var(--od-color-text-muted);
+    font-size: var(--od-font-size-sm);
+    -unity-font-style: bold;
+}
+
+.od-tabbody {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.od-tab-page {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    --od-pulse-ms: var(--od-value-refresh-ms);
+}
+
+.od-status {
+    flex-grow: 1;
+    padding: var(--od-space-6);
+    color: var(--od-color-text-muted);
+    white-space: normal;
+    -unity-text-align: upper-left;
+}
+
+.od-empty {
+    padding: var(--od-space-7) var(--od-space-6);
+    color: var(--od-color-text-muted);
+    font-size: var(--od-font-size-lg);
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+/* ---------- shared building blocks ---------- */
+
+.od-icon {
+    width: var(--od-icon-size);
+    height: var(--od-icon-size);
+    flex-shrink: 0;
+}
+
+.od-root .od-icon-button {
+    width: var(--od-icon-button-size);
+    height: var(--od-icon-button-size);
+    min-width: var(--od-icon-button-size);
+    padding: 0;
+    margin: 0;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background-color: transparent;
+    border-width: 0;
+    border-radius: var(--od-radius-md);
+    color: var(--od-color-text-muted);
+}
+
+.od-root .od-icon-button:hover {
+    background-color: var(--od-color-control);
+    color: var(--od-color-text);
+}
+
+/* A scroll view takes the press away from the button under it, so it marks the button itself. */
+.od-root .unity-button:active,
+.od-root .unity-button.od-pressed {
+    scale: 0.94 0.94;
+    opacity: var(--od-opacity-pressed);
+}
+
+.od-root .od-tappable.od-pressed {
+    background-color: var(--od-color-control);
+}
+
+.od-scroll {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
+}
+
+.od-scroll__content {
+    padding: var(--od-space-6);
+}
+
+.od-popup-list {
+    flex-grow: 0;
+}
+
+.od-popup-list .od-scroll__content {
+    padding: 0;
+}
+
+/*
+ * Explicit rows of two, never a wrapping line: wrap lines with wrapping text inside are measured
+ * wrong. One column stacks a row's cells; two columns splits the row evenly, and the filler keeps
+ * an odd last card at half width.
+ */
+.od-grid {
+    flex-direction: column;
+}
+
+.od-grid__row {
+    flex-direction: column;
+}
+
+.od-grid--two-columns > .od-grid__row {
+    flex-direction: row;
+}
+
+/*
+ * Cards that fold open stand in two columns of their own, top-aligned, so unfolding one moves only
+ * the cards under it. One column hides the second, which is empty then.
+ */
+.od-grid--columns {
+    flex-direction: row;
+    align-items: flex-start;
+}
+
+.od-grid__column {
+    flex-direction: column;
+    flex-grow: 1;
+    flex-basis: 0;
+    width: 0;
+    min-width: 0;
+}
+
+.od-grid__column--end {
+    display: none;
+}
+
+.od-grid--two-columns > .od-grid__column--end {
+    display: flex;
+    padding-left: var(--od-space-3);
+}
+
+.od-grid--two-columns > .od-grid__column--start {
+    padding-right: var(--od-space-3);
+}
+
+.od-grid__cell {
+    min-width: 0;
+    flex-shrink: 0;
+    margin-bottom: var(--od-card-gap);
+}
+
+.od-grid--two-columns > .od-grid__row > .od-grid__cell {
+    width: 0;
+    flex-basis: 0;
+    flex-grow: 1;
+}
+
+.od-grid--two-columns > .od-grid__row > .od-grid__cell--start {
+    padding-right: var(--od-space-3);
+}
+
+.od-grid--two-columns > .od-grid__row > .od-grid__cell--end {
+    padding-left: var(--od-space-3);
+}
+
+.od-grid__cell--filler {
+    display: none;
+}
+
+.od-grid--two-columns > .od-grid__row > .od-grid__cell--filler {
+    display: flex;
+}
+
+.od-grid__cell > * {
+    flex-grow: 1;
+}
+
+/* A glass tile: a faint wash over the panel, lit along its top edge. */
+.od-card {
+    padding: var(--od-space-4);
+    background-color: var(--od-color-card);
+    border-width: var(--od-border-width);
+    border-color: var(--od-color-card-edge);
+    border-top-color: var(--od-color-glass-edge);
+    border-radius: var(--od-radius-lg);
+}
+
+.od-page-header {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    margin-bottom: var(--od-space-5);
+}
+
+.od-page-header__title {
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-left: var(--od-space-3);
+    font-size: var(--od-font-size-xl);
+    -unity-font-style: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.od-page-header__count {
+    flex-shrink: 0;
+    margin-left: var(--od-space-3);
+    padding: var(--od-space-1) var(--od-space-3);
+    background-color: var(--od-color-card-inset);
+    border-radius: var(--od-radius-sm);
+    color: var(--od-color-text-faint);
+    font-size: var(--od-font-size-xs);
+}
+
+.od-page-header__caption {
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-right: var(--od-space-5);
+    color: var(--od-color-text-muted);
+    font-size: var(--od-font-size-sm);
+    white-space: normal;
+}
+
+/* A toolbar sits above a page's scroll view, padded like the scroll content under it. */
+.od-toolbar {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    padding: var(--od-space-6) var(--od-space-6) 0 var(--od-space-6);
+}
+
+.od-root .od-toolbar .od-toolbar__chip {
+    margin: 0 0 0 var(--od-space-3);
+}
+
+.od-search-box {
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 1;
+    height: var(--od-control-height);
+    padding-left: var(--od-space-5);
+    background-color: var(--od-color-input);
+    border-width: var(--od-border-width);
+    border-color: var(--od-color-input-border);
+    border-radius: var(--od-capsule-radius);
+    color: var(--od-color-text-faint);
+}
+
+.od-search-box .od-icon {
+    width: var(--od-icon-size-sm);
+    height: var(--od-icon-size-sm);
+}
+
+/*
+ * The field clips, not Unity's input inside it: the input's box is shorter than a line of text and
+ * cut the descenders of g, p and y off. The field is a whole control high and still keeps a long,
+ * scrolled query off the magnifier.
+ */
+.od-root .od-search-box__field {
+    flex-grow: 1;
+    margin: 0;
+    overflow: hidden;
+}
+
+.od-root .od-search-box__field > .unity-base-field__input,
+.od-root .od-search-box__field:hover > .unity-base-field__input,
+.od-root .od-search-box__field:focus > .unity-base-field__input {
+    background-color: transparent;
+    border-width: 0;
+    overflow: visible;
+}
+
+.od-chips {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.od-root .od-chip {
+    height: var(--od-chip-height);
+    min-height: var(--od-chip-height);
+    margin: 0 var(--od-space-2) var(--od-space-2) 0;
+    padding-left: var(--od-space-5);
+    padding-right: var(--od-space-5);
+    background-color: var(--od-color-control);
+    border-width: var(--od-border-width);
+    border-color: transparent;
+    border-radius: var(--od-chip-radius);
+    color: var(--od-color-text-muted);
+    font-size: var(--od-font-size-sm);
+}
+
+.od-root .od-chip--active,
+.od-root .od-chip--active:hover {
+    background-color: var(--od-color-control-selected);
+    border-color: var(--od-color-accent-edge);
+    color: var(--od-color-text);
+}
+
+.od-root .od-button--primary,
+.od-root .od-button--primary:hover {
+    background-color: var(--od-color-accent);
+    color: var(--od-color-accent-text);
+    -unity-font-style: bold;
+    --od-halo-color: var(--od-color-glow);
+    --od-halo-size: var(--od-glow-size-sm);
+}
+
+.od-root .od-button--destructive,
+.od-root .od-button--destructive:hover {
+    background-color: var(--od-color-destructive);
+    color: var(--od-color-danger);
+}
+
+/* ---------- popups and menus ---------- */
+
+.od-popup-layer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    display: none;
+}
+
+.od-popup-layer--visible {
+    display: flex;
+    background-color: var(--od-color-scrim);
+}
+
+.od-popup {
+    position: absolute;
+    max-width: 90%;
+    max-height: 80%;
+    padding: var(--od-space-6);
+    background-color: var(--od-color-popup);
+    border-width: var(--od-border-width);
+    border-color: var(--od-color-card-edge);
+    border-top-color: var(--od-color-glass-edge);
+    border-radius: var(--od-radius-xl);
+    --od-halo-color: var(--od-color-shadow);
+    --od-halo-size: var(--od-shadow-size);
+}
+
+.od-popup--anchored {
+    padding: var(--od-space-2);
+    border-radius: var(--od-radius-lg);
+    --od-halo-size: var(--od-shadow-size-sm);
+}
+
+.od-popup-layer--anchored {
+    background-color: transparent;
+}
+
+.od-popup__title {
+    margin-bottom: var(--od-space-4);
+    font-size: var(--od-font-size-xl);
+    -unity-font-style: bold;
+    white-space: normal;
+}
+
+.od-popup__text {
+    color: var(--od-color-text);
+    white-space: normal;
+}
+
+.od-root .od-popup__option {
+    height: var(--od-control-height);
+    margin: 0;
+    padding-left: var(--od-space-4);
+    padding-right: var(--od-space-4);
+    background-color: transparent;
+    border-width: 0;
+    border-radius: var(--od-radius-sm);
+    -unity-text-align: middle-left;
+}
+
+.od-root .od-popup__option--selected,
+.od-root .od-popup__option--selected:hover {
+    background-color: var(--od-color-control-selected);
+}
+
+.od-menu {
+    flex-direction: column;
+}
+
+.od-menu__title {
+    padding: var(--od-space-3) var(--od-space-4) 0 var(--od-space-4);
+    -unity-font-style: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.od-menu__caption {
+    margin-bottom: var(--od-space-2);
+    padding: var(--od-space-1) var(--od-space-4) var(--od-space-3) var(--od-space-4);
+    border-bottom-width: var(--od-border-width);
+    border-bottom-color: var(--od-color-divider);
+    color: var(--od-color-text-faint);
+    font-size: var(--od-font-size-xs);
+    white-space: normal;
+}
+
+.od-root .od-menu__item {
+    flex-direction: row;
+    align-items: center;
+}
+
+.od-menu__item .od-icon {
+    width: var(--od-icon-size-sm);
+    height: var(--od-icon-size-sm);
+    margin-right: var(--od-space-4);
+    color: var(--od-color-text-muted);
+}
+
+.od-menu__item-label {
+    flex-grow: 1;
+    -unity-text-align: middle-left;
+}
+
+.od-toast {
+    position: absolute;
+    bottom: var(--od-space-7);
+    align-self: center;
+    padding: var(--od-space-3) var(--od-space-6);
+    background-color: var(--od-color-popup);
+    border-width: var(--od-border-width);
+    border-color: var(--od-color-accent-edge);
+    border-radius: var(--od-radius-lg);
+    opacity: 0;
+    transition-property: opacity;
+    transition-duration: var(--od-transition-duration);
+}
+
+.od-toast--visible {
+    opacity: 1;
+}
+
+/* ---------- info tab ---------- */
+
+.od-section {
+    padding: var(--od-space-5) var(--od-space-6) var(--od-space-4) var(--od-space-6);
+    background-color: var(--od-color-card);
+    border-width: var(--od-border-width);
+    border-color: var(--od-color-card-edge);
+    border-top-color: var(--od-color-glass-edge);
+    border-radius: var(--od-radius-lg);
+}
+
+.od-section__title {
+    margin-bottom: var(--od-space-3);
+    color: var(--od-color-text-muted);
+    font-size: var(--od-font-size-sm);
+    -unity-font-style: bold;
+    letter-spacing: var(--od-letter-spacing-label);
+}
+
+.od-kv-row {
+    flex-direction: row;
+    align-items: center;
+    min-height: var(--od-kv-row-height);
+    border-top-width: var(--od-border-width);
+    border-top-color: var(--od-color-divider);
+}
+
+.od-kv-row.od-first {
+    border-top-width: 0;
+}
+
+.od-kv-row__key {
+    flex-shrink: 0;
+    margin-right: var(--od-space-5);
+    color: var(--od-color-text-muted);
+}
+
+.od-kv-row__value {
+    flex-grow: 1;
+    flex-shrink: 1;
+    white-space: normal;
+    -unity-text-align: middle-right;
+}
+
+/* ---------- commands: group sections ---------- */
+
+.od-group {
+    padding: 0;
+}
+
+.od-root .od-group__head {
+    flex-direction: row;
+    align-items: center;
+    min-height: var(--od-row-min-height);
+    height: auto;
+    margin: 0;
+    padding: var(--od-space-2) var(--od-space-5) var(--od-space-2) var(--od-space-2);
+    background-color: transparent;
+    border-width: 0;
+    border-radius: var(--od-radius-lg);
+    color: var(--od-color-text-muted);
+}
+
+.od-root .od-group__head:hover {
+    background-color: var(--od-color-control);
+}
+
+.od-group__toggle .od-icon {
+    rotate: -90deg;
+    transition-property: rotate;
+    transition-duration: var(--od-transition-duration);
+}
+
+.od-group--expanded .od-group__toggle .od-icon {
+    rotate: 0deg;
+}
+
+.od-group__star {
+    width: var(--od-icon-size-sm);
+    height: var(--od-icon-size-sm);
+    margin-left: var(--od-space-2);
+    color: var(--od-color-accent);
+}
+
+.od-group__title {
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-left: var(--od-space-3);
+    color: var(--od-color-text-muted);
+    font-size: var(--od-font-size-sm);
+    -unity-font-style: bold;
+    letter-spacing: var(--od-letter-spacing-label);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.od-group--favorites .od-group__title {
+    color: var(--od-color-accent-soft);
+}
+
+.od-group__count {
+    flex-shrink: 0;
+    margin-left: var(--od-space-3);
+    margin-right: var(--od-space-3);
+    padding: var(--od-space-1) var(--od-space-3);
+    background-color: var(--od-color-card-inset);
+    border-radius: var(--od-radius-sm);
+    color: var(--od-color-text-faint);
+    font-size: var(--od-font-size-xs);
+}
+
+.od-group__open {
+    width: var(--od-icon-size-sm);
+    height: var(--od-icon-size-sm);
+    color: var(--od-color-text-faint);
+}
+
+.od-group__body {
+    display: none;
+    padding: 0 var(--od-space-5) var(--od-space-2) var(--od-space-5);
+}
+
+.od-group--expanded .od-group__body {
+    display: flex;
+}
+
+/* ---------- commands: rows ---------- */
+
+.od-row-list {
+    padding: 0 var(--od-space-5);
+}
+
+.od-row {
+    flex-direction: column;
+    border-top-width: var(--od-border-width);
+    border-top-color: var(--od-color-divider);
+}
+
+.od-row.od-first {
+    border-top-width: 0;
+}
+
+.od-row__main {
+    flex-direction: row;
+    align-items: center;
+    min-height: var(--od-row-min-height);
+    padding: var(--od-space-2) 0;
+}
+
+.od-row__icon {
+    width: var(--od-icon-size);
+    height: var(--od-icon-size);
+    flex-shrink: 0;
+    margin-right: var(--od-space-5);
+    align-items: center;
+    justify-content: center;
+    -unity-background-scale-mode: scale-to-fit;
+    color: var(--od-color-warning);
+}
+
+.od-row__titles {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    margin-right: var(--od-space-4);
+}
+
+.od-row__name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.od-row__caption {
+    margin-top: var(--od-space-1);
+    color: var(--od-color-text-faint);
+    font-size: var(--od-font-size-xs);
+}
+
+.od-row__chevron {
+    width: var(--od-icon-size-sm);
+    height: var(--od-icon-size-sm);
+    color: var(--od-color-text-faint);
+}
+
+.od-row__control {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    max-width: 60%;
+}
+
+.od-row__control > .od-arguments {
+    flex-direction: row;
+    align-items: center;
+}
+
+.od-root .od-row__control .od-field {
+    margin: 0;
+}
+
+.od-root .od-row__control .unity-base-text-field {
+    width: var(--od-inline-field-width);
+}
+
+.od-root .od-row__control .od-enum-button {
+    min-width: var(--od-inline-field-width);
+}
+
+.od-row__value {
+    color: var(--od-color-accent-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -unity-text-align: middle-right;
+}
+
+.od-root .od-row__run,
+.od-root .od-row__run:hover {
+    margin-left: var(--od-space-3);
+    background-color: var(--od-color-accent);
+    color: var(--od-color-accent-text);
+    --od-halo-color: var(--od-color-glow);
+    --od-halo-size: var(--od-glow-size-sm);
+}
+
+.od-root .od-row__more {
+    margin-left: var(--od-space-2);
+    color: var(--od-color-text-faint);
+}
+
+.od-row__extra {
+    padding-bottom: var(--od-space-4);
+}
+
+.od-row__status {
+    margin-bottom: var(--od-space-3);
+    font-size: var(--od-font-size-sm);
+    white-space: normal;
+}
+
+.od-row__status--success {
+    color: var(--od-color-success);
+}
+
+.od-row__status--error {
+    color: var(--od-color-danger);
+}
+
+.od-row--compact .od-row__main {
+    min-height: var(--od-control-height);
+}
+
+.od-about {
+    margin-top: var(--od-card-gap);
+    padding: var(--od-space-5) var(--od-space-6);
+}
+
+.od-about__text {
+    margin-bottom: var(--od-space-3);
+    white-space: normal;
+}
+
+.od-about__meta {
+    color: var(--od-color-text-faint);
+    font-size: var(--od-font-size-xs);
+    white-space: normal;
+}
+
+/* ---------- argument fields ---------- */
+
+.od-arguments {
+    flex-direction: column;
+}
+
+.od-root .od-field {
+    min-height: var(--od-control-height);
+    margin-top: 0;
+    margin-right: 0;
+    margin-bottom: var(--od-space-3);
+    margin-left: 0;
+}
+
+.od-root .od-field > .unity-base-field__label,
+.od-field__label {
+    min-width: 0;
+    width: 35%;
+    flex-shrink: 0;
+    font-size: var(--od-font-size-sm);
+    color: var(--od-color-text-muted);
+    -unity-text-align: middle-left;
+}
+
+.od-root .od-field--invalid > .unity-base-field__input,
+.od-root .od-field--invalid:hover > .unity-base-field__input,
+.od-root .od-field--invalid:focus > .unity-base-field__input,
+.od-root .od-field--invalid .od-enum-button {
+    border-color: var(--od-color-danger);
+}
+
+.od-field__hint {
+    color: var(--od-color-text-muted);
+    font-size: var(--od-font-size-xs);
+    white-space: normal;
+}
+
+.od-field__nullable {
+    margin-right: var(--od-space-3);
+}
+
+.od-root .od-enum-button,
+.od-root .od-enum-button:hover {
+    flex-grow: 1;
+    flex-direction: row;
+    align-items: center;
+    height: var(--od-control-height);
+    margin: 0;
+    padding-left: var(--od-space-4);
+    padding-right: var(--od-space-2);
+    background-color: var(--od-color-input);
+    border-width: var(--od-border-width);
+    border-color: var(--od-color-input-border);
+    border-radius: var(--od-radius-md);
+}
+
+.od-enum-button__text {
+    flex-grow: 1;
+    -unity-text-align: middle-left;
+}
+
+.od-enum-button .od-icon {
+    width: var(--od-icon-size-sm);
+    height: var(--od-icon-size-sm);
+    color: var(--od-color-text-muted);
+}
+
+/*
+ * A switch is a field whose input is a button drawn as the track, with a knob inside it. It is not
+ * Unity's toggle: a toggle's checkmark restyled into a track was not painted in the runtime panel.
+ * The track keeps the button's transitions and press feedback; its rules repeat :hover because the
+ * button rules above set the background in that state too.
+ */
+.od-root .od-switch {
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 0;
+    flex-shrink: 0;
+    min-height: var(--od-switch-height);
+}
+
+.od-root .od-switch__track,
+.od-root .od-switch__track:hover {
+    width: var(--od-switch-width);
+    min-width: var(--od-switch-width);
+    height: var(--od-switch-height);
+    min-height: var(--od-switch-height);
+    flex-grow: 0;
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0;
+    background-color: var(--od-color-switch-track);
+    border-width: 0;
+    border-radius: var(--od-switch-radius);
+}
+
+.od-root .od-switch--on > .od-switch__track,
+.od-root .od-switch--on > .od-switch__track:hover {
+    background-color: var(--od-color-accent);
+    --od-halo-color: var(--od-color-glow);
+    --od-halo-size: var(--od-glow-size-sm);
+}
+
+.od-switch__knob {
+    position: absolute;
+    left: var(--od-knob-inset);
+    top: var(--od-knob-inset);
+    width: var(--od-knob-size);
+    height: var(--od-knob-size);
+    background-color: var(--od-color-switch-knob);
+    border-radius: var(--od-knob-radius);
+    transition-property: left, background-color;
+    transition-duration: var(--od-transition-duration), var(--od-transition-duration);
+}
+
+.od-switch--on .od-switch__knob {
+    left: var(--od-knob-on-left);
+    background-color: var(--od-color-accent-text);
+}
+
+/*
+ * A ranged number: Unity's slider with every box pinned — track and thumb centred on the drag area,
+ * the fill Unity sizes inline — and a value box beside it.
+ */
+.od-range {
+    flex-direction: row;
+    align-items: center;
+    min-height: var(--od-control-height);
+}
+
+.od-root .od-range__slider {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    margin: 0 var(--od-space-5) 0 0;
+}
+
+.od-root .od-range__slider .unity-base-slider__input,
+.od-root .od-range__slider .unity-base-slider__drag-container {
+    margin: 0;
+    padding: 0;
+}
+
+.od-root .od-range__slider .unity-base-slider__tracker,
+.od-root .od-range__slider:hover .unity-base-slider__tracker,
+.od-root .od-range__slider:focus .unity-base-slider__tracker {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: var(--od-slider-track-height);
+    margin-top: var(--od-slider-track-offset);
+    background-color: var(--od-color-slider-track);
+    border-width: 0;
+    border-radius: var(--od-slider-track-radius);
+}
+
+.od-root .od-range__slider .unity-base-slider__fill {
+    position: absolute;
+    background-color: var(--od-color-accent);
+    border-radius: var(--od-slider-track-radius);
+}
+
+.od-root .od-range__slider .unity-base-slider__dragger-border {
+    display: none;
+}
+
+.od-root .od-range__slider .unity-base-slider__dragger,
+.od-root .od-range__slider:hover .unity-base-slider__dragger,
+.od-root .od-range__slider:focus .unity-base-slider__dragger {
+    position: absolute;
+    top: 50%;
+    width: var(--od-slider-thumb-size);
+    height: var(--od-slider-thumb-size);
+    margin: 0;
+    margin-top: var(--od-slider-thumb-offset);
+    background-color: var(--od-color-accent-text);
+    border-width: var(--od-slider-thumb-border);
+    border-color: var(--od-color-accent);
+    border-radius: var(--od-slider-thumb-radius);
+}
+
+.od-root .od-range__box {
+    flex-shrink: 0;
+    width: var(--od-range-box-width);
+    margin: 0;
+}
+
+/* ---------- logs ---------- */
+
+/*
+ * Two fixed rows, never a wrapping line: a wrap line broke the controls one by one, the type
+ * filters apart and the last button alone. Search sits above and the controls below as one row;
+ * the wide modifier puts them side by side. Gaps are set on the toolbar's own classes, at least as
+ * specific as the neutralised button margin, which beat the old child-selector gaps.
+ */
+.od-logs-toolbar {
+    flex-direction: column;
+    flex-shrink: 0;
+    padding: var(--od-space-6) var(--od-space-6) var(--od-space-4) var(--od-space-6);
+}
+
+.od-logs-toolbar--wide {
+    flex-direction: row;
+    align-items: center;
+}
+
+.od-logs-toolbar > .od-search-box {
+    flex-grow: 0;
+    flex-shrink: 0;
+    margin-bottom: var(--od-space-3);
+}
+
+.od-logs-toolbar--wide > .od-search-box {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: var(--od-search-min-width);
+    margin-right: var(--od-space-3);
+    margin-bottom: 0;
+}
+
+.od-logs-controls {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.od-root .od-logs-filter {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    height: var(--od-control-height);
+    min-height: var(--od-control-height);
+    margin-right: var(--od-space-2);
+    padding-top: 0;
+    padding-bottom: 0;
+    padding-left: var(--od-space-4);
+    padding-right: var(--od-space-4);
+    border-radius: var(--od-capsule-radius);
+    color: var(--od-color-text-muted);
+}
+
+/* Stacked, the tags button takes the room left in the row and gives it back first when it runs out. */
+.od-root .od-logs-tags {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    height: var(--od-control-height);
+    min-height: var(--od-control-height);
+    margin-left: var(--od-space-2);
+    padding-top: 0;
+    padding-bottom: 0;
+    border-radius: var(--od-capsule-radius);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.od-root .od-logs-toolbar--wide .od-logs-tags {
+    flex-grow: 0;
+}
+
+.od-root .od-logs-controls > .od-icon-button {
+    margin-left: var(--od-space-2);
+}
+
+.od-logs-filter .od-icon {
+    margin-right: var(--od-space-2);
+    width: var(--od-icon-size-sm);
+    height: var(--od-icon-size-sm);
+}
+
+.od-root .od-logs-filter--log.od-logs-filter--active {
+    background-color: var(--od-color-log-filter-log);
+    color: var(--od-color-text);
+}
+
+.od-root .od-logs-filter--warning.od-logs-filter--active {
+    background-color: var(--od-color-log-filter-warning);
+    color: var(--od-color-warning);
+}
+
+.od-root .od-logs-filter--error.od-logs-filter--active {
+    background-color: var(--od-color-log-filter-error);
+    color: var(--od-color-danger);
+}
+
+.od-logs-list {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
+    margin-top: 0;
+    margin-right: var(--od-space-6);
+    margin-bottom: var(--od-space-6);
+    margin-left: var(--od-space-6);
+}
+
+/*
+ * The row is what the list measures, and a list with dynamic heights reads only its layout height —
+ * a margin there would be lost from every offset. The gap is the row's padding, the card sits inside.
+ */
+.od-log-row {
+    padding-bottom: var(--od-space-2);
+}
+
+.od-log {
+    flex-direction: row;
+    align-items: flex-start;
+    margin: 0;
+    padding-top: var(--od-space-3);
+    padding-right: var(--od-space-2);
+    padding-bottom: var(--od-space-3);
+    padding-left: var(--od-space-4);
+    background-color: var(--od-color-card);
+    border-left-width: var(--od-log-stripe-width);
+    border-left-color: var(--od-color-log-stripe-log);
+    border-radius: var(--od-radius-md);
+}
+
+.od-log--warning {
+    border-left-color: var(--od-color-log-stripe-warning);
+}
+
+.od-log--error {
+    border-left-color: var(--od-color-log-stripe-error);
+}
+
+.od-log__body {
+    flex-grow: 1;
+    flex-shrink: 1;
+}
+
+/*
+ * The record's header, one line: time, type and tags. Muted rather than faint — faint grey on the
+ * card's grey read as one smudge. The tags wrap inside their own label, never as a wrapping line.
+ */
+.od-log__meta {
+    flex-direction: row;
+    align-items: flex-start;
+    font-size: var(--od-font-size-sm);
+}
+
+.od-log__time {
+    flex-shrink: 0;
+    color: var(--od-color-text-muted);
+}
+
+.od-log__type {
+    flex-shrink: 0;
+    margin-left: var(--od-space-4);
+    color: var(--od-color-text);
+    -unity-font-style: bold;
+    letter-spacing: var(--od-letter-spacing-label);
+}
+
+.od-log--warning .od-log__type {
+    color: var(--od-color-warning);
+}
+
+.od-log--error .od-log__type {
+    color: var(--od-color-danger);
+}
+
+.od-log__tags {
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-left: var(--od-space-4);
+    color: var(--od-color-accent-soft);
+    white-space: normal;
+}
+
+.od-log__message {
+    margin-top: var(--od-space-1);
+    white-space: normal;
+    font-size: var(--od-font-size-sm);
+}
+
+.od-log--warning .od-log__message {
+    color: var(--od-color-warning);
+}
+
+.od-log--error .od-log__message {
+    color: var(--od-color-danger);
+}
+
+.od-root .od-log .od-icon-button {
+    width: var(--od-log-button-size);
+    height: var(--od-log-button-size);
+    min-width: var(--od-log-button-size);
+    margin-left: var(--od-space-2);
+    color: var(--od-color-text-faint);
+}
+
+.od-root .od-logs-follow,
+.od-root .od-logs-follow:hover {
+    position: absolute;
+    right: var(--od-space-7);
+    bottom: var(--od-space-7);
+    width: var(--od-follow-button-size);
+    height: var(--od-follow-button-size);
+    min-width: var(--od-follow-button-size);
+    background-color: var(--od-color-accent);
+    border-radius: var(--od-follow-button-radius);
+    color: var(--od-color-accent-text);
+    --od-halo-color: var(--od-color-glow);
+    --od-halo-size: var(--od-glow-size);
+}
+
+/* ---------- floating windows ---------- */
+
+/* No clipping here: the header is transparent, and a clip would cut the window's own shadow. */
+.od-window {
+    position: absolute;
+    width: var(--od-window-width);
+    max-height: var(--od-window-max-height);
+    background-color: var(--od-color-window-bg);
+    border-width: var(--od-border-width);
+    border-color: var(--od-color-card-edge);
+    border-top-color: var(--od-color-glass-edge);
+    border-radius: var(--od-radius-lg);
+    transform-origin: 0 0;
+    opacity: var(--od-opacity-window-idle);
+    transition-property: opacity;
+    transition-duration: var(--od-transition-duration);
+    --od-halo-color: var(--od-color-shadow);
+    --od-halo-size: var(--od-shadow-size-sm);
+}
+
+/* Shares the desk with the stage, so windows are hidden one by one while the panel covers the screen. */
+.od-desk--windows-hidden > .od-window {
+    display: none;
+}
+
+.od-window--active {
+    opacity: 1;
+    border-color: var(--od-color-window-border);
+}
+
+.od-window__header {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: var(--od-window-header-height);
+    padding: var(--od-space-1) var(--od-space-2) var(--od-space-1) var(--od-space-5);
+    border-bottom-width: var(--od-border-width);
+    border-bottom-color: var(--od-color-divider);
+}
+
+.od-window__title {
+    flex-grow: 1;
+    flex-shrink: 1;
+    color: var(--od-color-text-muted);
+    font-size: var(--od-font-size-sm);
+    -unity-font-style: bold;
+    letter-spacing: var(--od-letter-spacing-label);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.od-root .od-window__header .od-icon-button {
+    width: var(--od-window-button-size);
+    height: var(--od-window-button-size);
+    min-width: var(--od-window-button-size);
+    margin-left: var(--od-space-1);
+}
+
+.od-window__content {
+    flex-shrink: 1;
+    padding: var(--od-space-1) var(--od-space-5) var(--od-space-3) var(--od-space-5);
+    font-size: var(--od-font-size-sm);
+}
+
+.od-window__content .od-scroll__content {
+    padding: 0;
+}
+
+.od-window__footer {
+    display: none;
+    flex-direction: row;
+    justify-content: flex-end;
+    flex-shrink: 0;
+    padding: 0 var(--od-space-5) var(--od-space-4) var(--od-space-5);
+}
+
+.od-window--with-footer .od-window__footer {
+    display: flex;
+}
+
+.od-window--collapsed .od-window__header {
+    border-bottom-width: 0;
+}
+
+.od-window--collapsed .od-window__content,
+.od-window--collapsed .od-window__footer {
+    display: none;
+}
+
+.od-window-row {
+    flex-direction: row;
+    align-items: center;
+    min-height: var(--od-row-min-height);
+    border-top-width: var(--od-border-width);
+    border-top-color: var(--od-color-divider);
+}
+
+.od-window-row.od-first {
+    border-top-width: 0;
+}
+
+.od-window-row__title {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    margin-right: var(--od-space-5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.od-window-row__control {
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+
+.od-window-scale {
+    margin-bottom: var(--od-card-gap);
+}
+
+.od-window-row--scale .od-window-row__title {
+    flex-grow: 0;
+}
+
+.od-window-row--scale .od-range {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.od-window-scale__value {
+    flex-shrink: 0;
+    width: var(--od-range-box-width);
+    -unity-text-align: middle-right;
+}
+
+/* ---------- open button ---------- */
+
+.od-open-button {
+    position: absolute;
+    width: var(--od-open-button-size);
+    height: var(--od-open-button-size);
+    align-items: center;
+    justify-content: center;
+    background-color: var(--od-color-open-button-fill);
+    border-width: var(--od-border-width);
+    border-color: var(--od-color-open-button-border);
+    border-radius: var(--od-open-button-radius);
+    color: var(--od-color-text);
+    transition-property: opacity, scale, border-color;
+    transition-duration: var(--od-transition-duration), var(--od-transition-duration), var(--od-transition-duration);
+    --od-halo-color: var(--od-color-shadow);
+    --od-halo-size: var(--od-glow-size);
+}
+
+.od-open-button__mark {
+    width: var(--od-icon-size-lg);
+    height: var(--od-icon-size-lg);
+}
+
+.od-open-button--pressed {
+    scale: 0.92 0.92;
+}
+
+.od-open-button--lit {
+    border-color: var(--od-color-open-button-indicator);
+    color: var(--od-color-open-button-indicator);
+    --od-halo-color: var(--od-color-glow);
+}
+
+.od-open-button--dragging {
+    scale: 1 1;
+}
+
+.od-open-button--alerting {
+    border-color: var(--od-color-alert);
+    --od-halo-color: var(--od-color-alert-glow);
+}
+
+.od-open-button--alerting .od-open-button__mark {
+    display: none;
+}
+
+.od-open-button__alert {
+    position: absolute;
+    left: 12%;
+    top: 12%;
+    right: 12%;
+    bottom: 12%;
+    color: var(--od-color-alert);
+}
+
+.od-open-button__alert > .od-icon {
+    flex-grow: 1;
+    width: auto;
+    height: auto;
+}
+
+.od-open-button__corners {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    color: var(--od-color-open-button-indicator);
+}
+
+/* ---------- lock ---------- */
+
+/*
+ * Outside the stage: the prompt shows while the panel is still closed, and a closed root hides the
+ * stage. The overlay takes input itself, so a tap beside the card never reaches the game.
+ */
+.od-lock {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    padding: var(--od-space-5);
+    background-color: var(--od-color-scrim);
+}
+
+.od-lock__card {
+    width: var(--od-lock-width);
+    max-width: 90%;
+    padding: var(--od-space-6);
+    background-color: var(--od-color-popup);
+    border-width: var(--od-border-width);
+    border-color: var(--od-color-card-edge);
+    border-top-color: var(--od-color-glass-edge);
+    border-radius: var(--od-radius-xl);
+    --od-halo-color: var(--od-color-shadow);
+    --od-halo-size: var(--od-shadow-size);
+}
+
+.od-lock__header {
+    flex-direction: row;
+    flex-shrink: 0;
+    align-items: center;
+    margin-bottom: var(--od-space-5);
+}
+
+.od-lock__title {
+    flex-grow: 1;
+    font-size: var(--od-font-size-xl);
+    -unity-font-style: bold;
+}
+
+.od-lock__dots {
+    flex-direction: row;
+    flex-shrink: 0;
+    justify-content: center;
+    min-height: var(--od-lock-dot-size);
+    margin-bottom: var(--od-space-5);
+}
+
+.od-lock__dot {
+    width: var(--od-lock-dot-size);
+    height: var(--od-lock-dot-size);
+    margin-left: var(--od-space-2);
+    margin-right: var(--od-space-2);
+    border-width: 2px;
+    border-color: var(--od-color-text-faint);
+    border-radius: var(--od-lock-dot-radius);
+}
+
+.od-lock__dot--filled {
+    background-color: var(--od-color-accent);
+    border-color: var(--od-color-accent);
+}
+
+.od-lock__password {
+    flex-direction: row;
+    flex-shrink: 0;
+    align-items: center;
+}
+
+.od-root .od-lock__field {
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-right: var(--od-space-3);
+}
+
+.od-lock__status {
+    flex-shrink: 0;
+    min-height: var(--od-font-size-md);
+    margin-top: var(--od-space-3);
+    margin-bottom: var(--od-space-3);
+    color: var(--od-color-danger);
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+/*
+ * The row holds the key height, not the key: on a short screen the card shrinks and takes the rows
+ * down with it, and a fixed-height key would spill over the row below.
+ */
+.od-lock__keypad-row {
+    flex-direction: row;
+    flex-shrink: 1;
+    height: var(--od-lock-key-height);
+    min-height: var(--od-control-height);
+    margin-top: var(--od-space-3);
+}
+
+/*
+ * Text and icon keys share one padding: the layout never shrinks a flex basis below the padding,
+ * so a padded digit key came out wider than the icon keys beside it. The gap sits between keys
+ * only, keeping the outer keys flush with the card's content.
+ */
+.od-root .od-lock__key {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    background-color: var(--od-color-control);
+    border-radius: var(--od-radius-lg);
+    color: var(--od-color-text);
+    font-size: var(--od-font-size-xl);
+}
+
+.od-root .od-lock__key--gap {
+    margin-left: var(--od-space-3);
+}
+
+.od-root .od-lock__key.od-button--primary,
+.od-root .od-lock__key.od-button--primary:hover {
+    background-color: var(--od-color-accent);
+    color: var(--od-color-accent-text);
+}

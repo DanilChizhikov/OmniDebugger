@@ -1,0 +1,30 @@
+{
+    "name": "com.dtech.omnidebugger",
+    "rootNamespace": "DTech",
+    "references": [
+        "Unity.InputSystem",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "OMNI_DEBUGGER"
+    ],
+    "versionDefines": [
+        {
+            "name": "com.unity.inputsystem",
+            "expression": "",
+            "define": "OMNI_DEBUGGER_INPUT_SYSTEM"
+        },
+        {
+            "name": "com.unity.ugui",
+            "expression": "",
+            "define": "OMNI_DEBUGGER_UGUI"
+        }
+    ],
+    "noEngineReferences": false
+}

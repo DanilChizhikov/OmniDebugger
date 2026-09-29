@@ -1,0 +1,18 @@
+{
+    "name": "com.dtech.omnidebugger.editor",
+    "rootNamespace": "DTech",
+    "references": [
+        "GUID:d0e1d48ae829462db18d59ae56168241"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
