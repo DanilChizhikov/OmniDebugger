@@ -149,5 +149,20 @@ namespace DTech.OmniDebugger.UI
 		public const string OpenButtonLit = "od-open-button--lit";
 		public const string OpenButtonAlert = "od-open-button__alert";
 		public const string OpenButtonCorners = "od-open-button__corners";
+
+		public const string Lock = "od-lock";
+		public const string LockCard = "od-lock__card";
+		public const string LockHeader = "od-lock__header";
+		public const string LockTitle = "od-lock__title";
+		public const string LockStatus = "od-lock__status";
+		public const string LockDots = "od-lock__dots";
+		public const string LockDot = "od-lock__dot";
+		public const string LockDotFilled = "od-lock__dot--filled";
+		public const string LockKeypad = "od-lock__keypad";
+		public const string LockKeypadRow = "od-lock__keypad-row";
+		public const string LockKey = "od-lock__key";
+		public const string LockKeyGap = "od-lock__key--gap";
+		public const string LockPassword = "od-lock__password";
+		public const string LockField = "od-lock__field";
 	}
 }

@@ -5,7 +5,7 @@ using UnityEngine.UIElements;
 namespace DTech.OmniDebugger.UI
 {
 	/// <summary>
-	/// How the runtime panel is scaled, layered, skinned and opened. Read through
+	/// How the runtime panel is scaled, layered, skinned, opened and locked. Read through
 	/// <see cref="OmniDebuggerOptions.Panel"/> and by <see cref="OmniDebuggerPanel.Options"/>.
 	/// </summary>
 	[Serializable]
@@ -58,6 +58,16 @@ namespace DTech.OmniDebugger.UI
 			set => _open = value;
 		}
 
+		/// <summary>
+		/// The PIN or password asked for before the panel shows. Never null. Read every time the panel
+		/// opens, so changes apply on the next open.
+		/// </summary>
+		public OmniDebuggerLockOptions Lock
+		{
+			get => _lock ??= new OmniDebuggerLockOptions();
+			set => _lock = value;
+		}
+
 		[Tooltip("Auto scales with the screen on phones and tablets and keeps a physical size on desktop.")]
 		[SerializeField] private OmniDebuggerScaleMode _scaleMode = OmniDebuggerScaleMode.Auto;
 
@@ -75,6 +85,8 @@ namespace DTech.OmniDebugger.UI
 
 		[SerializeField] private OmniDebuggerOpenOptions _open = new ();
 
+		[SerializeField] private OmniDebuggerLockOptions _lock = new ();
+
 		internal OmniDebuggerPanelOptions Clone()
 		{
 			return new OmniDebuggerPanelOptions
@@ -85,6 +97,7 @@ namespace DTech.OmniDebugger.UI
 				_openOnStart = _openOnStart,
 				_panelSettings = _panelSettings,
 				_open = Open.Clone(),
+				_lock = Lock.Clone(),
 			};
 		}
 	}

@@ -1306,3 +1306,123 @@
     bottom: 0;
     color: var(--od-color-open-button-indicator);
 }
+
+/* ---------- lock ---------- */
+
+/*
+ * Not an od-scrim: the prompt shows while the panel is still closed, and a closed root hides every
+ * scrim inside it. The overlay takes input itself, so a tap beside the card never reaches the game.
+ */
+.od-lock {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    padding: var(--od-space-5);
+    background-color: var(--od-color-scrim);
+}
+
+.od-lock__card {
+    width: 300px;
+    max-width: 90%;
+    padding: var(--od-space-5);
+    background-color: var(--od-color-card);
+    border-width: var(--od-border-width);
+    border-color: var(--od-color-divider);
+    border-radius: var(--od-radius-lg);
+}
+
+.od-lock__header {
+    flex-direction: row;
+    flex-shrink: 0;
+    align-items: center;
+    margin-bottom: var(--od-space-5);
+}
+
+.od-lock__title {
+    flex-grow: 1;
+    font-size: var(--od-font-size-xl);
+    -unity-font-style: bold;
+}
+
+.od-lock__dots {
+    flex-direction: row;
+    flex-shrink: 0;
+    justify-content: center;
+    min-height: 14px;
+    margin-bottom: var(--od-space-5);
+}
+
+.od-lock__dot {
+    width: 14px;
+    height: 14px;
+    margin-left: var(--od-space-2);
+    margin-right: var(--od-space-2);
+    border-width: 2px;
+    border-color: var(--od-color-text-muted);
+    border-radius: 7px;
+}
+
+.od-lock__dot--filled {
+    background-color: var(--od-color-text);
+    border-color: var(--od-color-text);
+}
+
+.od-lock__password {
+    flex-direction: row;
+    flex-shrink: 0;
+    align-items: center;
+}
+
+.od-root .od-lock__field {
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-right: var(--od-space-3);
+}
+
+.od-lock__status {
+    flex-shrink: 0;
+    min-height: var(--od-font-size-md);
+    margin-top: var(--od-space-3);
+    margin-bottom: var(--od-space-3);
+    color: var(--od-color-danger);
+    white-space: normal;
+    -unity-text-align: middle-center;
+}
+
+/*
+ * The row holds the key height, not the key: on a short screen the card shrinks and takes the rows
+ * down with it, and a fixed-height key would spill over the row below.
+ */
+.od-lock__keypad-row {
+    flex-direction: row;
+    flex-shrink: 1;
+    height: 56px;
+    min-height: var(--od-control-height);
+    margin-top: var(--od-space-3);
+}
+
+/*
+ * Text and icon keys share one padding: the layout never shrinks a flex basis below the padding,
+ * so a padded digit key came out wider than the icon keys beside it. The gap sits between keys
+ * only, keeping the outer keys flush with the card's content.
+ */
+.od-root .od-lock__key {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-basis: 0;
+    width: auto;
+    height: auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border-radius: var(--od-radius-md);
+    font-size: var(--od-font-size-xl);
+}
+
+.od-root .od-lock__key--gap {
+    margin-left: var(--od-space-3);
+}
