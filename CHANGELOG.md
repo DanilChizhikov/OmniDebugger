@@ -65,8 +65,12 @@ Initial release.
 - Extension seams: `IOmniDebuggerTabFactory` / `IOmniDebugger.Tabs` for additional tabs,
   `IArgumentFieldHandler` / `IOmniDebugger.Fields` for additional argument types, `IOmniDebuggerGesture` for how the
   panel is opened on a device.
+- An optional PIN or password in front of the runtime panel (`OmniDebuggerPanelOptions.Lock`): a keypad for a
+  PIN, a masked field for a password, stored only as a salted SHA-256 hash. It is asked for on every open, once
+  per session or once per device until the secret changes; a run of wrong entries pauses the prompt, and play mode
+  in the editor skips it by default.
 - `Project Settings → DTech → OmniDebugger → Panel` for every panel option: startup, scaling and sorting order,
-  panel settings, the open button, shortcuts, the default theme and extra themes, and icon catalogs kept outside
+  panel settings, the open button, shortcuts, the lock, the default theme and extra themes, and icon catalogs kept outside
   `Resources`. Stored in `ProjectSettings/OmniDebuggerSettings.asset`; `new OmniDebugger()` and
   `OmniDebuggerOptions.Default` read a copy of it. Play mode reads it live, and a debugger built without options in
   code — with its panel — applies every edit at once; a build gets a snapshot written to a
