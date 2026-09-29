@@ -1,5 +1,6 @@
 #if OMNI_DEBUGGER
 using System.Collections.Generic;
+using DTech.OmniDebugger.UI;
 using UnityEditor;
 using UnityEngine;
 
@@ -29,14 +30,30 @@ namespace DTech.OmniDebugger.Editor
 		private const string ButtonOpacityField = "_buttonOpacity";
 		private const string ShortcutsField = "_shortcuts";
 
+		private const string LockField = "_lock";
+		private const string LockModeField = "_mode";
+		private const string UnlockScopeField = "_unlockScope";
+		private const string SkipInEditorField = "_skipInEditor";
+		private const string MaxAttemptsField = "_maxAttempts";
+		private const string CooldownSecondsField = "_cooldownSeconds";
+		private const string SecretHashField = "_secretHash";
+		private const string SecretSaltField = "_secretSalt";
+		private const string PinLengthField = "_pinLength";
+
+		private const float SecretButtonWidth = 60.0f;
+
 		private static readonly GUIContent _buttonEnabledLabel = new GUIContent(
 			"Open Button Enabled",
 			"Shows the floating button that opens the panel. Off, a shortcut or code is the only way in.");
 
 		private static readonly GUIContent _removeShortcutContent = new GUIContent("×", "Remove the shortcut.");
 		private static readonly GUIContent _addShortcutContent = new GUIContent("Add Shortcut", "Add a key or a chord that toggles the panel.");
+		private static readonly GUIContent _setSecretContent = new GUIContent("Set", "Replace the stored hash with one of the value typed here.");
+		private static readonly GUIContent _clearSecretContent = new GUIContent("Clear", "Forget the stored hash, so the panel opens without asking.");
 
 		private static SerializedObject _serialized;
+		private static string _secretInput;
+		private static string _secretError;
 
 		[SettingsProvider]
 		public static SettingsProvider Create()
@@ -67,6 +84,10 @@ namespace DTech.OmniDebugger.Editor
 					"theme",
 					"icon",
 					"catalog",
+					"lock",
+					"pin",
+					"password",
+					"passcode",
 				},
 			};
 		}
@@ -138,6 +159,13 @@ namespace DTech.OmniDebugger.Editor
 				DrawShortcuts(open.FindPropertyRelative(ShortcutsField));
 			}
 
+			DrawHeader("Lock");
+
+			using (new EditorGUI.IndentLevelScope())
+			{
+				DrawLock(panel.FindPropertyRelative(LockField));
+			}
+
 			DrawHeader("Themes");
 
 			using (new EditorGUI.IndentLevelScope())
@@ -182,6 +210,8 @@ namespace DTech.OmniDebugger.Editor
 		{
 			ShortcutDrawer.StopRecording();
 			_serialized = null;
+			_secretInput = null;
+			_secretError = null;
 		}
 
 		private static void DrawShortcuts(SerializedProperty shortcuts)
@@ -222,6 +252,150 @@ namespace DTech.OmniDebugger.Editor
 				shortcuts.arraySize = index + 1;
 				shortcuts.GetArrayElementAtIndex(index).FindPropertyRelative(ShortcutDrawer.KeysField).arraySize = 0;
 			}
+		}
+
+		private static void DrawLock(SerializedProperty lockOptions)
+		{
+			SerializedProperty mode = lockOptions.FindPropertyRelative(LockModeField);
+			SerializedProperty hash = lockOptions.FindPropertyRelative(SecretHashField);
+			SerializedProperty salt = lockOptions.FindPropertyRelative(SecretSaltField);
+			SerializedProperty pinLength = lockOptions.FindPropertyRelative(PinLengthField);
+
+			OmniDebuggerLockMode previous = (OmniDebuggerLockMode)mode.intValue;
+
+			EditorGUI.BeginChangeCheck();
+			EditorGUILayout.PropertyField(mode);
+
+			OmniDebuggerLockMode current = (OmniDebuggerLockMode)mode.intValue;
+
+			if (EditorGUI.EndChangeCheck() &&
+				previous != OmniDebuggerLockMode.None &&
+				current != OmniDebuggerLockMode.None &&
+				previous != current)
+			{
+				ClearSecret(hash, salt, pinLength);
+			}
+
+			if (current == OmniDebuggerLockMode.None)
+			{
+				EditorGUILayout.LabelField("Off: the panel opens without asking.", EditorStyles.miniLabel);
+				return;
+			}
+
+			bool pin = current == OmniDebuggerLockMode.Pin;
+			string noun = pin ? "PIN" : "password";
+			bool hasSecret = !string.IsNullOrEmpty(hash.stringValue) && !string.IsNullOrEmpty(salt.stringValue);
+
+			if (hasSecret)
+			{
+				EditorGUILayout.LabelField(" ", $"A {noun} is set. Only its salted hash is stored.", EditorStyles.miniLabel);
+			}
+			else
+			{
+				EditorGUILayout.HelpBox($"No {noun} is set, so the panel opens without asking.", MessageType.Warning);
+			}
+
+			DrawSecretInput(hash, salt, pinLength, pin, noun, hasSecret);
+
+			if (!string.IsNullOrEmpty(_secretError))
+			{
+				EditorGUILayout.HelpBox(_secretError, MessageType.Error);
+			}
+
+			DrawField(lockOptions, UnlockScopeField);
+			DrawField(lockOptions, SkipInEditorField);
+
+			SerializedProperty maxAttempts = lockOptions.FindPropertyRelative(MaxAttemptsField);
+			EditorGUILayout.PropertyField(maxAttempts);
+
+			using (new EditorGUI.DisabledScope(maxAttempts.intValue <= 0))
+			{
+				DrawField(lockOptions, CooldownSecondsField);
+			}
+
+			EditorGUILayout.HelpBox(
+				"Only the runtime panel asks; the editor window never does. The hash ships with the build, so " +
+				"this keeps testers and players out by accident, not a determined attacker: a short PIN is " +
+				"quick to guess from it.",
+				MessageType.Info);
+		}
+
+		private static void DrawSecretInput(
+			SerializedProperty hash,
+			SerializedProperty salt,
+			SerializedProperty pinLength,
+			bool pin,
+			string noun,
+			bool hasSecret)
+		{
+			Rect row = EditorGUILayout.GetControlRect();
+			float buttons = (SecretButtonWidth + ShortcutDrawer.Spacing) * 2.0f;
+			Rect field = new Rect(row.x, row.y, row.width - buttons, row.height);
+			Rect set = new Rect(field.xMax + ShortcutDrawer.Spacing, row.y, SecretButtonWidth, row.height);
+			Rect clear = new Rect(set.xMax + ShortcutDrawer.Spacing, row.y, SecretButtonWidth, row.height);
+
+			GUIContent label = new GUIContent(
+				pin ? "New PIN" : "New Password",
+				pin
+					? $"{OmniDebuggerLockOptions.MinPinLength} to {OmniDebuggerLockOptions.MaxPinLength} digits."
+					: "Any characters.");
+
+			_secretInput = EditorGUI.PasswordField(field, label, _secretInput ?? string.Empty);
+
+			if (GUI.Button(set, _setSecretContent, EditorStyles.miniButton))
+			{
+				SetSecret(hash, salt, pinLength, pin, noun);
+			}
+
+			using (new EditorGUI.DisabledScope(!hasSecret))
+			{
+				if (GUI.Button(clear, _clearSecretContent, EditorStyles.miniButton))
+				{
+					ClearSecret(hash, salt, pinLength);
+				}
+			}
+		}
+
+		private static void SetSecret(
+			SerializedProperty hash,
+			SerializedProperty salt,
+			SerializedProperty pinLength,
+			bool pin,
+			string noun)
+		{
+			string secret = _secretInput ?? string.Empty;
+
+			if (secret.Length == 0)
+			{
+				_secretError = $"Type a {noun} first.";
+				return;
+			}
+
+			if (pin && !LockSecret.IsValidPin(secret))
+			{
+				_secretError =
+					$"A PIN takes {OmniDebuggerLockOptions.MinPinLength} to {OmniDebuggerLockOptions.MaxPinLength} digits and nothing else.";
+				return;
+			}
+
+			string newSalt = LockSecret.CreateSalt();
+			salt.stringValue = newSalt;
+			hash.stringValue = LockSecret.Hash(secret, newSalt);
+			pinLength.intValue = pin ? secret.Length : 0;
+
+			_secretInput = string.Empty;
+			_secretError = null;
+			GUI.FocusControl(null);
+		}
+
+		private static void ClearSecret(SerializedProperty hash, SerializedProperty salt, SerializedProperty pinLength)
+		{
+			hash.stringValue = string.Empty;
+			salt.stringValue = string.Empty;
+			pinLength.intValue = 0;
+			_secretInput = string.Empty;
+			_secretError = null;
+			GUI.FocusControl(null);
 		}
 
 		private static void DrawHeader(string title)

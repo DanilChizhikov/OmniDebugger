@@ -36,6 +36,7 @@ OmniDebuggerPanel.Create(_debugger);
 - [The Panel](#the-panel)
     - [At Runtime](#at-runtime)
     - [Opening It](#opening-it)
+    - [Locking It](#locking-it)
     - [Tabs](#tabs)
     - [Floating Windows](#floating-windows)
     - [Command Icons](#command-icons)
@@ -337,6 +338,23 @@ To bind a shortcut, press *Add Shortcut*, click the new field, hold the keys and
 removes the row. Shortcuts are `KeyCode`s whichever input backend runs: the Input System package is used when it is
 installed and active, the legacy Input Manager otherwise. Shift, Ctrl, Alt and Cmd/Win match either side of the
 keyboard. Nothing is required: with neither backend, shortcuts stay silent and the button still works.
+
+### Locking It
+
+Panel settings → *Lock* makes the runtime panel ask for a PIN or a password before it shows. Every way in — the
+button, a shortcut, `Open()` and *Open On Start* — goes through the prompt; the editor window never asks.
+
+| Option | What it does |
+|---|---|
+| `Lock.Mode` | `None`, `Pin` — 4 to 12 digits on the panel's own keypad (a hardware keyboard types too), or `Password` — any characters in a masked field |
+| *New PIN / New Password* → *Set* | Stores a salted SHA-256 hash of what was typed; *Clear* forgets it. From code: `Lock.SetSecret("1234")` / `Lock.ClearSecret()` |
+| `Lock.UnlockScope` | `EveryOpen` asks each time, `Session` once until the app restarts, `Device` once on this device until the secret changes |
+| `Lock.SkipInEditor` | On by default: play mode in the editor opens without asking |
+| `Lock.MaxAttempts` / `Lock.CooldownSeconds` | After 5 wrong entries in a row the prompt pauses for 30 seconds; 0 attempts never pauses |
+
+Neither the project settings nor a build hold the secret itself, only its hash. That keeps testers and players from
+wandering in, not a determined attacker: the hash ships with the build, and a short PIN is quick to guess from it.
+With a mode picked but no secret set, the panel opens without asking and the settings page warns about it.
 
 ### Tabs
 

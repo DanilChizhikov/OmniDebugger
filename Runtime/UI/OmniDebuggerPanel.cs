@@ -20,6 +20,7 @@ namespace DTech.OmniDebugger.UI
 		private const string PanelObjectName = "OmniDebugger Panel";
 
 		private readonly OmniDebuggerViewState _state = new ();
+		private readonly LockAttempts _lockAttempts = new ();
 
 		/// <summary>Whether the panel is showing.</summary>
 		public bool IsOpen => _view != null && _view.IsOpen;
@@ -28,11 +29,11 @@ namespace DTech.OmniDebugger.UI
 		public IOmniDebugger Debugger => _debugger;
 
 		/// <summary>
-		/// How the panel is scaled, skinned and opened: a copy of the project settings, read the first
+		/// How the panel is scaled, skinned, opened and locked: a copy of the project settings, read the first
 		/// time it is touched, or what <see cref="Create"/> was given. Panel settings and sorting order
 		/// are read when the panel is built, so change them before <see cref="Bind"/>. Changes to
 		/// scaling apply through <see cref="SetScale"/>, changes to the button through
-		/// <see cref="SetOpenButtonEnabled"/>; shortcuts and tap counts are read live. Unless
+		/// <see cref="SetOpenButtonEnabled"/>; shortcuts, tap counts and the lock are read live. Unless
 		/// <see cref="Create"/> was given options, play mode in the editor replaces this copy whenever the
 		/// project settings are edited, and the panel applies the edit on its next frame.
 		/// </summary>
@@ -50,11 +51,16 @@ namespace DTech.OmniDebugger.UI
 		private PanelSettings _runtimeSettings;
 		private UIDocument _ownedDocument;
 		private OmniDebuggerView _view;
+		private LockPrompt _lockPrompt;
 		private IOmniDebugger _debugger;
 
 #if OMNI_DEBUGGER_UGUI
 		private PanelInputBinding _inputBinding;
 #endif
+
+		private bool IsLockPromptShowing => _lockPrompt != null && _lockPrompt.IsShowing;
+
+		private bool IsLockRequired => Options.Lock.IsActive && !UnlockMemory.IsUnlocked(Options.Lock);
 
 		/// <summary>
 		/// Creates a panel from nothing: a new object that survives scene loads, already bound.
@@ -156,7 +162,10 @@ namespace DTech.OmniDebugger.UI
 			PanelScaling.Apply(_runtimeSettings, Options.ScaleMode, Options.Scale);
 		}
 
-		/// <summary>Shows the panel.</summary>
+		/// <summary>
+		/// Shows the panel, or first the PIN or password prompt when <see cref="OmniDebuggerPanelOptions.Lock"/>
+		/// asks for one and the panel is not unlocked yet.
+		/// </summary>
 		public void Open()
 		{
 			if (_view == null)
@@ -164,15 +173,26 @@ namespace DTech.OmniDebugger.UI
 				return;
 			}
 
-			_view.Open();
-			_gesture?.SetPanelOpen(true);
+			if (IsLockRequired)
+			{
+				ShowLockPrompt();
+				return;
+			}
+
+			OpenView();
 		}
 
-		/// <summary>Hides the panel, keeping what was typed and selected.</summary>
+		/// <summary>Hides the panel, keeping what was typed and selected. Dismisses the lock prompt too.</summary>
 		public void Close()
 		{
 			if (_view == null)
 			{
+				return;
+			}
+
+			if (IsLockPromptShowing)
+			{
+				_lockPrompt.Cancel();
 				return;
 			}
 
@@ -182,7 +202,7 @@ namespace DTech.OmniDebugger.UI
 		/// <summary>Opens the panel when it is closed, closes it when it is open.</summary>
 		public void Toggle()
 		{
-			if (IsOpen)
+			if (IsOpen || IsLockPromptShowing)
 			{
 				Close();
 			}
@@ -291,6 +311,9 @@ namespace DTech.OmniDebugger.UI
 				return;
 			}
 
+			bool openOnStart = Options.OpenOnStart && !_everBuilt;
+			bool locked = IsLockRequired;
+
 			OmniDebuggerViewSettings settings = new OmniDebuggerViewSettings(
 				document.rootVisualElement,
 				_debugger,
@@ -299,7 +322,7 @@ namespace DTech.OmniDebugger.UI
 				OmniDebuggerViewSettings.DefaultOrigin,
 				useScreenSafeArea: true,
 				showCloseButton: true,
-				startOpen: Options.OpenOnStart && !_everBuilt,
+				startOpen: openOnStart && !locked,
 				hostWindows: true);
 
 			_everBuilt = true;
@@ -319,6 +342,11 @@ namespace DTech.OmniDebugger.UI
 			}
 
 			AttachGesture();
+
+			if (openOnStart && locked)
+			{
+				ShowLockPrompt();
+			}
 		}
 
 		private void OnProjectOptionsChanged() => _projectOptionsChanged = true;
@@ -388,9 +416,55 @@ namespace DTech.OmniDebugger.UI
 
 		private void OnViewClosed() => _gesture?.SetPanelOpen(false);
 
+		private void OpenView()
+		{
+			_view.Open();
+			_gesture?.SetPanelOpen(true);
+		}
+
+		private void ShowLockPrompt()
+		{
+			if (_lockPrompt == null)
+			{
+				_lockPrompt = new LockPrompt(_view.Root, _lockAttempts);
+				_lockPrompt.OnUnlocked += OnLockUnlocked;
+				_lockPrompt.OnCancelled += OnLockCancelled;
+			}
+
+			_lockPrompt.Show(Options.Lock);
+			_gesture?.SetPanelOpen(true);
+		}
+
+		private void OnLockUnlocked()
+		{
+			UnlockMemory.Remember(Options.Lock);
+			_lockAttempts.Reset();
+
+			if (_view != null)
+			{
+				OpenView();
+			}
+		}
+
+		private void OnLockCancelled() => _gesture?.SetPanelOpen(false);
+
+		private void ReleaseLockPrompt()
+		{
+			if (_lockPrompt == null)
+			{
+				return;
+			}
+
+			_lockPrompt.OnUnlocked -= OnLockUnlocked;
+			_lockPrompt.OnCancelled -= OnLockCancelled;
+			_lockPrompt.Dispose();
+			_lockPrompt = null;
+		}
+
 		private void ReleaseView()
 		{
 			_gesture?.Detach();
+			ReleaseLockPrompt();
 
 			if (_view != null)
 			{
