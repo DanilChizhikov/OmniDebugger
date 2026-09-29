@@ -34,7 +34,7 @@ namespace DTech.OmniDebugger.UI
 		/// scaling apply through <see cref="SetScale"/>, changes to the button through
 		/// <see cref="SetOpenButtonEnabled"/>; shortcuts and tap counts are read live. Unless
 		/// <see cref="Create"/> was given options, play mode in the editor replaces this copy whenever the
-		/// project settings are edited, and the panel applies the edit at once.
+		/// project settings are edited, and the panel applies the edit on its next frame.
 		/// </summary>
 		public OmniDebuggerPanelOptions Options => _options ??= OmniDebuggerOptions.Default.Panel;
 
@@ -44,6 +44,7 @@ namespace DTech.OmniDebugger.UI
 		private OmniDebuggerPanelOptions _options;
 		private bool _optionsGiven;
 		private bool _everBuilt;
+		private bool _projectOptionsChanged;
 		private IOmniDebuggerGesture _gesture;
 		private ShortcutTrigger _shortcuts;
 		private PanelSettings _runtimeSettings;
@@ -253,6 +254,12 @@ namespace DTech.OmniDebugger.UI
 
 		private void Update()
 		{
+			if (_projectOptionsChanged)
+			{
+				_projectOptionsChanged = false;
+				Apply(OmniDebuggerOptions.Default.Panel);
+			}
+
 			if (_view == null)
 			{
 				return;
@@ -314,7 +321,7 @@ namespace DTech.OmniDebugger.UI
 			AttachGesture();
 		}
 
-		private void OnProjectOptionsChanged() => Apply(OmniDebuggerOptions.Default.Panel);
+		private void OnProjectOptionsChanged() => _projectOptionsChanged = true;
 
 		private IOmniDebuggerGesture CreateDefaultGesture() =>
 			new HoldToDragButtonGesture(Options.Open, _debugger?.Logs);
