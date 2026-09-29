@@ -93,7 +93,7 @@ namespace DTech.OmniDebugger.UI
 			StopInertia();
 
 			_pointerId = evt.pointerId;
-			_pointerStart = evt.position;
+			_pointerStart = _scroll.WorldToLocal(evt.position);
 			_pointerLast = _pointerStart;
 			_lastMoveTime = Time.realtimeSinceStartup;
 			IsDragging = false;
@@ -120,11 +120,11 @@ namespace DTech.OmniDebugger.UI
 
 			evt.StopPropagation();
 
-			Vector2 position = evt.position;
+			Vector2 position = _scroll.WorldToLocal(evt.position);
 
 			if (!IsDragging)
 			{
-				_pressed?.EnableInClassList(OmniDebuggerUiClasses.Pressed, _pressed.worldBound.Contains(position));
+				_pressed?.EnableInClassList(OmniDebuggerUiClasses.Pressed, _pressed.worldBound.Contains(evt.position));
 
 				Vector2 travel = position - _pointerStart;
 				float along = Mathf.Abs(Along(travel));
