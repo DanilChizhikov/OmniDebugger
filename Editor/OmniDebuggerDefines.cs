@@ -68,10 +68,15 @@ namespace DTech.OmniDebugger.Editor
 
 			_knownTargets = new List<NamedBuildTarget>();
 			HashSet<string> seen = new HashSet<string>(StringComparer.Ordinal);
-
-			foreach (BuildTargetGroup group in Enum.GetValues(typeof(BuildTargetGroup)))
+			foreach (FieldInfo field in typeof(BuildTargetGroup).GetFields(BindingFlags.Public | BindingFlags.Static))
 			{
-				if (group == BuildTargetGroup.Unknown || IsObsolete(group))
+				if (field.IsDefined(typeof(ObsoleteAttribute), inherit: false))
+				{
+					continue;
+				}
+
+				BuildTargetGroup group = (BuildTargetGroup)field.GetValue(null);
+				if (group == BuildTargetGroup.Unknown)
 				{
 					continue;
 				}
@@ -112,12 +117,6 @@ namespace DTech.OmniDebugger.Editor
 			}
 
 			return defines;
-		}
-
-		private static bool IsObsolete(BuildTargetGroup group)
-		{
-			FieldInfo field = typeof(BuildTargetGroup).GetField(group.ToString());
-			return field != null && field.IsDefined(typeof(ObsoleteAttribute), inherit: false);
 		}
 	}
 }
