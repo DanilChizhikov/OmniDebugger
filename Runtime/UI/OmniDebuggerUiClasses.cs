@@ -12,6 +12,7 @@ namespace DTech.OmniDebugger.UI
 		public const string HeaderTitle = "od-header__title";
 		public const string HeaderSpacer = "od-header__spacer";
 		public const string HeaderButton = "od-header__button";
+		public const string HeaderThemePicker = "od-header__theme-picker";
 
 		public const string Content = "od-content";
 		public const string TabBar = "od-tabbar";
@@ -145,6 +146,7 @@ namespace DTech.OmniDebugger.UI
 		public const string OpenButton = "od-open-button";
 		public const string OpenButtonPressed = "od-open-button--pressed";
 		public const string OpenButtonDragging = "od-open-button--dragging";
+		public const string OpenButtonLit = "od-open-button--lit";
 		public const string OpenButtonAlert = "od-open-button__alert";
 		public const string OpenButtonCorners = "od-open-button__corners";
 	}

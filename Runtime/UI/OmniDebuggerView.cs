@@ -23,8 +23,6 @@ namespace DTech.OmniDebugger.UI
 		private readonly ITabRegistry _tabRegistry;
 		private readonly OmniDebuggerViewState _state;
 		private readonly IViewPrefs _prefs;
-		private readonly OmniDebuggerTheme _fixedTheme;
-		private readonly OmniDebuggerTheme[] _fixedThemes;
 		private readonly string _origin;
 		private readonly VisualElement _host;
 		private readonly VisualElement _root;
@@ -52,6 +50,7 @@ namespace DTech.OmniDebugger.UI
 		/// <summary>The theme in use. Never null once the view is built.</summary>
 		public OmniDebuggerTheme Theme => _themes.Theme;
 
+		private ViewOrientation _orientation;
 		private bool _landscape;
 		private bool _orientationResolved;
 		private bool _disposed;
@@ -74,8 +73,6 @@ namespace DTech.OmniDebugger.UI
 			_debugger = settings.Debugger;
 			_state = settings.State ?? new OmniDebuggerViewState();
 			_prefs = settings.Prefs;
-			_fixedTheme = settings.Theme;
-			_fixedThemes = _fixedTheme == null ? null : new[] { _fixedTheme };
 			_origin = settings.Origin;
 			_catalog = _debugger.Catalog;
 			_themeRegistry = _debugger.Themes;
@@ -111,7 +108,7 @@ namespace DTech.OmniDebugger.UI
 			_panel = UiBuild.Element(OmniDebuggerUiClasses.Panel);
 			_root.Add(_panel);
 
-			_chrome = new PanelChrome(settings.ShowCloseButton);
+			_chrome = new PanelChrome(settings.ShowCloseButton, _popups);
 			_chrome.OnThemeSelected += OnThemePicked;
 			_chrome.OnCloseRequested += Close;
 			_panel.Add(_chrome.Root);
@@ -171,8 +168,7 @@ namespace DTech.OmniDebugger.UI
 
 		/// <summary>
 		/// Switches the theme and saves the choice, so a runtime panel and an editor window end up with
-		/// separate selections. Nothing is saved while the mount fixes its theme through
-		/// <see cref="OmniDebuggerViewSettings.Theme"/>.
+		/// separate selections.
 		/// </summary>
 		public void SetTheme(OmniDebuggerTheme theme)
 		{
@@ -180,11 +176,7 @@ namespace DTech.OmniDebugger.UI
 			ThrowIfDisposed();
 
 			ApplyTheme(theme ?? _themeRegistry.Default);
-
-			if (_fixedTheme == null)
-			{
-				_prefs?.SetThemeId(Theme.Id);
-			}
+			_prefs?.SetThemeId(Theme.Id);
 
 			RefreshThemePicker();
 		}
@@ -242,13 +234,25 @@ namespace DTech.OmniDebugger.UI
 			OnClosed = null;
 		}
 
-		private OmniDebuggerTheme ResolveTheme()
+		internal void SetOrientation(ViewOrientation orientation)
 		{
-			if (_fixedTheme != null)
+			MainThreadGuard.Verify(nameof(SetOrientation));
+			ThrowIfDisposed();
+
+			_orientation = orientation;
+
+			if (orientation != ViewOrientation.Auto)
 			{
-				return _fixedTheme;
+				ApplyOrientation(orientation == ViewOrientation.Landscape);
+				return;
 			}
 
+			_orientationResolved = false;
+			ResolveOrientation(_panel.layout.width, _panel.layout.height);
+		}
+
+		private OmniDebuggerTheme ResolveTheme()
+		{
 			if (_themeRegistry.TryGet(_state.ThemeId, out OmniDebuggerTheme fromState))
 			{
 				return fromState;
@@ -293,7 +297,7 @@ namespace DTech.OmniDebugger.UI
 
 		private void SaveFavorites() => _prefs?.SetFavorites(_state.Favorites.Keys);
 
-		private void RefreshThemePicker() => _chrome.SetThemes(_fixedThemes ?? _themeRegistry.All, Theme);
+		private void RefreshThemePicker() => _chrome.SetThemes(_themeRegistry.All, Theme);
 
 		private void SetOpen(bool open, bool notify)
 		{
@@ -325,12 +329,12 @@ namespace DTech.OmniDebugger.UI
 			_tabHost.SetVertical(landscape);
 		}
 
-		private void OnGeometryChanged(GeometryChangedEvent evt)
-		{
-			float width = evt.newRect.width;
-			float height = evt.newRect.height;
+		private void OnGeometryChanged(GeometryChangedEvent evt) =>
+			ResolveOrientation(evt.newRect.width, evt.newRect.height);
 
-			if (width <= 0.0f || height <= 0.0f)
+		private void ResolveOrientation(float width, float height)
+		{
+			if (_orientation != ViewOrientation.Auto || !(width > 0.0f) || !(height > 0.0f))
 			{
 				return;
 			}
@@ -380,7 +384,20 @@ namespace DTech.OmniDebugger.UI
 
 		private void OnThemePicked(OmniDebuggerTheme theme) => SetTheme(theme);
 
-		private void OnThemesChanged() => RefreshThemePicker();
+		private void OnThemesChanged()
+		{
+			bool follows = !_themeRegistry.TryGet(Theme.Id, out _) || !IsThemeChosen();
+
+			if (follows && !ReferenceEquals(Theme, _themeRegistry.Default))
+			{
+				ApplyTheme(_themeRegistry.Default);
+			}
+
+			RefreshThemePicker();
+		}
+
+		private bool IsThemeChosen() =>
+			_prefs == null || (_prefs.TryGetThemeId(out string id) && _themeRegistry.TryGet(id, out _));
 
 		private void OnTabsChanged() => _tabHost.Rebuild();
 

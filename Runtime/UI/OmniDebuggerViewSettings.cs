@@ -30,13 +30,6 @@ namespace DTech.OmniDebugger.UI
 		public OmniDebuggerViewState State { get; }
 
 		/// <summary>
-		/// Fixes the panel to this theme: the theme switcher is hidden and no choice is saved. Null
-		/// lets the user pick from <see cref="IThemeRegistry.All"/>, starting from the last saved
-		/// choice and then <see cref="IThemeRegistry.Default"/>.
-		/// </summary>
-		public OmniDebuggerTheme Theme { get; }
-
-		/// <summary>
 		/// Value put into <see cref="InvocationRequest.Origin"/>, so the log says which panel ran a
 		/// command. Defaults to <see cref="DefaultOrigin"/>.
 		/// </summary>
@@ -69,13 +62,12 @@ namespace DTech.OmniDebugger.UI
 			VisualElement root,
 			IOmniDebugger debugger,
 			OmniDebuggerViewState state = null,
-			OmniDebuggerTheme theme = null,
 			string origin = null,
 			bool useScreenSafeArea = false,
 			bool showCloseButton = false,
 			bool startOpen = false,
 			bool hostWindows = false)
-			: this(root, debugger, state, null, theme, origin, useScreenSafeArea, showCloseButton, startOpen, hostWindows)
+			: this(root, debugger, state, null, origin, useScreenSafeArea, showCloseButton, startOpen, hostWindows)
 		{
 		}
 
@@ -84,7 +76,6 @@ namespace DTech.OmniDebugger.UI
 			IOmniDebugger debugger,
 			OmniDebuggerViewState state,
 			IViewPrefs prefs,
-			OmniDebuggerTheme theme = null,
 			string origin = null,
 			bool useScreenSafeArea = false,
 			bool showCloseButton = false,
@@ -95,7 +86,6 @@ namespace DTech.OmniDebugger.UI
 			Debugger = debugger;
 			State = state;
 			Prefs = prefs;
-			Theme = theme;
 			_origin = origin;
 			UseScreenSafeArea = useScreenSafeArea;
 			ShowCloseButton = showCloseButton;

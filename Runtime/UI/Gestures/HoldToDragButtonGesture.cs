@@ -9,16 +9,18 @@ namespace DTech.OmniDebugger.UI
 		private const long UnlockDelayMs = 1000;
 		private const long ErrorPollMs = 250;
 		private const long PulseFrameMs = 16;
+		private const long MinLitMs = 150;
 		private const float DragThreshold = 9.0f;
 		private const float EdgePadding = 9.0f;
 		private const float PulsePeriod = 0.55f;
 		private const float PulseMinOpacity = 0.45f;
 		private const float PulseDuration = 60.0f;
+		private const float LitOpacity = 1.0f;
 
-		private readonly OmniDebuggerOpenOptions _options;
 		private readonly ILogFeed _logs;
 		private readonly ClickSeries _clicks = new ();
 
+		private OmniDebuggerOpenOptions _options;
 		private VisualElement _root;
 		private VisualElement _button;
 		private VisualElement _alert;
@@ -27,6 +29,7 @@ namespace DTech.OmniDebugger.UI
 		private IVisualElementScheduledItem _unlock;
 		private IVisualElementScheduledItem _errorPoll;
 		private IVisualElementScheduledItem _pulse;
+		private IVisualElementScheduledItem _unlit;
 
 		private Vector2 _normalized;
 		private Vector2 _pointerStart;
@@ -37,8 +40,10 @@ namespace DTech.OmniDebugger.UI
 		private bool _unlocked;
 		private bool _dragging;
 		private bool _panelOpen;
+		private bool _lit;
 		private long _seenErrors;
 		private float _pulseStart;
+		private float _pressStart;
 
 		public HoldToDragButtonGesture(OmniDebuggerOpenOptions options, ILogFeed logs)
 		{
@@ -98,6 +103,7 @@ namespace DTech.OmniDebugger.UI
 			}
 
 			SetPanelOpen(_panelOpen);
+			RefreshOpacity();
 			Place();
 		}
 
@@ -116,6 +122,7 @@ namespace DTech.OmniDebugger.UI
 			{
 				StopAlert();
 				ResetPress();
+				SetLit(false);
 			}
 		}
 
@@ -141,10 +148,12 @@ namespace DTech.OmniDebugger.UI
 			_unlock?.Pause();
 			_errorPoll?.Pause();
 			_pulse?.Pause();
+			_unlit?.Pause();
 
 			_unlock = null;
 			_errorPoll = null;
 			_pulse = null;
+			_unlit = null;
 			_button = null;
 			_alert = null;
 			_corners = null;
@@ -154,7 +163,22 @@ namespace DTech.OmniDebugger.UI
 			_pressedInside = false;
 			_unlocked = false;
 			_dragging = false;
+			_lit = false;
 			_clicks.Reset();
+		}
+
+		internal void SetOptions(OmniDebuggerOpenOptions options)
+		{
+			OpenButtonAnchor anchor = _options.ButtonAnchor;
+			_options = options ?? new OmniDebuggerOpenOptions();
+
+			if (_hasPosition && anchor != _options.ButtonAnchor)
+			{
+				_normalized = GetDefaultPosition();
+				Place();
+			}
+
+			RefreshOpacity();
 		}
 
 		private static Vector2 FromNormalized(Vector2 normalized, Rect bounds) =>
@@ -178,9 +202,11 @@ namespace DTech.OmniDebugger.UI
 			_pressedInside = true;
 			_unlocked = false;
 			_dragging = false;
+			_pressStart = Time.realtimeSinceStartup;
 
 			_button.CapturePointer(_pointerId);
 			_button.AddToClassList(OmniDebuggerUiClasses.OpenButtonPressed);
+			SetLit(true);
 
 			_unlock?.Pause();
 			_unlock = _button.schedule.Execute(UnlockDrag).StartingIn(UnlockDelayMs);
@@ -205,6 +231,7 @@ namespace DTech.OmniDebugger.UI
 				{
 					_pressedInside = inside;
 					_button.EnableInClassList(OmniDebuggerUiClasses.OpenButtonPressed, inside);
+					SetLit(inside);
 				}
 
 				if (!inside)
@@ -318,6 +345,52 @@ namespace DTech.OmniDebugger.UI
 			_button.RemoveFromClassList(OmniDebuggerUiClasses.OpenButtonPressed);
 			_button.RemoveFromClassList(OmniDebuggerUiClasses.OpenButtonDragging);
 			_corners.Hide();
+			ReleaseLit();
+		}
+
+		private void SetLit(bool lit)
+		{
+			_unlit?.Pause();
+			_lit = lit;
+
+			if (_button == null)
+			{
+				return;
+			}
+
+			_button.EnableInClassList(OmniDebuggerUiClasses.OpenButtonLit, lit);
+			RefreshOpacity();
+		}
+
+		private void ReleaseLit()
+		{
+			if (!_lit)
+			{
+				RefreshOpacity();
+				return;
+			}
+
+			long elapsedMs = (long)((Time.realtimeSinceStartup - _pressStart) * 1000.0f);
+			long restMs = MinLitMs - elapsedMs;
+
+			if (restMs <= 0)
+			{
+				SetLit(false);
+				return;
+			}
+
+			_unlit?.Pause();
+			_unlit = _button.schedule.Execute(Unlight).StartingIn(restMs);
+		}
+
+		private void Unlight() => SetLit(false);
+
+		private void RefreshOpacity()
+		{
+			if (_button != null)
+			{
+				_button.style.opacity = _lit || _unlocked ? LitOpacity : _options.ButtonOpacity;
+			}
 		}
 
 		private void UnlockDrag()
@@ -331,6 +404,7 @@ namespace DTech.OmniDebugger.UI
 			_clicks.Reset();
 			_button.AddToClassList(OmniDebuggerUiClasses.OpenButtonDragging);
 			_corners.Show();
+			RefreshOpacity();
 		}
 
 		private void PollErrors()
@@ -435,12 +509,20 @@ namespace DTech.OmniDebugger.UI
 		{
 			switch (_options.ButtonAnchor)
 			{
-				case OpenButtonAnchor.Left:
-					return new Vector2(0.0f, 0.5f);
+				case OpenButtonAnchor.TopLeft:
+					return new Vector2(0.0f, 0.0f);
 				case OpenButtonAnchor.Top:
 					return new Vector2(0.5f, 0.0f);
+				case OpenButtonAnchor.TopRight:
+					return new Vector2(1.0f, 0.0f);
+				case OpenButtonAnchor.Left:
+					return new Vector2(0.0f, 0.5f);
+				case OpenButtonAnchor.BottomLeft:
+					return new Vector2(0.0f, 1.0f);
 				case OpenButtonAnchor.Bottom:
 					return new Vector2(0.5f, 1.0f);
+				case OpenButtonAnchor.BottomRight:
+					return new Vector2(1.0f, 1.0f);
 				default:
 					return new Vector2(1.0f, 0.5f);
 			}

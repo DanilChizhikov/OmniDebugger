@@ -269,22 +269,41 @@ private void OnDestroy() => _debugger?.Dispose();
 #endif
 ```
 
-Pass `OmniDebuggerOptions` to change how it looks and opens:
+How it looks and opens is set in **Project Settings → DTech → OmniDebugger → Panel**. The page shows up while
+`OMNI_DEBUGGER` is on for the active build target:
+
+| Section | Options |
+|---|---|
+| Startup | `CreatePanel`, `OpenOnStart` |
+| Scaling and Layering | `ScaleMode`, `Scale`, `SortingOrder`, `PanelSettings` (left empty, the shipped asset is cloned, never edited) |
+| Open Button | `ButtonEnabled` (*Open Button Enabled*), `ButtonClicks`, `MultiClickWindow`, `ButtonAnchor`, `ButtonOpacity` |
+| Shortcuts | `Shortcuts` |
+| Themes | `DefaultTheme`, extra `Themes` |
+| Icons | `IconCatalogs` |
+
+The settings live in `ProjectSettings/OmniDebuggerSettings.asset`: versioned with the project, nothing added to
+`Assets`. Play mode reads them live: a debugger built without options in code, and its panel, pick up every edit
+made on the page while the game runs. A build gets a snapshot — right before it
+starts, the settings are written to a generated `Resources` asset, which is deleted again once the build is done.
+That only happens while `OMNI_DEBUGGER` is on for the target, so a release build carries neither the settings nor
+the themes, catalogs and panel settings they point at.
+
+`new OmniDebugger()` reads these settings, and so does `OmniDebuggerOptions.Default`, which hands out a copy — change
+a few values in code and pass it on:
 
 ```csharp
-OmniDebuggerOptions options = new OmniDebuggerOptions();
-options.Panel.ScaleMode = OmniDebuggerScaleMode.ScreenSize;   // Auto, ScreenSize or PhysicalSize
-options.Panel.Scale = 1.2f;
-options.Panel.Open.ButtonClicks = 3;                             // three taps in a row open it
+OmniDebuggerOptions options = OmniDebuggerOptions.Default;       // the project settings, copied
 options.Panel.Open.Shortcuts.Add(new OmniDebuggerShortcut(KeyCode.LeftControl, KeyCode.BackQuote));
 
 _debugger = new OmniDebugger(options);
 ```
 
+Options passed to the debugger replace the project settings as a whole — later edits to the page no longer reach it;
+`new OmniDebuggerOptions()` starts from the package's built-in defaults instead.
+
 Set `CreatePanel = false` to build the panel yourself instead: drop `OmniDebuggerPanel` on a GameObject and call
-`Bind(debugger)`. Its inspector carries the same options. Everything else on the component is optional: leave the
-`UIDocument` empty and one is created, leave the panel settings empty and the shipped asset is cloned (never
-edited).
+`Bind(debugger)`. The component has no options of its own — it reads the same project settings, and code can change
+`panel.Options` before binding. Its `UIDocument` is optional: leave it empty and one is created.
 
 **Scaling.** Every size is written for a portrait phone 360 units wide. `ScreenSize` scales that with the screen,
 so the panel looks the same on every phone and leans towards the height in landscape instead of tripling in size.
@@ -303,18 +322,21 @@ EventSystem and creating a new one does not leave it deaf to taps.
 
 | Way in | Configured by |
 |---|---|
-| The floating button — tap it, or tap it `ButtonClicks` times in a row | `Open.ShowButton`, `Open.ButtonClicks`, `Open.MultiClickWindow`, `Open.ButtonAnchor` |
-| A keyboard shortcut — one key, or a chord that fires when its last key goes down; each toggles the panel | `Open.Shortcuts` |
+| The floating button — tap it, or tap it `ButtonClicks` times in a row | Panel settings → *Open Button* (`Open.ButtonEnabled`, `Open.ButtonClicks`, `Open.MultiClickWindow`, `Open.ButtonAnchor`, `Open.ButtonOpacity`) |
+| A keyboard shortcut — one key, or a chord that fires when its last key goes down; each toggles the panel | Panel settings → *Shortcuts* (`Open.Shortcuts`) |
 | Code | `OmniDebuggerPanel.Open()` / `Close()` / `Toggle()` |
 
+It starts at the corner or edge `ButtonAnchor` names, at `ButtonOpacity` (0.4 by default), and lights up — full
+opacity, accent border — on every tap, so a series of taps shows each one landed.
 Hold the button for a second and corner brackets slide out: now it can be dragged. It stays where it was dropped
 for the session, and inside the safe area when the screen turns. It blinks red for a minute whenever an error is logged, until
-it is tapped. Hide it at runtime with `SetOpenButtonVisible(false)`, or replace it with
+it is tapped. Hide it at runtime with `SetOpenButtonEnabled(false)`, or replace it with
 `SetGesture(IOmniDebuggerGesture)`.
 
-Shortcuts are `KeyCode`s whichever input backend runs: the Input System package is used when it is installed and
-active, the legacy Input Manager otherwise. Nothing is required: with neither, shortcuts stay silent and the
-button still works.
+To bind a shortcut, press *Add Shortcut*, click the new field, hold the keys and release them; `Esc` cancels and `×`
+removes the row. Shortcuts are `KeyCode`s whichever input backend runs: the Input System package is used when it is
+installed and active, the legacy Input Manager otherwise. Shift, Ctrl, Alt and Cmd/Win match either side of the
+keyboard. Nothing is required: with neither backend, shortcuts stay silent and the button still works.
 
 ### Tabs
 
@@ -352,7 +374,7 @@ public void AddCoins(int amount) { … }
 
 `Resources` keys load a sprite or texture from a `Resources` folder. `Catalog` keys are looked up in
 `OmniDebuggerIconCatalog` assets (**Create → DTech → OmniDebugger → Icon Catalog**) found in a
-`Resources/OmniDebugger` folder or passed to `debugger.Icons.AddCatalog`. Register an
+`Resources/OmniDebugger` folder, listed under *Icons* in the Panel settings, or passed to `debugger.Icons.AddCatalog`. Register an
 `IOmniDebuggerIconProvider` to serve icons from anywhere else.
 
 ### In the Editor
@@ -361,7 +383,14 @@ public void AddCoins(int amount) { … }
 debugger — every `OmniDebugger` announces itself on construction.
 
 The window saves its theme and favourites in `EditorPrefs` while the game saves its own in `PlayerPrefs`, so the
-two never move each other. Floating windows and pins belong to the runtime panel only.
+two never move each other. The window's theme can also be picked in **Project Settings → DTech → OmniDebugger → UI**. Floating windows and pins belong to the runtime panel only.
+
+The same page sets how the window shows the panel, per user in `EditorPrefs` and live:
+
+- **Layout** — *Auto* follows the window's shape (tabs on top while it is taller than wide, in a sidebar otherwise);
+  *Portrait* and *Landscape* keep one layout whatever the shape.
+- **Zoom** — the panel is scaled to fit the window the way `ScreenSize` scales it on a device; 1 is the size it has
+  on a phone as big as the window, lower is smaller and fits more.
 
 ## Themes
 
@@ -382,11 +411,19 @@ set underneath is always complete, a theme that redefines one variable is perfec
 ```
 
 1. **Create → DTech → OmniDebugger → Theme**, name it, drag the `.uss` into *Style Sheets*.
-2. Put the asset in any `Resources/OmniDebugger` folder, or call `debugger.Themes.Register(theme)`.
-3. The theme button in the panel's header steps through it, and the editor window's settings list it. No code.
+2. Set it as *Default Theme* or list it under *Themes* in the Panel settings, or call
+   `debugger.Themes.Register(theme)`.
+3. The panel's header offers it, and the editor window's settings list it. No code.
 
-Assigning a theme on `OmniDebuggerPanel` (`Options.Theme`) fixes the runtime panel to it instead: the built-in
-themes are no longer offered, the theme button is hidden and no choice is saved.
+What the header offers depends on what is set:
+
+| Set | Themes offered | Switcher |
+|---|---|---|
+| Nothing | built-in Dark and Light | one button toggling the two |
+| *Default Theme* only | that theme alone | hidden |
+| *Themes* (or `Register`), with or without *Default Theme* | built-in Dark and Light, the listed ones and the default | dropdown, starting from *Default Theme* |
+
+The package's `Example/Themes/ExampleSunsetTheme` is a ready-made theme to try either way.
 
 Every colour, spacing, radius, font size and metric the panel draws with is a `--od-*` variable; the full list is
 in `Runtime/UI/Resources/OmniDebugger/OmniDebuggerTokensDark.uss`. Want a light base? List the package's
@@ -439,7 +476,8 @@ command stays runnable when that argument is optional.
 
 ## Code Stripping
 
-OmniDebugger does not generate a `link.xml` and does not hook the build pipeline.
+OmniDebugger does not generate a `link.xml`. Its only build hook copies the project settings into the build (see
+[At Runtime](#at-runtime)).
 
 Usually nothing is needed: you pass a source *instance* to `AddSource`, so your own code references the type and
 the managed stripper keeps it. Two cases do need a hint:

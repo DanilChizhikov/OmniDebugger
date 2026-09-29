@@ -48,6 +48,35 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		}
 
 		[Test]
+		public void ShortcutTrigger_ModifierMatchesEitherSide()
+		{
+			FakeInput input = new FakeInput();
+			ShortcutTrigger trigger = new ShortcutTrigger(input);
+			List<OmniDebuggerShortcut> shortcuts = new List<OmniDebuggerShortcut>
+			{
+				new OmniDebuggerShortcut(KeyCode.LeftControl, KeyCode.D),
+			};
+
+			input.Hold(KeyCode.RightControl, pressedNow: false);
+			input.Hold(KeyCode.D, pressedNow: true);
+			Assert.That(trigger.Poll(shortcuts), Is.True, "right Ctrl stands in for left Ctrl");
+		}
+
+		[Test]
+		public void ShortcutTrigger_OtherKeysHaveNoStandIn()
+		{
+			FakeInput input = new FakeInput();
+			ShortcutTrigger trigger = new ShortcutTrigger(input);
+			List<OmniDebuggerShortcut> shortcuts = new List<OmniDebuggerShortcut>
+			{
+				new OmniDebuggerShortcut(KeyCode.Return),
+			};
+
+			input.Hold(KeyCode.KeypadEnter, pressedNow: true);
+			Assert.That(trigger.Poll(shortcuts), Is.False);
+		}
+
+		[Test]
 		public void ClickSeries_NeedsTheWholeSeriesWithinTheWindow()
 		{
 			ClickSeries series = new ClickSeries();
@@ -74,6 +103,16 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 
 			options.ButtonClicks = 99;
 			Assert.That(options.ButtonClicks, Is.EqualTo(OmniDebuggerOpenOptions.MaxButtonClicks));
+		}
+
+		[Test]
+		public void OpenOptions_ClampTheButtonOpacity()
+		{
+			OmniDebuggerOpenOptions options = new OmniDebuggerOpenOptions { ButtonOpacity = 0.0f };
+			Assert.That(options.ButtonOpacity, Is.EqualTo(OmniDebuggerOpenOptions.MinButtonOpacity));
+
+			options.ButtonOpacity = 2.0f;
+			Assert.That(options.ButtonOpacity, Is.EqualTo(1.0f));
 		}
 
 		private sealed class FakeInput : IInputBackend

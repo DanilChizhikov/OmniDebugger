@@ -33,7 +33,8 @@ Initial release.
 - UI Toolkit panel: one `OmniDebuggerView` mounted either over the running game or by
   `Window → DTech → OmniDebugger`. `new OmniDebugger()` builds the runtime panel itself in play mode and
   destroys it on `Dispose`; `OmniDebuggerOptions` configures it, and `CreatePanel = false` hands the job to an
-  `OmniDebuggerPanel` component. Tabs sit on top in portrait and in a sidebar in landscape; cards flow into two
+  `OmniDebuggerPanel` component, which carries no options of its own and reads the project settings too. Tabs
+  sit on top in portrait and in a sidebar in landscape; cards flow into two
   columns when there is room; the header paints the notch.
 - Scaling: `OmniDebuggerScaleMode.ScreenSize` (360-unit-wide reference, leaning to height in landscape),
   `PhysicalSize` (96 DPI), or `Auto` by platform, times a `Scale` multiplier.
@@ -44,9 +45,10 @@ Initial release.
   capped storage, `[Tag]` parsing and id-based paging.
 - Floating windows through `IOmniDebugger.Windows` (custom content or a list of commands), shown while the panel
   is closed, draggable and collapsible, plus a built-in Pinned window.
-- Open button: tap (or a configurable series of taps), hold one second to drag with animated corner brackets,
-  position kept for the session, blinks on new errors. Keyboard shortcuts (single keys or chords) toggle the panel under
-  either input backend.
+- Open button: tap (or a configurable series of taps), lights up on every tap, hold one second to drag with animated
+  corner brackets, position kept for the session, blinks on new errors. Starts at any corner or edge middle, with a
+  configurable resting opacity. Keyboard shortcuts (single keys or chords, modifiers on either side) toggle the panel
+  under either input backend, and are bound in Project Settings by pressing the keys.
 - `[DebugIcon]` with Resources, `OmniDebuggerIconCatalog` and `IOmniDebuggerIconProvider` lookups;
   `CommandDefinition.Tags` and `CommandDefinition.Icon`.
 - Enum arguments pick from a list in the panel's own popup layer.
@@ -54,19 +56,27 @@ Initial release.
   a press only becomes a drag past a small threshold, so buttons under it still take a tap.
 - The panel keeps its input object alive across an EventSystem being destroyed and recreated.
 - Themes as `OmniDebuggerTheme` assets holding plain `.uss` sheets, applied after the panel's own skin so a
-  theme that redefines a single `--od-*` variable wins. Dark and light are built in; anything dropped into a
-  `Resources/OmniDebugger` folder is offered too, and `IOmniDebugger.Themes.Register` covers themes built at
-  runtime. The theme and favourites are the only choices the panel saves: the editor window keeps them in
-  `EditorPrefs` and the game in `PlayerPrefs`, so the two are independent. A theme assigned in
-  `OmniDebuggerPanelOptions.Theme` fixes the panel to it and hides the switcher. Pins, the open tab and group, and
-  the open button position last for the session only.
+  theme that redefines a single `--od-*` variable wins. Dark and light are built in and switched with one
+  button. `OmniDebuggerOptions.DefaultTheme` alone replaces both and hides the switcher; themes listed in
+  `OmniDebuggerOptions.Themes` or added through `IOmniDebugger.Themes.Register` are offered next to the built-in
+  ones in a dropdown, starting from the default theme. The theme and favourites are the only choices the panel
+  saves: the editor window keeps them in `EditorPrefs` and the game in `PlayerPrefs`, so the two are
+  independent. Pins, the open tab and group, and the open button position last for the session only.
 - Extension seams: `IOmniDebuggerTabFactory` / `IOmniDebugger.Tabs` for additional tabs,
   `IArgumentFieldHandler` / `IOmniDebugger.Fields` for additional argument types, `IOmniDebuggerGesture` for how the
   panel is opened on a device.
-- `Project Settings → DTech → OmniDebugger → UI` for the editor window's default theme.
+- `Project Settings → DTech → OmniDebugger → Panel` for every panel option: startup, scaling and sorting order,
+  panel settings, the open button, shortcuts, the default theme and extra themes, and icon catalogs kept outside
+  `Resources`. Stored in `ProjectSettings/OmniDebuggerSettings.asset`; `new OmniDebugger()` and
+  `OmniDebuggerOptions.Default` read a copy of it. Play mode reads it live, and a debugger built without options in
+  code — with its panel — applies every edit at once; a build gets a snapshot written to a
+  generated `Resources` asset just before the build and deleted after it, and only while `OMNI_DEBUGGER` is on for
+  the target.
+- `Project Settings → DTech → OmniDebugger → UI` for the editor window's theme, layout (auto, portrait or landscape)
+  and zoom; the window scales the panel to fit itself the way `ScreenSize` does on a device.
 - EditMode test suite covering scanning, the catalog, invocation, argument binding, search, group and command
-  ordering, argument-array building, theme discovery, view state, log storage and tags, shortcuts and tap
-  series, favourites and pins, the window registry, scaling and options.
+  ordering, argument-array building, theme selection, view state, log storage and tags, shortcuts and tap
+  series, favourites and pins, the window registry, scaling, options and their project-settings copies.
 
 ### Notes
 - No package dependencies. No UniTask, no Newtonsoft. The Input System package and uGUI are used when present

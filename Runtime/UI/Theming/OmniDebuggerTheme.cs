@@ -32,6 +32,8 @@ namespace DTech.OmniDebugger.UI
 		/// </summary>
 		public IReadOnlyList<StyleSheet> StyleSheets => _styleSheets ??= new ();
 
+		internal bool IsBuiltIn { get; private set; }
+
 		[SerializeField] private string _id;
 		[SerializeField] private string _displayName;
 		[SerializeField] private int _sortOrder = CommandDefinition.DefaultSortOrder;
@@ -41,6 +43,13 @@ namespace DTech.OmniDebugger.UI
 		public override string ToString() => DisplayName;
 
 		internal static OmniDebuggerTheme CreateBuiltIn(string id, string displayName, int sortOrder, StyleSheet sheet)
+		{
+			OmniDebuggerTheme theme = Create(id, displayName, sortOrder, sheet);
+			theme.IsBuiltIn = true;
+			return theme;
+		}
+
+		internal static OmniDebuggerTheme Create(string id, string displayName, int sortOrder, StyleSheet sheet)
 		{
 			OmniDebuggerTheme theme = CreateInstance<OmniDebuggerTheme>();
 			theme.name = displayName;

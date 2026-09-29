@@ -30,6 +30,24 @@ namespace DTech.OmniDebugger.UI
 			return false;
 		}
 
+		private static KeyCode Twin(KeyCode key)
+		{
+			switch (key)
+			{
+				case KeyCode.LeftShift: return KeyCode.RightShift;
+				case KeyCode.RightShift: return KeyCode.LeftShift;
+				case KeyCode.LeftControl: return KeyCode.RightControl;
+				case KeyCode.RightControl: return KeyCode.LeftControl;
+				case KeyCode.LeftAlt: return KeyCode.RightAlt;
+				case KeyCode.RightAlt: return KeyCode.LeftAlt;
+				case KeyCode.LeftCommand: return KeyCode.RightCommand;
+				case KeyCode.RightCommand: return KeyCode.LeftCommand;
+				case KeyCode.LeftWindows: return KeyCode.RightWindows;
+				case KeyCode.RightWindows: return KeyCode.LeftWindows;
+				default: return KeyCode.None;
+			}
+		}
+
 		private bool IsTriggered(OmniDebuggerShortcut shortcut)
 		{
 			if (shortcut == null)
@@ -50,16 +68,28 @@ namespace DTech.OmniDebugger.UI
 					continue;
 				}
 
-				if (!_input.IsKeyHeld(key))
+				if (!IsHeld(key))
 				{
 					return false;
 				}
 
 				anyKey = true;
-				pressedNow |= _input.WasKeyPressed(key);
+				pressedNow |= WasPressed(key);
 			}
 
 			return anyKey && pressedNow;
+		}
+
+		private bool IsHeld(KeyCode key)
+		{
+			KeyCode twin = Twin(key);
+			return _input.IsKeyHeld(key) || (twin != KeyCode.None && _input.IsKeyHeld(twin));
+		}
+
+		private bool WasPressed(KeyCode key)
+		{
+			KeyCode twin = Twin(key);
+			return _input.WasKeyPressed(key) || (twin != KeyCode.None && _input.WasKeyPressed(twin));
 		}
 	}
 }

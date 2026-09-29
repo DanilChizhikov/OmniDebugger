@@ -17,7 +17,8 @@ namespace DTech.OmniDebugger.UI.Editor
 
 		private readonly OmniDebuggerViewState _state = new ();
 
-		private VisualElement _host;
+		private VisualElement _viewport;
+		private VisualElement _canvas;
 		private Label _waiting;
 		private OmniDebuggerView _view;
 		private IOmniDebugger _bound;
@@ -31,19 +32,33 @@ namespace DTech.OmniDebugger.UI.Editor
 			window.Show();
 		}
 
-		private void OnEnable() => OmniDebuggerViews.OnCurrentChanged += OnCurrentChanged;
+		private void OnEnable()
+		{
+			OmniDebuggerViews.OnCurrentChanged += OnCurrentChanged;
+			EditorWindowPrefs.OnChanged += OnPrefsChanged;
+		}
 
 		private void OnDisable()
 		{
 			OmniDebuggerViews.OnCurrentChanged -= OnCurrentChanged;
+			EditorWindowPrefs.OnChanged -= OnPrefsChanged;
 			ReleaseView();
 		}
 
 		private void CreateGUI()
 		{
-			_host = new VisualElement();
-			_host.style.flexGrow = 1.0f;
-			rootVisualElement.Add(_host);
+			_viewport = new VisualElement { pickingMode = PickingMode.Ignore };
+			_viewport.style.flexGrow = 1.0f;
+			_viewport.style.overflow = Overflow.Hidden;
+			_viewport.RegisterCallback<GeometryChangedEvent>(OnViewportGeometryChanged);
+			rootVisualElement.Add(_viewport);
+
+			_canvas = new VisualElement { pickingMode = PickingMode.Ignore };
+			_canvas.style.position = Position.Absolute;
+			_canvas.style.left = 0.0f;
+			_canvas.style.top = 0.0f;
+			_canvas.style.transformOrigin = new TransformOrigin(Length.Percent(0.0f), Length.Percent(0.0f));
+			_viewport.Add(_canvas);
 
 			_waiting = new Label(WaitingMessage);
 			_waiting.style.flexGrow = 1.0f;
@@ -57,12 +72,42 @@ namespace DTech.OmniDebugger.UI.Editor
 
 		private void OnCurrentChanged()
 		{
-			if (_host == null)
+			if (_canvas == null)
 			{
 				return;
 			}
 
 			Bind();
+		}
+
+		private void OnPrefsChanged()
+		{
+			UpdateCanvasScale();
+			_view?.SetOrientation(EditorWindowPrefs.Orientation);
+		}
+
+		private void OnViewportGeometryChanged(GeometryChangedEvent evt) => UpdateCanvasScale();
+
+		private void UpdateCanvasScale()
+		{
+			if (_viewport == null || _canvas == null)
+			{
+				return;
+			}
+
+			float width = _viewport.resolvedStyle.width;
+			float height = _viewport.resolvedStyle.height;
+
+			if (!(width > 0.0f) || !(height > 0.0f) || float.IsInfinity(width) || float.IsInfinity(height))
+			{
+				return;
+			}
+
+			float scale = PanelScaling.ResolveFitScale(width, height) * EditorWindowPrefs.Zoom;
+
+			_canvas.style.width = width / scale;
+			_canvas.style.height = height / scale;
+			_canvas.style.scale = new Scale(new Vector3(scale, scale, 1.0f));
 		}
 
 		private void Bind()
@@ -78,12 +123,12 @@ namespace DTech.OmniDebugger.UI.Editor
 
 			if (debugger == null)
 			{
-				_waiting.style.display = DisplayStyle.Flex;
+				SetWaiting(true);
 				return;
 			}
 
 			OmniDebuggerViewSettings settings = new OmniDebuggerViewSettings(
-				_host,
+				_canvas,
 				debugger,
 				_state,
 				EditorPrefsViewPrefs.Default,
@@ -97,12 +142,19 @@ namespace DTech.OmniDebugger.UI.Editor
 			}
 			catch (ObjectDisposedException)
 			{
-				_waiting.style.display = DisplayStyle.Flex;
+				SetWaiting(true);
 				return;
 			}
 
-			_waiting.style.display = DisplayStyle.None;
+			_view.SetOrientation(EditorWindowPrefs.Orientation);
+			SetWaiting(false);
 			_bound = debugger;
+		}
+
+		private void SetWaiting(bool waiting)
+		{
+			_waiting.style.display = waiting ? DisplayStyle.Flex : DisplayStyle.None;
+			_viewport.style.display = waiting ? DisplayStyle.None : DisplayStyle.Flex;
 		}
 
 		private void ReleaseView()

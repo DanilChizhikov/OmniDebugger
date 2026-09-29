@@ -1,11 +1,15 @@
 namespace DTech.OmniDebugger.UI
 {
-	/// <summary>The screen edge the open button starts at, centred along it.</summary>
+	/// <summary>Where the open button starts: a corner of the screen, or the middle of an edge.</summary>
 	public enum OpenButtonAnchor
 	{
-		Right = 0,
-		Left = 1,
+		TopLeft = 4,
 		Top = 2,
+		TopRight = 5,
+		Left = 1,
+		Right = 0,
+		BottomLeft = 6,
 		Bottom = 3,
+		BottomRight = 7,
 	}
 }
