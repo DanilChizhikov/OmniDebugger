@@ -37,6 +37,16 @@ namespace DTech.OmniDebugger
 			return cached;
 		}
 
+		public static MemberBinding[] GetBindingsWithoutCaching(Type type)
+		{
+			if (type == null)
+			{
+				throw new ArgumentNullException(nameof(type));
+			}
+
+			return _cache.TryGetValue(type, out MemberBinding[] cached) ? cached : Build(type);
+		}
+
 		private static MemberBinding[] Build(Type type)
 		{
 			MemberInfo[] members = type.GetMembers(ScannedMembers);

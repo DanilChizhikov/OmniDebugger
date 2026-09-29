@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using DTech.OmniDebugger.UI;
 using NUnit.Framework;
 
 namespace DTech.OmniDebugger.Tests.EditorMode
@@ -75,6 +76,30 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 
 			Assert.That(ranged.ToString(), Is.EqualTo("Single speed [0..2]"));
 			Assert.That(stepped.ToString(), Is.EqualTo("Int32 level [1..10] step 1"));
+		}
+
+		[Test]
+		public void RangedField_KeepsTheDecimalsOfAStepWrittenInExponentForm()
+		{
+			ArgumentDefinition argument = new ArgumentDefinition(
+				"precision",
+				typeof(float),
+				range: new ArgumentRange(0.0, 0.001, 0.00001));
+
+			IArgumentField field = new NumericArgumentFieldHandler().Create(
+				ArgumentFieldRequest.For(argument, null, showLabel: false));
+
+			try
+			{
+				field.SetValue(0.00003f);
+
+				Assert.That(field.TryGetValue(out object value), Is.True);
+				Assert.That((float)value, Is.EqualTo(0.00003f).Within(1e-9f), "a 1E-05 step keeps five decimals");
+			}
+			finally
+			{
+				field.Dispose();
+			}
 		}
 
 		private Dictionary<string, CommandDefinition> Scan() =>

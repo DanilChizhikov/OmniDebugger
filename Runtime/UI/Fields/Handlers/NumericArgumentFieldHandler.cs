@@ -8,6 +8,7 @@ namespace DTech.OmniDebugger.UI
 	internal sealed class NumericArgumentFieldHandler : IArgumentFieldHandler
 	{
 		private const int MaxStepDecimals = 6;
+		private const double DecimalTolerance = 1e-9;
 
 		public int Priority => 0;
 
@@ -237,15 +238,17 @@ namespace DTech.OmniDebugger.UI
 				return MaxStepDecimals;
 			}
 
-			string text = step.ToString("R", CultureInfo.InvariantCulture);
-			int point = text.IndexOf('.');
+			int decimals = 0;
+			double scaled = step;
 
-			if (point < 0 || text.IndexOf('E') >= 0)
+			while (decimals < MaxStepDecimals &&
+				Math.Abs(scaled - Math.Round(scaled)) > DecimalTolerance * Math.Max(1.0, scaled))
 			{
-				return point < 0 ? 0 : MaxStepDecimals;
+				scaled *= 10.0;
+				decimals++;
 			}
 
-			return Math.Min(MaxStepDecimals, text.Length - point - 1);
+			return decimals;
 		}
 	}
 }

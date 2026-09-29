@@ -13,6 +13,9 @@ namespace DTech.OmniDebugger
 	/// </summary>
 	public sealed class OmniDebuggerHost : IOmniDebuggerHost
 	{
+		private static readonly Version _version = new (1, 0, 0);
+		private static readonly List<OmniDebuggerHost> _alive = new ();
+
 		private readonly CommandCatalog _catalog;
 		private readonly CommandInvoker _invoker;
 		private readonly GroupOrder _groups;
@@ -31,8 +34,9 @@ namespace DTech.OmniDebugger
 		/// here from the project settings, the way the parameterless constructor builds it. Main thread only.
 		/// <para>
 		/// A debugger built here belongs to the package: in the editor it is disposed once play mode is over.
-		/// Disposing the shared debugger empties the slot, and the next read builds a fresh one. Code that must
-		/// not build one, such as <c>OnDisable</c> or <c>OnDestroy</c>, reads <see cref="TryGetShared"/> instead.
+		/// Disposing the shared debugger hands the slot to the oldest debugger still alive, or empties it, and
+		/// the next read of an empty slot builds a fresh one. Code that must not build one, such as
+		/// <c>OnDisable</c> or <c>OnDestroy</c>, reads <see cref="TryGetShared"/> instead.
 		/// </para>
 		/// </summary>
 		public static OmniDebuggerHost Shared
@@ -148,7 +152,7 @@ namespace DTech.OmniDebugger
 		/// </summary>
 		public OmniDebuggerPanel Panel => _disposed || _panel == null ? null : _panel;
 
-		internal Version Version => new Version(1, 0, 0);
+		internal Version Version => _version;
 
 		private static OmniDebuggerHost _shared;
 		private static bool _ownsShared;
@@ -216,6 +220,8 @@ namespace DTech.OmniDebugger
 				ProjectOptions.OnEditorChanged += OnProjectOptionsChanged;
 			}
 
+			_alive.Add(this);
+
 			if (_shared == null)
 			{
 				_shared = this;
@@ -243,8 +249,8 @@ namespace DTech.OmniDebugger
 		/// <summary>
 		/// Releases every registered source — MonoBehaviours included — empties every registry and
 		/// clears their <c>OnChanged</c> subscriber lists. Every member throws
-		/// <see cref="ObjectDisposedException"/> afterwards. Disposing <see cref="Shared"/> empties its
-		/// slot. Safe to call more than once.
+		/// <see cref="ObjectDisposedException"/> afterwards. Disposing <see cref="Shared"/> hands its slot
+		/// to the oldest debugger still alive, or empties it. Safe to call more than once.
 		/// </summary>
 		public void Dispose()
 		{
@@ -254,10 +260,11 @@ namespace DTech.OmniDebugger
 			}
 
 			_disposed = true;
+			_alive.Remove(this);
 
 			if (ReferenceEquals(_shared, this))
 			{
-				_shared = null;
+				_shared = _alive.Count > 0 ? _alive[0] : null;
 				_ownsShared = false;
 			}
 
@@ -292,6 +299,7 @@ namespace DTech.OmniDebugger
 		private static void ResetShared()
 		{
 			ReleaseShared();
+			_alive.Clear();
 			_shared = null;
 			_ownsShared = false;
 		}

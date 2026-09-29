@@ -55,6 +55,34 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		}
 
 		[Test]
+		public void Dispose_HandsTheSlotToTheOldestDebuggerStillAlive()
+		{
+			OmniDebuggerHost first = new OmniDebuggerHost(new RecordingLogSink());
+			OmniDebuggerHost second = new OmniDebuggerHost(new RecordingLogSink());
+			OmniDebuggerHost third = new OmniDebuggerHost(new RecordingLogSink());
+
+			try
+			{
+				first.Dispose();
+
+				Assert.That(OmniDebuggerHost.TryGetShared(out OmniDebuggerHost found), Is.True);
+				Assert.That(found, Is.SameAs(second), "no new debugger is built while one is still alive");
+
+				OmniDebuggerHost.ReleaseShared();
+
+				Assert.DoesNotThrow(() => _ = second.Catalog, "a handed-over slot still belongs to the game");
+			}
+			finally
+			{
+				third.Dispose();
+				second.Dispose();
+				first.Dispose();
+			}
+
+			Assert.That(OmniDebuggerHost.TryGetShared(out _), Is.False);
+		}
+
+		[Test]
 		public void ReleaseShared_DisposesOnlyADebuggerThePackageBuilt()
 		{
 			OmniDebuggerHost own = new OmniDebuggerHost(new RecordingLogSink());

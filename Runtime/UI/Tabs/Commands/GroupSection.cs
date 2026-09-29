@@ -19,7 +19,6 @@ namespace DTech.OmniDebugger.UI
 		private readonly List<CommandRow> _rows = new ();
 
 		private bool _expanded;
-		private bool _built;
 		private bool _disposed;
 
 		public GroupSection(
@@ -78,13 +77,7 @@ namespace DTech.OmniDebugger.UI
 			}
 
 			_disposed = true;
-
-			for (int i = 0; i < _rows.Count; i++)
-			{
-				_rows[i].Dispose();
-			}
-
-			_rows.Clear();
+			ClearRows();
 			RemoveFromHierarchy();
 		}
 
@@ -101,15 +94,22 @@ namespace DTech.OmniDebugger.UI
 			_expanded = expanded;
 			EnableInClassList(OmniDebuggerUiClasses.GroupExpanded, expanded);
 
-			if (expanded && !_built)
+			if (expanded)
 			{
 				BuildRows();
+			}
+			else
+			{
+				ClearRows();
 			}
 		}
 
 		private void BuildRows()
 		{
-			_built = true;
+			if (_rows.Count > 0)
+			{
+				return;
+			}
 
 			for (int i = 0; i < _commands.Count; i++)
 			{
@@ -118,6 +118,16 @@ namespace DTech.OmniDebugger.UI
 				_rows.Add(row);
 				_body.Add(row);
 			}
+		}
+
+		private void ClearRows()
+		{
+			for (int i = 0; i < _rows.Count; i++)
+			{
+				_rows[i].Dispose();
+			}
+
+			_rows.Clear();
 		}
 	}
 }

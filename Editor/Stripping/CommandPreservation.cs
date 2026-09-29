@@ -69,10 +69,13 @@ namespace DTech.OmniDebugger.Editor
 
 			try
 			{
-				bindings = TypeBindingCache.GetBindings(type);
+				bindings = TypeBindingCache.GetBindingsWithoutCaching(type);
 			}
-			catch (Exception)
+			catch (Exception exception)
 			{
+				UnityLogSink.Default.Warning(
+					$"The commands of {type.FullName} could not be read, so code stripping may remove them " +
+					$"({exception.GetBaseException().Message}).");
 				return;
 			}
 
