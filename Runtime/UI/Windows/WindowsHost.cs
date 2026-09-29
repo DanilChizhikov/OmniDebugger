@@ -7,9 +7,9 @@ namespace DTech.OmniDebugger.UI
 {
 	internal sealed class WindowsHost : IDisposable
 	{
-		private const float EdgePadding = 4.0f;
-		private const float StartMargin = 8.0f;
-		private const float CascadeStep = 7.0f;
+		private const float EdgePadding = 6.0f;
+		private const float StartMargin = 12.0f;
+		private const float CascadeStep = 10.0f;
 		private const string NoCommandsMessage = "No commands.";
 
 		private readonly VisualElement _layer;

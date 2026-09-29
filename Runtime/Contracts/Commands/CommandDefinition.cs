@@ -11,7 +11,7 @@ namespace DTech.OmniDebugger
 	public sealed class CommandDefinition : ISearchIndexable
 	{
 		/// <summary>Sort order applied when a command does not state one.</summary>
-		public const int DefaultSortOrder = 100;
+		public const int DefaultSortOrder = 1000;
 		
 		private static readonly ArgumentDefinition[] _noArguments = Array.Empty<ArgumentDefinition>();
 		private static readonly string[] _noTags = Array.Empty<string>();

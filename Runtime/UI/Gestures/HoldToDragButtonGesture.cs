@@ -6,15 +6,14 @@ namespace DTech.OmniDebugger.UI
 {
 	internal sealed class HoldToDragButtonGesture : IOmniDebuggerGesture
 	{
-		private const long UnlockDelayMs = 1000;
+		private const long UnlockDelayMs = 600;
 		private const long ErrorPollMs = 250;
 		private const long PulseFrameMs = 16;
 		private const long MinLitMs = 150;
-		private const float DragThreshold = 9.0f;
-		private const float EdgePadding = 9.0f;
-		private const float PulsePeriod = 0.55f;
+		private const float EdgePadding = 12.0f;
+		private const float PulsePeriod = 0.8f;
 		private const float PulseMinOpacity = 0.45f;
-		private const float PulseDuration = 60.0f;
+		private const float PulseDuration = 45.0f;
 		private const float LitOpacity = 1.0f;
 
 		private readonly ILogFeed _logs;
@@ -244,7 +243,7 @@ namespace DTech.OmniDebugger.UI
 
 			Vector2 delta = position - _pointerStart;
 
-			if (!_dragging && delta.magnitude < DragThreshold)
+			if (!_dragging && delta.magnitude < TouchSlop.Distance)
 			{
 				return;
 			}

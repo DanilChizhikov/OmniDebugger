@@ -111,6 +111,102 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			Assert.That(store.Count, Is.Zero);
 			Assert.That(store.Version, Is.GreaterThan(version));
 			Assert.That(store.ErrorCount, Is.EqualTo(1));
+			Assert.That(store.BodyCount, Is.Zero);
+		}
+
+		[Test]
+		public void Add_StoresARepeatedMessageOnce()
+		{
+			LogStore store = new LogStore();
+			store.Add(Fresh("[Net] ping"), Fresh("at Ping()"), LogType.Log, _time);
+			store.Add(Fresh("[Net] ping"), Fresh("at Ping()"), LogType.Log, _time);
+
+			List<LogRecord> records = new List<LogRecord>();
+			store.Query(default, records);
+
+			Assert.That(store.Count, Is.EqualTo(2));
+			Assert.That(store.BodyCount, Is.EqualTo(1));
+			Assert.That(records[1].Message, Is.SameAs(records[0].Message));
+			Assert.That(records[1].StackTrace, Is.SameAs(records[0].StackTrace));
+			Assert.That(records[1].Tags, Is.SameAs(records[0].Tags), "tags are parsed once per distinct message");
+			Assert.That(records[1].Id, Is.GreaterThan(records[0].Id));
+		}
+
+		[Test]
+		public void Add_KeepsMessagesThatDifferInTypeOrTruncationApart()
+		{
+			LogStore store = new LogStore();
+			string limit = new string('x', LogStore.MaxMessageLength);
+
+			store.Add(limit, string.Empty, LogType.Log, _time);
+			store.Add(limit + "tail", string.Empty, LogType.Log, _time);
+			store.Add(limit + "another tail", string.Empty, LogType.Log, _time);
+			store.Add(limit, string.Empty, LogType.Warning, _time);
+
+			Assert.That(store.Count, Is.EqualTo(4));
+			Assert.That(store.BodyCount, Is.EqualTo(3), "two cut messages that read the same share their text");
+		}
+
+		[Test]
+		public void Add_BeyondCapacity_ReleasesTextNoRecordUsesAnyMore()
+		{
+			LogStore store = new LogStore(capacity: 2);
+			store.Add(Fresh("first"), string.Empty, LogType.Log, _time);
+			store.Add(Fresh("second"), string.Empty, LogType.Log, _time);
+			store.Add(Fresh("second"), string.Empty, LogType.Log, _time);
+
+			Assert.That(Messages(store, default), Is.EqualTo(new[] { "second", "second" }));
+			Assert.That(store.BodyCount, Is.EqualTo(1));
+		}
+
+		[Test]
+		public void Add_OverTheTextBudget_DropsTheOldestButRepeatsCostNothing()
+		{
+			LogStore store = new LogStore(capacity: 100, textBudget: 10);
+			store.Add("aaaa", string.Empty, LogType.Log, _time);
+			store.Add("bbbb", string.Empty, LogType.Log, _time);
+			store.Add("cccc", string.Empty, LogType.Log, _time);
+
+			Assert.That(Messages(store, default), Is.EqualTo(new[] { "bbbb", "cccc" }));
+
+			store.Add("cccc", string.Empty, LogType.Log, _time);
+			store.Add("cccc", string.Empty, LogType.Log, _time);
+
+			Assert.That(store.Count, Is.EqualTo(4));
+			Assert.That(store.BodyCount, Is.EqualTo(2));
+		}
+
+		[Test]
+		public void Counts_StayPerRecordWhenTextIsShared()
+		{
+			LogStore store = new LogStore(capacity: 3);
+
+			for (int i = 0; i < 3; i++)
+			{
+				store.Add("[Net] retry", string.Empty, LogType.Warning, _time);
+			}
+
+			store.Add("done", string.Empty, LogType.Log, _time);
+
+			store.CountByType(out int logs, out int warnings, out int errors);
+			List<string> tags = new List<string>();
+			store.GetKnownTags(tags);
+
+			Assert.That((logs, warnings, errors), Is.EqualTo((1, 2, 0)));
+			Assert.That(tags, Is.EqualTo(new[] { "Net" }), "two records still carry the tag");
+		}
+
+		[Test]
+		public void Query_ReevaluatesSharedTextForEveryQuery()
+		{
+			LogStore store = new LogStore();
+			store.Add("[Net] ping", string.Empty, LogType.Log, _time);
+			store.Add("[Net] ping", string.Empty, LogType.Log, _time);
+			store.Add("pong", string.Empty, LogType.Log, _time);
+
+			Assert.That(Messages(store, new LogQuery(text: "ping")).Count, Is.EqualTo(2));
+			Assert.That(Messages(store, new LogQuery(text: "pong")), Is.EqualTo(new[] { "pong" }));
+			Assert.That(Messages(store, new LogQuery(tags: new[] { "Net" })).Count, Is.EqualTo(2));
 		}
 
 		private static List<string> Messages(LogStore store, LogQuery query)
@@ -119,5 +215,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			store.Query(query, records);
 			return records.ConvertAll(record => record.Message);
 		}
+
+		private static string Fresh(string text) => new string(text.ToCharArray());
 	}
 }

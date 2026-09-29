@@ -29,6 +29,14 @@ Initial release.
   folded into the bulk data once the changes add up.
 - Main-thread enforcement across the catalog, the invoker, group order, and the search index — an
   off-thread call throws `InvalidOperationException` naming the operation and the thread.
+- `OmniDebugger.Shared`: the first debugger built and not disposed yet, or — while there is none — one built on the
+  spot from the project settings and owned by the package, disposed in the editor once play mode is over.
+  `OmniDebugger.TryGetShared` reads it without building one. A debugger built next to it never replaces it and
+  warns when both put a panel on screen. `OmniDebuggerOptions.CreateOnStartup` builds it before the first scene
+  loads.
+- A `link.xml` generated for every build with `OMNI_DEBUGGER` on: every type declaring a command, kept whole by the
+  same rules the catalog registers commands with, and every enum used in a command signature. Only assemblies that
+  reference OmniDebugger are searched.
 - `Project Settings → DTech → OmniDebugger` to toggle the `OMNI_DEBUGGER` define per build target.
 - UI Toolkit panel: one `OmniDebuggerView` mounted either over the running game or by
   `Window → DTech → OmniDebugger`. `new OmniDebugger()` builds the runtime panel itself in play mode and
@@ -41,11 +49,13 @@ Initial release.
 - Built-in tabs: Info (build, device, live runtime figures), Commands (group grid with favourites, cards with
   icon, tags, description popup, pin and star), Search (debounced, optional case sensitivity), Logs (captured
   console with type/text/tag filters, copy, clear, follow mode, older pages on demand) and Windows.
-- `ILogFeed` on `IOmniDebugger.Logs`: thread-safe capture of `Application.logMessageReceivedThreaded` with
-  capped storage, `[Tag]` parsing and id-based paging.
+- `ILogFeed` on `IOmniDebugger.Logs`: thread-safe capture of `Application.logMessageReceivedThreaded`, `[Tag]`
+  parsing and id-based paging. Storage is bounded twice — 16 384 records and a budget of about 8 MB of text — and
+  a message repeated word for word is stored once, its tags parsed once, and read once per filter however many
+  records share it.
 - Floating windows through `IOmniDebugger.Windows` (custom content or a list of commands), shown while the panel
   is closed, draggable and collapsible, plus a built-in Pinned window.
-- Open button: tap (or a configurable series of taps), lights up on every tap, hold one second to drag with animated
+- Open button: tap (or a configurable series of taps), lights up on every tap, hold 0.6 seconds to drag with animated
   corner brackets, position kept for the session, blinks on new errors. Starts at any corner or edge middle, with a
   configurable resting opacity. Keyboard shortcuts (single keys or chords, modifiers on either side) toggle the panel
   under either input backend, and are bound in Project Settings by pressing the keys.
@@ -79,8 +89,9 @@ Initial release.
 - `Project Settings → DTech → OmniDebugger → UI` for the editor window's theme, layout (auto, portrait or landscape)
   and zoom; the window scales the panel to fit itself the way `ScreenSize` does on a device.
 - EditMode test suite covering scanning, the catalog, invocation, argument binding, search, group and command
-  ordering, argument-array building, theme selection, view state, log storage and tags, shortcuts and tap
-  series, favourites and pins, the window registry, scaling, options and their project-settings copies.
+  ordering, argument-array building, theme selection, view state, log storage, sharing and tags, shortcuts and tap
+  series, favourites and pins, the window registry, scaling, options and their project-settings copies, the shared
+  debugger and the generated `link.xml`.
 
 ### Notes
 - No package dependencies. No UniTask, no Newtonsoft. The Input System package and uGUI are used when present

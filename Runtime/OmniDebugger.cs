@@ -1,13 +1,15 @@
 using System;
 using System.Collections.Generic;
 using DTech.OmniDebugger.UI;
+using UnityEngine;
 
 namespace DTech.OmniDebugger
 {
 	/// <summary>
-	/// The debugger core. The game constructs it, holds it, and disposes it. In play mode it also
-	/// puts the panel on screen and takes it down again, set up as
-	/// <c>Project Settings → DTech → OmniDebugger → Panel</c> says — see <see cref="OmniDebuggerOptions"/>.
+	/// The debugger core. Either the game constructs it, holds it and disposes it, or it reads
+	/// <see cref="Shared"/> and leaves the lifetime to the package. In play mode it also puts the panel on
+	/// screen and takes it down again, set up as <c>Project Settings → DTech → OmniDebugger → Panel</c>
+	/// says — see <see cref="OmniDebuggerOptions"/>.
 	/// </summary>
 	public sealed class OmniDebugger : IOmniDebugger
 	{
@@ -22,6 +24,32 @@ namespace DTech.OmniDebugger
 		private readonly IconRegistry _icons;
 		private readonly ArgumentFieldRegistry _fields;
 		private readonly bool _followsProject;
+
+		/// <summary>
+		/// The app's debugger: the first one built and not disposed yet — by the game's code or by
+		/// <see cref="OmniDebuggerOptions.CreateOnStartup"/> — and, while there is none, a new one built right
+		/// here from the project settings, the way the parameterless constructor builds it. Main thread only.
+		/// <para>
+		/// A debugger built here belongs to the package: in the editor it is disposed once play mode is over.
+		/// Disposing the shared debugger empties the slot, and the next read builds a fresh one. Code that must
+		/// not build one, such as <c>OnDisable</c> or <c>OnDestroy</c>, reads <see cref="TryGetShared"/> instead.
+		/// </para>
+		/// </summary>
+		public static OmniDebugger Shared
+		{
+			get
+			{
+				MainThreadGuard.Verify(nameof(Shared));
+
+				if (_shared == null)
+				{
+					OmniDebugger created = new OmniDebugger();
+					_ownsShared = ReferenceEquals(_shared, created);
+				}
+
+				return _shared;
+			}
+		}
 
 		/// <inheritdoc/>
 		public ICommandCatalog Catalog
@@ -120,6 +148,9 @@ namespace DTech.OmniDebugger
 		/// </summary>
 		public OmniDebuggerPanel Panel => _disposed || _panel == null ? null : _panel;
 
+		private static OmniDebugger _shared;
+		private static bool _ownsShared;
+
 		private OmniDebuggerOptions _options;
 		private OmniDebuggerPanel _panel;
 		private bool _disposed;
@@ -182,12 +213,36 @@ namespace DTech.OmniDebugger
 			{
 				ProjectOptions.OnEditorChanged += OnProjectOptionsChanged;
 			}
+
+			if (_shared == null)
+			{
+				_shared = this;
+			}
+			else if (_panel != null && _shared._panel != null)
+			{
+				log.Warning(
+					"Another debugger already shows its panel, so two panels are on screen now. Read " +
+					$"{nameof(OmniDebugger)}.{nameof(Shared)} instead of building a second debugger, or turn off " +
+					"'Create On Startup' in Project Settings → DTech → OmniDebugger → Panel.");
+			}
+		}
+
+		/// <summary>
+		/// Reads <see cref="Shared"/> without building it: false while no debugger is alive. Main thread only.
+		/// </summary>
+		public static bool TryGetShared(out OmniDebugger debugger)
+		{
+			MainThreadGuard.Verify(nameof(TryGetShared));
+
+			debugger = _shared;
+			return debugger != null;
 		}
 
 		/// <summary>
 		/// Releases every registered source — MonoBehaviours included — empties every registry and
 		/// clears their <c>OnChanged</c> subscriber lists. Every member throws
-		/// <see cref="ObjectDisposedException"/> afterwards. Safe to call more than once.
+		/// <see cref="ObjectDisposedException"/> afterwards. Disposing <see cref="Shared"/> empties its
+		/// slot. Safe to call more than once.
 		/// </summary>
 		public void Dispose()
 		{
@@ -197,6 +252,12 @@ namespace DTech.OmniDebugger
 			}
 
 			_disposed = true;
+
+			if (ReferenceEquals(_shared, this))
+			{
+				_shared = null;
+				_ownsShared = false;
+			}
 
 			if (_followsProject)
 			{
@@ -215,6 +276,31 @@ namespace DTech.OmniDebugger
 			_themes.Clear();
 			_icons.Clear();
 			_fields.Clear();
+		}
+
+		internal static void ReleaseShared()
+		{
+			if (_shared != null && _ownsShared)
+			{
+				_shared.Dispose();
+			}
+		}
+
+		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+		private static void ResetShared()
+		{
+			ReleaseShared();
+			_shared = null;
+			_ownsShared = false;
+		}
+
+		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+		private static void CreateSharedOnStartup()
+		{
+			if (_shared == null && ProjectOptions.Load().CreateOnStartup)
+			{
+				_ = Shared;
+			}
 		}
 
 		private static bool Contains<T>(List<T> items, T item) where T : class

@@ -5,8 +5,8 @@ namespace DTech.OmniDebugger.UI
 {
 	internal sealed class ResponsiveGrid : VisualElement
 	{
-		public const float TwoColumnsWidth = 430.0f;
-		public const float OneColumnWidth = 395.0f;
+		public const float TwoColumnsWidth = 460.0f;
+		public const float OneColumnWidth = 420.0f;
 
 		private readonly List<VisualElement> _columnCells;
 		private readonly VisualElement _startColumn;

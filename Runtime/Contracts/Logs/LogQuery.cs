@@ -5,7 +5,7 @@ namespace DTech.OmniDebugger
 	/// <summary>What to read from an <see cref="ILogFeed"/>. The default value matches everything.</summary>
 	public readonly struct LogQuery
 	{
-		public const int DefaultLimit = 100;
+		public const int DefaultLimit = 64;
 
 		private readonly LogTypeMask _types;
 		private readonly int _limit;

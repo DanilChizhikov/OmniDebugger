@@ -6,9 +6,9 @@ namespace DTech.OmniDebugger.UI
 	internal static class PanelScaling
 	{
 		private const float ReferenceDpi = 96.0f;
-		private const float PortraitAspect = 0.56f;
-		private const float LandscapeAspect = 1.78f;
-		private const float LandscapeMatch = 0.7f;
+		private const float PortraitAspect = 9.0f / 16.0f;
+		private const float LandscapeAspect = 16.0f / 9.0f;
+		private const float LandscapeMatch = 0.75f;
 		
 		private static readonly Vector2 _referenceResolution = new (360.0f, 640.0f);
 

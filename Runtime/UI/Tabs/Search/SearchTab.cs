@@ -7,7 +7,7 @@ namespace DTech.OmniDebugger.UI
 {
 	internal sealed class SearchTab : IOmniDebuggerTab
 	{
-		private const long DebounceMs = 300;
+		private const long DebounceMs = 150;
 		private const string Placeholder = "Search commands…";
 		private const string PromptMessage = "Type to search by name, group or tag.";
 		private const string NothingFoundMessage = "No commands found.";

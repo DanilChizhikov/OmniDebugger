@@ -8,13 +8,11 @@ namespace DTech.OmniDebugger.UI
 	{
 		public event Action OnDragStarted;
 
-		private const float DragThreshold = 8.0f;
-		private const float VelocitySmoothing = 0.35f;
-		private const float DampingPerFrame = 0.95f;
-		private const float FramesPerSecond = 60.0f;
-		private const float MinVelocity = 20.0f;
-		private const float MaxVelocity = 3200.0f;
-		private const float MaxReleaseDelay = 0.12f;
+		private const float VelocitySmoothing = 0.3f;
+		private const float InertiaHalfLife = 0.2f;
+		private const float MinVelocity = 25.0f;
+		private const float MaxVelocity = 4000.0f;
+		private const float MaxReleaseDelay = 0.1f;
 		private const long InertiaIntervalMs = 16;
 		private const int PrimaryButtonMask = 1;
 
@@ -129,7 +127,7 @@ namespace DTech.OmniDebugger.UI
 				Vector2 travel = position - _pointerStart;
 				float along = Mathf.Abs(Along(travel));
 
-				if (along < DragThreshold || along <= Mathf.Abs(Across(travel)))
+				if (along < TouchSlop.Distance || along <= Mathf.Abs(Across(travel)))
 				{
 					return;
 				}
@@ -270,7 +268,7 @@ namespace DTech.OmniDebugger.UI
 			float clamped = Clamp(desired);
 			SetAxisOffset(clamped);
 
-			_velocity *= Mathf.Pow(DampingPerFrame, elapsed * FramesPerSecond);
+			_velocity *= Mathf.Pow(0.5f, elapsed / InertiaHalfLife);
 
 			if (!Mathf.Approximately(desired, clamped) || Mathf.Abs(_velocity) < MinVelocity)
 			{

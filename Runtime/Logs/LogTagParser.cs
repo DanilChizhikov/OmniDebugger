@@ -5,7 +5,7 @@ namespace DTech.OmniDebugger
 {
 	internal static class LogTagParser
 	{
-		public const int MaxTagLength = 64;
+		public const int MaxTagLength = 32;
 
 		public static IReadOnlyList<string> Parse(string message)
 		{

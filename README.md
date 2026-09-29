@@ -101,8 +101,31 @@ private void OnDestroy()
 }
 ```
 
-There is no static `Instance`: you construct the debugger, you hold it, and you dispose it. Disposing releases
-every registered source — MonoBehaviours included — and clears the catalog's subscribers.
+That debugger is yours: you construct it, you hold it, and you dispose it. Disposing releases every registered
+source — MonoBehaviours included — and clears the catalog's subscribers.
+
+Or leave the lifetime to the package and read `OmniDebugger.Shared`. It hands out the first debugger built and not
+disposed yet, and while there is none it builds one from the project settings right there, so any script reaches
+the same debugger without passing it around:
+
+```csharp
+#if OMNI_DEBUGGER
+private void OnEnable() => OmniDebugger.Shared.Catalog.AddSource(this);
+
+private void OnDisable()
+{
+    if (OmniDebugger.TryGetShared(out OmniDebugger debugger))
+    {
+        debugger.Catalog.RemoveSource(this);
+    }
+}
+#endif
+```
+
+`TryGetShared` reads the slot without building anything, which is what teardown code wants. A debugger `Shared`
+built itself is disposed by the package once play mode is over in the editor; one your code built stays yours to
+dispose, and a debugger built next to it never replaces it. Turn on *Create On Startup* (see
+[At Runtime](#at-runtime)) to have the shared debugger built before the first scene loads.
 
 ## Usage
 
@@ -270,12 +293,17 @@ private void OnDestroy() => _debugger?.Dispose();
 #endif
 ```
 
+With *Create On Startup* on, not even that is needed: the package builds `OmniDebugger.Shared` before the first
+scene loads, so the log is captured from the very first frame and the panel is there without a line of code.
+Scripts register their commands through `OmniDebugger.Shared`. A debugger built with `new` next to it puts a second
+panel on screen, and says so in the console.
+
 How it looks and opens is set in **Project Settings → DTech → OmniDebugger → Panel**. The page shows up while
 `OMNI_DEBUGGER` is on for the active build target:
 
 | Section | Options |
 |---|---|
-| Startup | `CreatePanel`, `OpenOnStart` |
+| Startup | `CreateOnStartup`, `CreatePanel`, `OpenOnStart` |
 | Scaling and Layering | `ScaleMode`, `Scale`, `SortingOrder`, `PanelSettings` (left empty, the shipped asset is cloned, never edited) |
 | Open Button | `ButtonEnabled` (*Open Button Enabled*), `ButtonClicks`, `MultiClickWindow`, `ButtonAnchor`, `ButtonOpacity` |
 | Shortcuts | `Shortcuts` |
@@ -327,11 +355,11 @@ EventSystem and creating a new one does not leave it deaf to taps.
 | A keyboard shortcut — one key, or a chord that fires when its last key goes down; each toggles the panel | Panel settings → *Shortcuts* (`Open.Shortcuts`) |
 | Code | `OmniDebuggerPanel.Open()` / `Close()` / `Toggle()` |
 
-It starts at the corner or edge `ButtonAnchor` names, at `ButtonOpacity` (0.4 by default), and lights up — full
+It starts at the corner or edge `ButtonAnchor` names, at `ButtonOpacity` (0.5 by default), and lights up — full
 opacity, accent border — on every tap, so a series of taps shows each one landed.
-Hold the button for a second and corner brackets slide out: now it can be dragged. It stays where it was dropped
-for the session, and inside the safe area when the screen turns. It blinks red for a minute whenever an error is logged, until
-it is tapped. Hide it at runtime with `SetOpenButtonEnabled(false)`, or replace it with
+Hold the button for 0.6 seconds and corner brackets slide out: now it can be dragged. It stays where it was dropped
+for the session, and inside the safe area when the screen turns. It blinks red for 45 seconds whenever an error is
+logged, until it is tapped. Hide it at runtime with `SetOpenButtonEnabled(false)`, or replace it with
 `SetGesture(IOmniDebuggerGesture)`.
 
 To bind a shortcut, press *Add Shortcut*, click the new field, hold the keys and release them; `Esc` cancels and `×`
@@ -368,6 +396,10 @@ With a mode picked but no secret set, the panel opens without asking and the set
 
 Favourites are saved; pins last for the session only. The captured log is also readable in code through
 `debugger.Logs` (`ILogFeed`).
+
+The log keeps up to 16 384 records within a budget of about 8 MB of text, dropping the oldest first. A message
+repeated word for word is stored once and shared by its records, so repeats cost a record but no text, and a
+filter reads each distinct message once rather than once per repeat.
 
 ### Floating Windows
 
@@ -408,7 +440,7 @@ The same page sets how the window shows the panel, per user in `EditorPrefs` and
 - **Layout** — *Auto* follows the window's shape (tabs on top while it is taller than wide, in a sidebar otherwise);
   *Portrait* and *Landscape* keep one layout whatever the shape.
 - **Zoom** — the panel is scaled to fit the window the way `ScreenSize` scales it on a device; 1 is the size it has
-  on a phone as big as the window, lower is smaller and fits more.
+  on a phone as big as the window, lower is smaller and fits more. It runs from 0.5 to 1.25.
 
 ## Themes
 
@@ -494,15 +526,18 @@ command stays runnable when that argument is optional.
 
 ## Code Stripping
 
-OmniDebugger does not generate a `link.xml`. Its only build hook copies the project settings into the build (see
+Nothing to do. While `OMNI_DEBUGGER` is on for the build target, OmniDebugger hands the linker a `link.xml` it
+generates for that build (`Temp/OmniDebugger/CommandsLink.xml`). It keeps, whole, every type that declares a
+command — by the same rules the catalog registers them — and every enum used in a command's arguments or value, so
+a command nothing else calls survives an IL2CPP build and an enum keeps the names its dropdown shows. Only
+assemblies that reference OmniDebugger are searched, since no other assembly can declare a command. With the
+define off, nothing is generated. The only other build hook copies the project settings into the build (see
 [At Runtime](#at-runtime)).
 
-Usually nothing is needed: you pass a source *instance* to `AddSource`, so your own code references the type and
-the managed stripper keeps it. Two cases do need a hint:
+The search reads the scripts as the editor compiled them, so two cases still need a hint:
 
-- a command method that nothing but OmniDebugger ever calls can still be stripped from an IL2CPP release build;
-- an **enum used only in a command signature** keeps its type but can lose its field names, which breaks anything
-  built from `Enum.GetNames`.
+- a command inside a precompiled DLL, which is not searched;
+- a command declared under `#if !UNITY_EDITOR`, which the editor never sees.
 
 Mark those with `[UnityEngine.Scripting.Preserve]`, or preserve them through whichever `link.xml` your project
 already maintains.

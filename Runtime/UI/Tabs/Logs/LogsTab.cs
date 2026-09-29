@@ -8,15 +8,16 @@ namespace DTech.OmniDebugger.UI
 {
 	internal sealed class LogsTab : IOmniDebuggerTab
 	{
-		private const int PageSize = 100;
+		private const int PageSize = 64;
 		private const int CopyLimit = int.MaxValue;
-		private const long PollMs = 250;
+		private const long PollMs = 200;
 		private const long SearchDebounceMs = 200;
-		private const long ToastMs = 2000;
-		private const float LoadOlderDistance = 160.0f;
-		private const float BottomTolerance = 16.0f;
+		private const long ToastMs = 1500;
 		private const float EstimatedRowHeight = 44.0f;
-		private const int SettleTicks = 3;
+		private const int PrefetchRows = 5;
+		private const float LoadOlderDistance = EstimatedRowHeight * PrefetchRows;
+		private const float BottomTolerance = 12.0f;
+		private const int SettleTicks = 4;
 		private const long SettleIntervalMs = 16;
 		private const float WideToolbarWidth = 600.0f;
 		private const float NarrowToolbarWidth = 570.0f;

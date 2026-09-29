@@ -36,6 +36,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			OmniDebuggerOptions copy = source.Clone();
 
 			Assert.That(copy, Is.Not.SameAs(source));
+			Assert.That(copy.CreateOnStartup, Is.True);
 			Assert.That(copy.CreatePanel, Is.False);
 			Assert.That(copy.DefaultTheme, Is.SameAs(source.DefaultTheme));
 			Assert.That(copy.Themes, Is.EqualTo(source.Themes));
@@ -189,6 +190,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		{
 			OmniDebuggerOptions options = new OmniDebuggerOptions
 			{
+				CreateOnStartup = true,
 				CreatePanel = false,
 				DefaultTheme = Track(Theme("sunset")),
 			};

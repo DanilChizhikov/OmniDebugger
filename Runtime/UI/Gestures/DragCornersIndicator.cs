@@ -5,11 +5,11 @@ namespace DTech.OmniDebugger.UI
 {
 	internal sealed class DragCornersIndicator : VisualElement
 	{
-		private const float CornerLength = 0.3f;
-		private const float CornerThickness = 0.1f;
+		private const float CornerLength = 0.26f;
+		private const float CornerThickness = 0.08f;
 		private const float Offset = 0.7f;
-		private const float ShowDuration = 0.16f;
-		private const float HideDuration = 0.12f;
+		private const float ShowDuration = 0.2f;
+		private const float HideDuration = 0.15f;
 		private const long FrameMs = 16;
 
 		private IVisualElementScheduledItem _animation;

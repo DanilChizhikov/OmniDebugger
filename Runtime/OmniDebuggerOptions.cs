@@ -14,6 +14,17 @@ namespace DTech.OmniDebugger
 	public sealed class OmniDebuggerOptions
 	{
 		/// <summary>
+		/// Builds <see cref="OmniDebugger.Shared"/> before the first scene loads, so the log is captured from
+		/// the first frame and the panel is there without a line of code. Read from the project settings when
+		/// the game starts; a debugger built in code ignores it. Off by default.
+		/// </summary>
+		public bool CreateOnStartup
+		{
+			get => _createOnStartup;
+			set => _createOnStartup = value;
+		}
+
+		/// <summary>
 		/// Builds the runtime panel together with the debugger and destroys it on
 		/// <see cref="OmniDebugger.Dispose"/>. Turn it off when a scene already carries an
 		/// <see cref="OmniDebuggerPanel"/>, or when the debugger is only meant for the editor window.
@@ -72,6 +83,9 @@ namespace DTech.OmniDebugger
 		/// </summary>
 		public static OmniDebuggerOptions Default => ProjectOptions.Load();
 
+		[Tooltip("Builds OmniDebugger.Shared before the first scene loads: the log from the first frame and the panel without any code.")]
+		[SerializeField] private bool _createOnStartup;
+
 		[Tooltip("Builds the runtime panel together with the debugger. Ignored outside play mode.")]
 		[SerializeField] private bool _createPanel = true;
 
@@ -90,6 +104,7 @@ namespace DTech.OmniDebugger
 		{
 			return new OmniDebuggerOptions
 			{
+				_createOnStartup = _createOnStartup,
 				_createPanel = _createPanel,
 				_panel = Panel.Clone(),
 				_defaultTheme = _defaultTheme,

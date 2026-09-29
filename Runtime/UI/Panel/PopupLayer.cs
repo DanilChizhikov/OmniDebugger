@@ -6,7 +6,7 @@ namespace DTech.OmniDebugger.UI
 {
 	internal sealed class PopupLayer : VisualElement
 	{
-		private const float AnchorGap = 2.0f;
+		private const float AnchorGap = 4.0f;
 		private const float MinAnchoredWidth = 160.0f;
 
 		public bool IsShowing => _popup != null;

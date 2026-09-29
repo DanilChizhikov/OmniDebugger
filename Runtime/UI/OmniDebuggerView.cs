@@ -15,7 +15,7 @@ namespace DTech.OmniDebugger.UI
 		/// <summary>Raised when the user closed the panel from inside it.</summary>
 		public event Action OnClosed;
 
-		private const float OrientationHysteresis = 1.05f;
+		private const float OrientationHysteresis = 1.1f;
 
 		private readonly IOmniDebugger _debugger;
 		private readonly ICommandCatalog _catalog;

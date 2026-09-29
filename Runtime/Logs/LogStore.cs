@@ -7,13 +7,16 @@ namespace DTech.OmniDebugger
 {
 	internal sealed class LogStore : ILogFeed
 	{
-		public const int DefaultCapacity = 10000;
-		public const int MaxMessageLength = 1024;
-		public const int MaxStackTraceLength = 2048;
+		public const int DefaultCapacity = 16384;
+		public const int DefaultTextBudget = 4 * 1024 * 1024;
+		public const int MaxMessageLength = 1500;
+		public const int MaxStackTraceLength = 4000;
 
 		private readonly object _gate = new ();
-		private readonly LogRecord[] _records;
+		private readonly LogSlot[] _slots;
+		private readonly LogBodyPool _bodies = new ();
 		private readonly Dictionary<string, int> _tagCounts = new (StringComparer.Ordinal);
+		private readonly int _textBudget;
 
 		public long Version => Interlocked.Read(ref _version);
 
@@ -35,51 +38,61 @@ namespace DTech.OmniDebugger
 		private int _logs;
 		private int _warnings;
 		private int _errors;
+		private int _filterStamp;
 		private long _nextId = 1;
 		private long _version;
 		private long _errorCount;
 
-		public LogStore(int capacity = DefaultCapacity)
+		internal int BodyCount
+		{
+			get
+			{
+				lock (_gate)
+				{
+					return _bodies.Count;
+				}
+			}
+		}
+
+		public LogStore(int capacity = DefaultCapacity, int textBudget = DefaultTextBudget)
 		{
 			if (capacity <= 0)
 			{
 				throw new ArgumentOutOfRangeException(nameof(capacity), capacity, "Capacity must be above zero.");
 			}
 
-			_records = new LogRecord[capacity];
+			if (textBudget <= 0)
+			{
+				throw new ArgumentOutOfRangeException(nameof(textBudget), textBudget, "The text budget must be above zero.");
+			}
+
+			_slots = new LogSlot[capacity];
+			_textBudget = textBudget;
 		}
 
 		public void Add(string message, string stackTrace, LogType type, DateTime timestampUtc)
 		{
-			string trimmedMessage = Cut(message, MaxMessageLength, out bool messageTruncated);
-			string trimmedStack = Cut(stackTrace, MaxStackTraceLength, out bool stackTruncated);
-			IReadOnlyList<string> tags = LogTagParser.Parse(trimmedMessage);
+			LogBodyKey key = new LogBodyKey(message, stackTrace, type, MaxMessageLength, MaxStackTraceLength);
 
 			lock (_gate)
 			{
-				if (_count == _records.Length)
+				LogBody body = _bodies.Rent(key);
+
+				if (_count == _slots.Length)
 				{
-					Forget(_records[_head]);
-					_records[_head] = default;
-					_head = (_head + 1) % _records.Length;
-					_count--;
+					DropOldest();
 				}
 
-				LogRecord record = new LogRecord(
-					_nextId++,
-					timestampUtc,
-					type,
-					trimmedMessage,
-					trimmedStack,
-					tags,
-					messageTruncated,
-					stackTruncated);
-
-				_records[(_head + _count) % _records.Length] = record;
+				_slots[(_head + _count) % _slots.Length] = new LogSlot(_nextId++, timestampUtc, body);
 				_count++;
-				Remember(record);
+				Remember(body);
 
-				if (record.IsError)
+				while (_bodies.TextLength > _textBudget && _count > 1)
+				{
+					DropOldest();
+				}
+
+				if (body.IsError)
 				{
 					Interlocked.Increment(ref _errorCount);
 				}
@@ -100,6 +113,8 @@ namespace DTech.OmniDebugger
 
 			lock (_gate)
 			{
+				_filterStamp = _filterStamp == int.MaxValue ? 1 : _filterStamp + 1;
+
 				return query.AfterId > 0
 					? QueryForward(filter, query.AfterId, limit, results)
 					: QueryBackward(filter, query.BeforeId, limit, results);
@@ -140,7 +155,8 @@ namespace DTech.OmniDebugger
 		{
 			lock (_gate)
 			{
-				Array.Clear(_records, 0, _records.Length);
+				Array.Clear(_slots, 0, _slots.Length);
+				_bodies.Clear();
 				_tagCounts.Clear();
 				_head = 0;
 				_count = 0;
@@ -151,27 +167,15 @@ namespace DTech.OmniDebugger
 			}
 		}
 
-		private static string Cut(string value, int max, out bool truncated)
-		{
-			if (string.IsNullOrEmpty(value))
-			{
-				truncated = false;
-				return string.Empty;
-			}
-
-			truncated = value.Length > max;
-			return truncated ? value.Substring(0, max) : value;
-		}
-
 		private bool QueryForward(in LogFilter filter, long afterId, int limit, List<LogRecord> results)
 		{
 			int added = 0;
 
 			for (int i = FirstIndexAfter(afterId); i < _count; i++)
 			{
-				LogRecord record = At(i);
+				LogSlot slot = At(i);
 
-				if (!filter.Matches(record))
+				if (!Accepts(filter, slot.Body))
 				{
 					continue;
 				}
@@ -181,7 +185,7 @@ namespace DTech.OmniDebugger
 					return true;
 				}
 
-				results.Add(record);
+				results.Add(slot.ToRecord());
 				added++;
 			}
 
@@ -197,9 +201,9 @@ namespace DTech.OmniDebugger
 
 			for (int i = end - 1; i >= 0; i--)
 			{
-				LogRecord record = At(i);
+				LogSlot slot = At(i);
 
-				if (!filter.Matches(record))
+				if (!Accepts(filter, slot.Body))
 				{
 					continue;
 				}
@@ -210,12 +214,23 @@ namespace DTech.OmniDebugger
 					break;
 				}
 
-				results.Add(record);
+				results.Add(slot.ToRecord());
 				added++;
 			}
 
 			results.Reverse(start, added);
 			return hasMore;
+		}
+
+		private bool Accepts(in LogFilter filter, LogBody body)
+		{
+			if (body.FilterStamp != _filterStamp)
+			{
+				body.FilterStamp = _filterStamp;
+				body.FilterResult = filter.Matches(body);
+			}
+
+			return body.FilterResult;
 		}
 
 		private int FirstIndexAfter(long id) => FirstIndexAtOrAfter(id + 1);
@@ -242,26 +257,38 @@ namespace DTech.OmniDebugger
 			return low;
 		}
 
-		private LogRecord At(int index) => _records[(_head + index) % _records.Length];
+		private LogSlot At(int index) => _slots[(_head + index) % _slots.Length];
 
-		private void Remember(in LogRecord record)
+		private void DropOldest()
 		{
-			Tally(record.Type, 1);
+			LogBody body = _slots[_head].Body;
 
-			for (int i = 0; i < record.Tags.Count; i++)
+			_slots[_head] = default;
+			_head = (_head + 1) % _slots.Length;
+			_count--;
+
+			Forget(body);
+			_bodies.Return(body);
+		}
+
+		private void Remember(LogBody body)
+		{
+			Tally(body.Type, 1);
+
+			for (int i = 0; i < body.Tags.Count; i++)
 			{
-				string tag = record.Tags[i];
+				string tag = body.Tags[i];
 				_tagCounts[tag] = _tagCounts.TryGetValue(tag, out int count) ? count + 1 : 1;
 			}
 		}
 
-		private void Forget(in LogRecord record)
+		private void Forget(LogBody body)
 		{
-			Tally(record.Type, -1);
+			Tally(body.Type, -1);
 
-			for (int i = 0; i < record.Tags.Count; i++)
+			for (int i = 0; i < body.Tags.Count; i++)
 			{
-				string tag = record.Tags[i];
+				string tag = body.Tags[i];
 
 				if (!_tagCounts.TryGetValue(tag, out int count))
 				{

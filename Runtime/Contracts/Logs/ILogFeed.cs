@@ -17,7 +17,10 @@ namespace DTech.OmniDebugger
 		/// </summary>
 		long ErrorCount { get; }
 
-		/// <summary>Records currently kept. The oldest are dropped once the capacity is reached.</summary>
+		/// <summary>
+		/// Records currently kept. The oldest are dropped once the record capacity or the text budget is
+		/// reached. A message repeated word for word is stored once, so a repeat costs a record but no text.
+		/// </summary>
 		int Count { get; }
 
 		/// <summary>

@@ -119,7 +119,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		public void Scaling_MatchesWidthInPortraitAndLeansToHeightInLandscape()
 		{
 			Assert.That(PanelScaling.ResolveMatch(1080.0f, 1920.0f), Is.EqualTo(0.0f).Within(0.01f));
-			Assert.That(PanelScaling.ResolveMatch(1920.0f, 1080.0f), Is.EqualTo(0.7f).Within(0.01f));
+			Assert.That(PanelScaling.ResolveMatch(1920.0f, 1080.0f), Is.EqualTo(0.75f).Within(0.01f));
 			Assert.That(PanelScaling.ResolveMatch(0.0f, 1080.0f), Is.Zero);
 		}
 
@@ -128,7 +128,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		{
 			Assert.That(PanelScaling.ResolveFitScale(360.0f, 640.0f), Is.EqualTo(1.0f).Within(0.01f));
 			Assert.That(PanelScaling.ResolveFitScale(720.0f, 1280.0f), Is.EqualTo(2.0f).Within(0.01f));
-			Assert.That(PanelScaling.ResolveFitScale(1920.0f, 1080.0f), Is.EqualTo(2.387f).Within(0.01f),
+			Assert.That(PanelScaling.ResolveFitScale(1920.0f, 1080.0f), Is.EqualTo(2.25f).Within(0.01f),
 				"landscape leans to the height");
 			Assert.That(PanelScaling.ResolveFitScale(0.0f, 640.0f), Is.EqualTo(1.0f), "an empty area leaves the scale alone");
 		}
@@ -138,10 +138,11 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		{
 			OmniDebuggerOptions options = new OmniDebuggerOptions();
 
+			Assert.That(options.CreateOnStartup, Is.False);
 			Assert.That(options.CreatePanel, Is.True);
 			Assert.That(options.Panel.ScaleMode, Is.EqualTo(OmniDebuggerScaleMode.Auto));
 			Assert.That(options.Panel.Open.ButtonEnabled, Is.True);
-			Assert.That(options.Panel.Open.ButtonOpacity, Is.EqualTo(0.4f));
+			Assert.That(options.Panel.Open.ButtonOpacity, Is.EqualTo(0.5f));
 			Assert.That(options.Panel.Open.Shortcuts, Is.Empty);
 
 			options.Panel.Scale = -1.0f;

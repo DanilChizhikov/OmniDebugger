@@ -10,6 +10,7 @@ namespace DTech.OmniDebugger.Editor
 	{
 		private const string SettingsPath = "Project/DTech/OmniDebugger/Panel";
 
+		private const string CreateOnStartupField = "_createOnStartup";
 		private const string CreatePanelField = "_createPanel";
 		private const string PanelField = "_panel";
 		private const string DefaultThemeField = "_defaultTheme";
@@ -70,6 +71,8 @@ namespace DTech.OmniDebugger.Editor
 					"debugger",
 					"panel",
 					"cheat",
+					"startup",
+					"shared",
 					"button",
 					"enabled",
 					"clicks",
@@ -122,8 +125,15 @@ namespace DTech.OmniDebugger.Editor
 
 			using (new EditorGUI.IndentLevelScope())
 			{
+				DrawField(options, CreateOnStartupField);
 				DrawField(options, CreatePanelField);
 				DrawField(panel, OpenOnStartField);
+
+				EditorGUILayout.HelpBox(
+					"Create On Startup builds OmniDebugger.Shared before the first scene loads. Code reaches it through " +
+					"OmniDebugger.Shared, or through OmniDebugger.TryGetShared where it must not build one, such as " +
+					"OnDestroy. A debugger built with new next to it puts a second panel on screen.",
+					MessageType.None);
 			}
 
 			DrawHeader("Scaling and Layering");
