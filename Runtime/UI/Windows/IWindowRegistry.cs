@@ -6,9 +6,9 @@ using UnityEngine.UIElements;
 namespace DTech.OmniDebugger.UI
 {
 	/// <summary>
-	/// Floating windows: small panes that stay over the game while the panel is closed — a live
+	/// Floating windows: small panes that stay over the game while the panel is closed or floating — a live
 	/// stat, or a handful of commands to hit while playing. Reached through
-	/// <see cref="IOmniDebugger.Windows"/>; the runtime panel shows them and its Windows tab lists them.
+	/// <see cref="IOmniDebuggerHost.Windows"/>; the runtime panel shows them and its Windows tab lists them.
 	/// </summary>
 	public interface IWindowRegistry
 	{

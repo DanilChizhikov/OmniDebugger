@@ -1,8 +1,8 @@
 namespace DTech.OmniDebugger.UI
 {
 	/// <summary>
-	/// A floating window registered with <see cref="IOmniDebugger.Windows"/>. Windows float over the
-	/// game while the panel is closed and hide while it is open.
+	/// A floating window registered with <see cref="IOmniDebuggerHost.Windows"/>. Windows float over the
+	/// game while the panel is closed or floating, and hide while it covers the screen.
 	/// </summary>
 	public interface IOmniDebuggerWindow
 	{

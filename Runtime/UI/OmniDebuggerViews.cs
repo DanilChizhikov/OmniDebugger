@@ -7,9 +7,9 @@ namespace DTech.OmniDebugger.UI
 	{
 		public static event Action OnCurrentChanged;
 
-		public static IOmniDebugger Current { get; private set; }
+		public static IOmniDebuggerHost Current { get; private set; }
 
-		public static void Register(IOmniDebugger debugger)
+		public static void Register(IOmniDebuggerHost debugger)
 		{
 			MainThreadGuard.Verify(nameof(Register));
 
@@ -27,7 +27,7 @@ namespace DTech.OmniDebugger.UI
 			OnCurrentChanged?.Invoke();
 		}
 
-		public static bool Unregister(IOmniDebugger debugger)
+		public static bool Unregister(IOmniDebuggerHost debugger)
 		{
 			MainThreadGuard.Verify(nameof(Unregister));
 

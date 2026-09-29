@@ -1,6 +1,6 @@
 namespace DTech.OmniDebugger.UI
 {
-	internal enum CommandCardMode : byte
+	internal enum CommandRowMode : byte
 	{
 		Full = 0,
 		Summary = 1,

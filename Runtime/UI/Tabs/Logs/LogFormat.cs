@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using UnityEngine;
 
 namespace DTech.OmniDebugger.UI
 {
@@ -9,21 +10,55 @@ namespace DTech.OmniDebugger.UI
 		private const string TimeFormat = "HH:mm:ss.fff";
 		private const string Truncated = "[truncated]";
 
-		public static string Meta(in LogRecord record)
+		public static string Timestamp(in LogRecord record) =>
+			record.TimestampUtc.ToLocalTime().ToString(TimeFormat, CultureInfo.InvariantCulture);
+
+		public static string TypeLabel(LogType type)
 		{
-			StringBuilder builder = new StringBuilder(48);
-			builder.Append(record.TimestampUtc.ToLocalTime().ToString(TimeFormat, CultureInfo.InvariantCulture));
-			builder.Append("  ");
-			builder.Append(record.Type);
+			switch (type)
+			{
+				case LogType.Warning:
+					return "WARNING";
+				case LogType.Error:
+					return "ERROR";
+				case LogType.Assert:
+					return "ASSERT";
+				case LogType.Exception:
+					return "EXCEPTION";
+				default:
+					return "LOG";
+			}
+		}
+
+		public static string TagLine(in LogRecord record)
+		{
+			bool truncated = record.IsMessageTruncated || record.IsStackTraceTruncated;
+
+			if (record.Tags.Count == 0 && !truncated)
+			{
+				return string.Empty;
+			}
+
+			StringBuilder builder = new StringBuilder(32);
 
 			for (int i = 0; i < record.Tags.Count; i++)
 			{
-				builder.Append("  [").Append(record.Tags[i]).Append(']');
+				if (i > 0)
+				{
+					builder.Append(' ');
+				}
+
+				builder.Append('[').Append(record.Tags[i]).Append(']');
 			}
 
-			if (record.IsMessageTruncated || record.IsStackTraceTruncated)
+			if (truncated)
 			{
-				builder.Append("  ").Append(Truncated);
+				if (builder.Length > 0)
+				{
+					builder.Append(' ');
+				}
+
+				builder.Append(Truncated);
 			}
 
 			return builder.ToString();
@@ -55,7 +90,7 @@ namespace DTech.OmniDebugger.UI
 
 		private static void Append(StringBuilder builder, in LogRecord record)
 		{
-			builder.Append('[').Append(record.TimestampUtc.ToLocalTime().ToString(TimeFormat, CultureInfo.InvariantCulture)).Append("] ");
+			builder.Append('[').Append(Timestamp(record)).Append("] ");
 			builder.Append('[').Append(record.Type).Append("] ");
 
 			if (record.IsMessageTruncated || record.IsStackTraceTruncated)

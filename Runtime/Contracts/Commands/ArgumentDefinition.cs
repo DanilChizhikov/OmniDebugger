@@ -20,7 +20,18 @@ namespace DTech.OmniDebugger
 		/// <summary>Whether a caller may omit this argument.</summary>
 		public bool IsOptional { get; }
 
-		public ArgumentDefinition(string name, Type type, object defaultValue = null, bool isOptional = false)
+		/// <summary>
+		/// The range declared with <see cref="DebugRangeAttribute"/>; empty when there is none. A hint for
+		/// the panel, which edits a ranged number with a slider — invocations are not checked against it.
+		/// </summary>
+		public ArgumentRange Range { get; }
+
+		public ArgumentDefinition(
+			string name,
+			Type type,
+			object defaultValue = null,
+			bool isOptional = false,
+			ArgumentRange range = default)
 		{
 			if (string.IsNullOrWhiteSpace(name))
 			{
@@ -36,10 +47,16 @@ namespace DTech.OmniDebugger
 			Type = type;
 			DefaultValue = defaultValue;
 			IsOptional = isOptional;
+			Range = range;
 		}
 
-		public override string ToString() => IsOptional
-			? $"{Type.Name} {Name} = {DefaultValue ?? "null"}"
-			: $"{Type.Name} {Name}";
+		public override string ToString()
+		{
+			string text = IsOptional
+				? $"{Type.Name} {Name} = {DefaultValue ?? "null"}"
+				: $"{Type.Name} {Name}";
+
+			return Range.IsEmpty ? text : $"{text} {Range}";
+		}
 	}
 }

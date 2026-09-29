@@ -1,7 +1,7 @@
 namespace DTech.OmniDebugger.UI
 {
 	/// <summary>
-	/// Contributes a tab to the panel. Register one with <see cref="IOmniDebugger.Tabs"/> and it shows
+	/// Contributes a tab to the panel. Register one with <see cref="IOmniDebuggerHost.Tabs"/> and it shows
 	/// up in both mounts — the runtime panel and the editor window.
 	/// </summary>
 	public interface IOmniDebuggerTabFactory
@@ -14,6 +14,13 @@ namespace DTech.OmniDebugger.UI
 
 		/// <summary>Label shown on the tab.</summary>
 		string DisplayName { get; }
+
+		/// <summary>
+		/// Icon shown with <see cref="DisplayName"/>, looked up through <see cref="IOmniDebuggerHost.Icons"/>
+		/// and tinted with the tab's text colour, so ship it white on transparent. Leave it empty for a
+		/// generic glyph.
+		/// </summary>
+		CommandIcon Icon { get; }
 
 		/// <summary>Position in the tab bar. Lower values come first.</summary>
 		int Order { get; }

@@ -32,7 +32,7 @@ namespace DTech.OmniDebugger
 		/// Registers every command an object contributes. The object may implement
 		/// <see cref="ICommandSource"/>; otherwise its <see cref="DebugCommandAttribute"/>
 		/// members are scanned. The catalog holds a strong reference until the source is
-		/// removed or the owning <see cref="IOmniDebugger"/> is disposed.
+		/// removed or the owning <see cref="IOmniDebuggerHost"/> is disposed.
 		/// </summary>
 		/// <returns><c>false</c> when the object was already registered or contributed nothing.</returns>
 		bool AddSource(object source);

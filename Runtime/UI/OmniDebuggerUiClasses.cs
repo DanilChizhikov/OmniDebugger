@@ -4,31 +4,46 @@ namespace DTech.OmniDebugger.UI
 	{
 		public const string Root = "od-root";
 		public const string RootClosed = "od-root--closed";
-		public const string Scrim = "od-scrim";
+		public const string RootOverlay = "od-root--overlay";
+		public const string RootLandscape = "od-root--landscape";
+		public const string RootFloating = "od-root--floating";
+		public const string Desk = "od-desk";
+		public const string DeskWindowsHidden = "od-desk--windows-hidden";
+		public const string Stage = "od-stage";
 		public const string Panel = "od-panel";
-		public const string PanelLandscape = "od-panel--landscape";
+		public const string Halo = "od-halo";
 
-		public const string Header = "od-header";
-		public const string HeaderTitle = "od-header__title";
-		public const string HeaderSpacer = "od-header__spacer";
-		public const string HeaderButton = "od-header__button";
-		public const string HeaderThemePicker = "od-header__theme-picker";
+		public const string Rail = "od-rail";
+		public const string RailFooter = "od-rail__footer";
+		public const string RailVersion = "od-rail__version";
+		public const string Brand = "od-brand";
+		public const string BrandTitle = "od-brand__title";
+		public const string Actions = "od-actions";
+		public const string ActionsThemePicker = "od-actions__theme-picker";
+		public const string Main = "od-main";
+		public const string PageBar = "od-page-bar";
+		public const string PageBarIcon = "od-page-bar__icon";
+		public const string PageBarTitle = "od-page-bar__title";
+		public const string Keycap = "od-keycap";
+		public const string Spacer = "od-spacer";
 
-		public const string Content = "od-content";
 		public const string TabBar = "od-tabbar";
 		public const string TabBarScroll = "od-tabbar__scroll";
 		public const string TabBarContent = "od-tabbar__content";
 		public const string Tab = "od-tab";
 		public const string TabSelected = "od-tab--selected";
+		public const string TabIcon = "od-tab__icon";
+		public const string TabImage = "od-tab__image";
+		public const string TabLabel = "od-tab__label";
 		public const string TabBody = "od-tabbody";
 		public const string TabPage = "od-tab-page";
 
 		public const string Status = "od-status";
 		public const string Empty = "od-empty";
+		public const string First = "od-first";
 
 		public const string Icon = "od-icon";
 		public const string IconButton = "od-icon-button";
-		public const string IconButtonActive = "od-icon-button--active";
 		public const string Pressed = "od-pressed";
 		public const string Tappable = "od-tappable";
 
@@ -50,10 +65,15 @@ namespace DTech.OmniDebugger.UI
 
 		public const string PageHeader = "od-page-header";
 		public const string PageHeaderTitle = "od-page-header__title";
+		public const string PageHeaderCount = "od-page-header__count";
+		public const string PageHeaderCaption = "od-page-header__caption";
+		public const string Toolbar = "od-toolbar";
+		public const string ToolbarChip = "od-toolbar__chip";
 
 		public const string SearchBox = "od-search-box";
 		public const string SearchBoxField = "od-search-box__field";
 
+		public const string Chips = "od-chips";
 		public const string Chip = "od-chip";
 		public const string ChipActive = "od-chip--active";
 
@@ -64,8 +84,15 @@ namespace DTech.OmniDebugger.UI
 		public const string PopupAnchored = "od-popup--anchored";
 		public const string PopupTitle = "od-popup__title";
 		public const string PopupText = "od-popup__text";
+		public const string PopupList = "od-popup-list";
 		public const string PopupOption = "od-popup__option";
 		public const string PopupOptionSelected = "od-popup__option--selected";
+
+		public const string Menu = "od-menu";
+		public const string MenuTitle = "od-menu__title";
+		public const string MenuCaption = "od-menu__caption";
+		public const string MenuItem = "od-menu__item";
+		public const string MenuItemLabel = "od-menu__item-label";
 
 		public const string Toast = "od-toast";
 		public const string ToastVisible = "od-toast--visible";
@@ -76,40 +103,55 @@ namespace DTech.OmniDebugger.UI
 		public const string KeyValueKey = "od-kv-row__key";
 		public const string KeyValueValue = "od-kv-row__value";
 
-		public const string GroupCard = "od-group-card";
-		public const string GroupCardFavorites = "od-group-card--favorites";
-		public const string GroupCardHead = "od-group-card__head";
-		public const string GroupCardToggle = "od-group-card__toggle";
-		public const string GroupCardTitle = "od-group-card__title";
-		public const string GroupCardCount = "od-group-card__count";
-		public const string GroupCardPreview = "od-group-card__preview";
-		public const string GroupCardPreviewItem = "od-group-card__preview-item";
+		public const string Group = "od-group";
+		public const string GroupFavorites = "od-group--favorites";
+		public const string GroupExpanded = "od-group--expanded";
+		public const string GroupHead = "od-group__head";
+		public const string GroupToggle = "od-group__toggle";
+		public const string GroupStar = "od-group__star";
+		public const string GroupTitle = "od-group__title";
+		public const string GroupCount = "od-group__count";
+		public const string GroupOpen = "od-group__open";
+		public const string GroupBody = "od-group__body";
 
-		public const string Command = "od-command";
-		public const string CommandCompact = "od-command--compact";
-		public const string CommandClickable = "od-command--clickable";
-		public const string CommandHeader = "od-command__header";
-		public const string CommandIcon = "od-command__icon";
-		public const string CommandTitles = "od-command__titles";
-		public const string CommandName = "od-command__name";
-		public const string CommandMeta = "od-command__meta";
-		public const string CommandActions = "od-command__actions";
-		public const string CommandBody = "od-command__body";
-		public const string CommandValueCaption = "od-command__value-caption";
-		public const string CommandValue = "od-command__value";
-		public const string CommandFooter = "od-command__footer";
-		public const string CommandStatus = "od-command__status";
-		public const string CommandStatusSuccess = "od-command__status--success";
-		public const string CommandStatusError = "od-command__status--error";
-		public const string CommandExecute = "od-command__execute";
+		public const string RowList = "od-row-list";
+		public const string Row = "od-row";
+		public const string RowSummary = "od-row--summary";
+		public const string RowCompact = "od-row--compact";
+		public const string RowMain = "od-row__main";
+		public const string RowIcon = "od-row__icon";
+		public const string RowTitles = "od-row__titles";
+		public const string RowName = "od-row__name";
+		public const string RowCaption = "od-row__caption";
+		public const string RowChevron = "od-row__chevron";
+		public const string RowControl = "od-row__control";
+		public const string RowValue = "od-row__value";
+		public const string RowRun = "od-row__run";
+		public const string RowMore = "od-row__more";
+		public const string RowExtra = "od-row__extra";
+		public const string RowStatus = "od-row__status";
+		public const string RowStatusSuccess = "od-row__status--success";
+		public const string RowStatusError = "od-row__status--error";
+
+		public const string About = "od-about";
+		public const string AboutText = "od-about__text";
+		public const string AboutMeta = "od-about__meta";
 
 		public const string Arguments = "od-arguments";
 		public const string Field = "od-field";
+		public const string FieldLabel = "od-field__label";
 		public const string FieldInvalid = "od-field--invalid";
 		public const string FieldHint = "od-field__hint";
 		public const string FieldNullableToggle = "od-field__nullable";
 		public const string EnumButton = "od-enum-button";
 		public const string EnumButtonText = "od-enum-button__text";
+		public const string Switch = "od-switch";
+		public const string SwitchKnob = "od-switch__knob";
+		public const string SwitchTrack = "od-switch__track";
+		public const string SwitchOn = "od-switch--on";
+		public const string Range = "od-range";
+		public const string RangeSlider = "od-range__slider";
+		public const string RangeBox = "od-range__box";
 
 		public const string LogsToolbar = "od-logs-toolbar";
 		public const string LogsToolbarWide = "od-logs-toolbar--wide";
@@ -128,18 +170,25 @@ namespace DTech.OmniDebugger.UI
 		public const string LogError = "od-log--error";
 		public const string LogBody = "od-log__body";
 		public const string LogMeta = "od-log__meta";
+		public const string LogTime = "od-log__time";
+		public const string LogTypeLabel = "od-log__type";
+		public const string LogTags = "od-log__tags";
 		public const string LogMessage = "od-log__message";
 
-		public const string WindowsLayer = "od-windows-layer";
 		public const string Window = "od-window";
 		public const string WindowActive = "od-window--active";
 		public const string WindowCollapsed = "od-window--collapsed";
+		public const string WindowWithFooter = "od-window--with-footer";
 		public const string WindowHeader = "od-window__header";
 		public const string WindowTitle = "od-window__title";
 		public const string WindowContent = "od-window__content";
 		public const string WindowFooter = "od-window__footer";
 		public const string WindowRow = "od-window-row";
 		public const string WindowRowTitle = "od-window-row__title";
+		public const string WindowRowControl = "od-window-row__control";
+		public const string WindowRowScale = "od-window-row--scale";
+		public const string WindowScale = "od-window-scale";
+		public const string WindowScaleValue = "od-window-scale__value";
 		public const string ButtonPrimary = "od-button--primary";
 		public const string ButtonDestructive = "od-button--destructive";
 
@@ -147,6 +196,8 @@ namespace DTech.OmniDebugger.UI
 		public const string OpenButtonPressed = "od-open-button--pressed";
 		public const string OpenButtonDragging = "od-open-button--dragging";
 		public const string OpenButtonLit = "od-open-button--lit";
+		public const string OpenButtonAlerting = "od-open-button--alerting";
+		public const string OpenButtonMark = "od-open-button__mark";
 		public const string OpenButtonAlert = "od-open-button__alert";
 		public const string OpenButtonCorners = "od-open-button__corners";
 

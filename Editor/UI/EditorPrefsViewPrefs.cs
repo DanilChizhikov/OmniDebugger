@@ -27,6 +27,20 @@ namespace DTech.OmniDebugger.UI.Editor
 
 		public void SetFavorites(IReadOnlyList<string> keys) =>
 			EditorPrefs.SetString(ViewStateKeys.Favorites, KeyListFormat.Join(keys));
+
+		public bool TryGetWindowScale(out float scale)
+		{
+			if (!EditorPrefs.HasKey(ViewStateKeys.WindowScale))
+			{
+				scale = 1.0f;
+				return false;
+			}
+
+			scale = EditorPrefs.GetFloat(ViewStateKeys.WindowScale);
+			return true;
+		}
+
+		public void SetWindowScale(float scale) => EditorPrefs.SetFloat(ViewStateKeys.WindowScale, scale);
 	}
 }
 #endif

@@ -9,14 +9,14 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		private const string Origin = "Test";
 
 		private RecordingLogSink _log;
-		private OmniDebugger _debugger;
+		private OmniDebuggerHost _debugger;
 		private SampleCommands _source;
 
 		[SetUp]
 		public void SetUp()
 		{
 			_log = new RecordingLogSink();
-			_debugger = new OmniDebugger(_log);
+			_debugger = new OmniDebuggerHost(_log);
 			_source = new SampleCommands();
 			_debugger.Catalog.AddSource(_source);
 			_log.Clear();

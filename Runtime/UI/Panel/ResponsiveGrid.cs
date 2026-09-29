@@ -7,18 +7,24 @@ namespace DTech.OmniDebugger.UI
 	{
 		public const float TwoColumnsWidth = 460.0f;
 		public const float OneColumnWidth = 420.0f;
+		public const float WideTwoColumnsWidth = 760.0f;
+		public const float WideOneColumnWidth = 720.0f;
 
 		private readonly List<VisualElement> _columnCells;
 		private readonly VisualElement _startColumn;
 		private readonly VisualElement _endColumn;
+		private readonly float _twoColumnsWidth;
+		private readonly float _oneColumnWidth;
 
 		private VisualElement _openRow;
 		private VisualElement _filler;
 		private bool _twoColumns;
 
-		public ResponsiveGrid(bool independentColumns = false)
+		public ResponsiveGrid(bool independentColumns = false, bool wide = false)
 		{
 			AddToClassList(OmniDebuggerUiClasses.Grid);
+			_twoColumnsWidth = wide ? WideTwoColumnsWidth : TwoColumnsWidth;
+			_oneColumnWidth = wide ? WideOneColumnWidth : OneColumnWidth;
 
 			if (independentColumns)
 			{
@@ -105,7 +111,7 @@ namespace DTech.OmniDebugger.UI
 				return;
 			}
 
-			bool twoColumns = _twoColumns ? width >= OneColumnWidth : width >= TwoColumnsWidth;
+			bool twoColumns = _twoColumns ? width >= _oneColumnWidth : width >= _twoColumnsWidth;
 
 			if (twoColumns == _twoColumns)
 			{

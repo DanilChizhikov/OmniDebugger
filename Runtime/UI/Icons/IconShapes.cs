@@ -109,6 +109,37 @@ namespace DTech.OmniDebugger.UI
 					pen.Line(10.0f, 10.0f, 10.0f, 16.5f);
 					pen.Line(14.0f, 10.0f, 14.0f, 16.5f);
 					break;
+				case IconGlyph.Sliders:
+					pen.Line(4.0f, 7.0f, 20.0f, 7.0f);
+					pen.Line(4.0f, 12.0f, 20.0f, 12.0f);
+					pen.Line(4.0f, 17.0f, 20.0f, 17.0f);
+					pen.Dot(15.0f, 7.0f, 2.3f);
+					pen.Dot(8.5f, 12.0f, 2.3f);
+					pen.Dot(13.0f, 17.0f, 2.3f);
+					break;
+				case IconGlyph.Terminal:
+					pen.Polygon(3.5f, 5.0f, 20.5f, 5.0f, 20.5f, 19.0f, 3.5f, 19.0f);
+					pen.Polyline(7.5f, 9.5f, 10.5f, 12.0f, 7.5f, 14.5f);
+					pen.Line(12.5f, 15.0f, 16.5f, 15.0f);
+					break;
+				case IconGlyph.Window:
+					pen.Polygon(3.5f, 5.0f, 20.5f, 5.0f, 20.5f, 19.0f, 3.5f, 19.0f);
+					pen.Line(3.5f, 9.5f, 20.5f, 9.5f);
+					break;
+				case IconGlyph.Grid:
+					pen.Polygon(4.0f, 4.0f, 10.5f, 4.0f, 10.5f, 10.5f, 4.0f, 10.5f);
+					pen.Polygon(13.5f, 4.0f, 20.0f, 4.0f, 20.0f, 10.5f, 13.5f, 10.5f);
+					pen.Polygon(4.0f, 13.5f, 10.5f, 13.5f, 10.5f, 20.0f, 4.0f, 20.0f);
+					pen.Polygon(13.5f, 13.5f, 20.0f, 13.5f, 20.0f, 20.0f, 13.5f, 20.0f);
+					break;
+				case IconGlyph.More:
+					pen.Dot(6.0f, 12.0f, 1.7f);
+					pen.Dot(12.0f, 12.0f, 1.7f);
+					pen.Dot(18.0f, 12.0f, 1.7f);
+					break;
+				case IconGlyph.ChevronDown:
+					pen.Polyline(6.0f, 9.0f, 12.0f, 15.0f, 18.0f, 9.0f);
+					break;
 			}
 		}
 

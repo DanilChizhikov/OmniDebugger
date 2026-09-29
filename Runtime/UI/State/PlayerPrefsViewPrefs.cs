@@ -33,5 +33,23 @@ namespace DTech.OmniDebugger.UI
 			PlayerPrefs.SetString(ViewStateKeys.Favorites, KeyListFormat.Join(keys));
 			PlayerPrefs.Save();
 		}
+
+		public bool TryGetWindowScale(out float scale)
+		{
+			if (!PlayerPrefs.HasKey(ViewStateKeys.WindowScale))
+			{
+				scale = 1.0f;
+				return false;
+			}
+
+			scale = PlayerPrefs.GetFloat(ViewStateKeys.WindowScale);
+			return true;
+		}
+
+		public void SetWindowScale(float scale)
+		{
+			PlayerPrefs.SetFloat(ViewStateKeys.WindowScale, scale);
+			PlayerPrefs.Save();
+		}
 	}
 }

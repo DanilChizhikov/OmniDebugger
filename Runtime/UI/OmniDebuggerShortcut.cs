@@ -31,5 +31,53 @@ namespace DTech.OmniDebugger.UI
 
 		internal OmniDebuggerShortcut Clone() =>
 			new OmniDebuggerShortcut(_keys == null ? Array.Empty<KeyCode>() : (KeyCode[])_keys.Clone());
+
+		internal string ToHint()
+		{
+			string hint = null;
+
+			for (int i = 0; i < Keys.Count; i++)
+			{
+				KeyCode key = Keys[i];
+
+				if (key == KeyCode.None)
+				{
+					continue;
+				}
+
+				string name = KeyName(key);
+				hint = hint == null ? name : hint + "+" + name;
+			}
+
+			return hint;
+		}
+
+		private static string KeyName(KeyCode key)
+		{
+			switch (key)
+			{
+				case KeyCode.LeftControl:
+				case KeyCode.RightControl:
+					return "Ctrl";
+				case KeyCode.LeftShift:
+				case KeyCode.RightShift:
+					return "Shift";
+				case KeyCode.LeftAlt:
+				case KeyCode.RightAlt:
+					return "Alt";
+				case KeyCode.LeftCommand:
+				case KeyCode.RightCommand:
+					return "Cmd";
+				case KeyCode.LeftWindows:
+				case KeyCode.RightWindows:
+					return "Win";
+				case KeyCode.BackQuote:
+					return "`";
+			}
+
+			return key >= KeyCode.Alpha0 && key <= KeyCode.Alpha9
+				? ((int)(key - KeyCode.Alpha0)).ToString()
+				: key.ToString();
+		}
 	}
 }

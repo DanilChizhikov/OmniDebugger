@@ -6,7 +6,7 @@ namespace DTech.OmniDebugger.UI
 	/// Where command icons come from. <see cref="DebugIconSource.Resources"/> keys load straight from
 	/// a <c>Resources</c> folder and <see cref="DebugIconSource.Catalog"/> keys are looked up in
 	/// <see cref="OmniDebuggerIconCatalog"/> assets; registered providers are asked first. Reached
-	/// through <see cref="IOmniDebugger.Icons"/>.
+	/// through <see cref="IOmniDebuggerHost.Icons"/>.
 	/// </summary>
 	public interface IIconRegistry
 	{

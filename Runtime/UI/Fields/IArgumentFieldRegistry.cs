@@ -3,7 +3,7 @@ namespace DTech.OmniDebugger.UI
 	/// <summary>
 	/// Which control edits which argument type. The built-ins cover <c>bool</c>, enums, every numeric
 	/// type, <c>char</c>, <c>string</c> and anything else convertible from text; register a handler
-	/// through <see cref="IOmniDebugger.Fields"/> to add your own type or to replace a built-in.
+	/// through <see cref="IOmniDebuggerHost.Fields"/> to add your own type or to replace a built-in.
 	/// </summary>
 	public interface IArgumentFieldRegistry
 	{

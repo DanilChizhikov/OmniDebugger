@@ -16,7 +16,7 @@ namespace DTech.OmniDebugger.Editor
 		{
 			if (change == PlayModeStateChange.EnteredEditMode)
 			{
-				OmniDebugger.ReleaseShared();
+				OmniDebuggerHost.ReleaseShared();
 			}
 		}
 	}

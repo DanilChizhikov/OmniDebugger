@@ -69,6 +69,11 @@ namespace DTech.OmniDebugger.UI
 
 			_button = new VisualElement { name = OmniDebuggerUiClasses.OpenButton };
 			_button.AddToClassList(OmniDebuggerUiClasses.OpenButton);
+			_button.AddManipulator(new Halo());
+
+			OmniIcon mark = new OmniIcon(IconGlyph.Terminal);
+			mark.AddToClassList(OmniDebuggerUiClasses.OpenButtonMark);
+			_button.Add(mark);
 
 			_alert = new VisualElement();
 			_alert.AddToClassList(OmniDebuggerUiClasses.OpenButtonAlert);
@@ -427,6 +432,7 @@ namespace DTech.OmniDebugger.UI
 		{
 			_pulseStart = Time.realtimeSinceStartup;
 			_alert.style.display = DisplayStyle.Flex;
+			_button.AddToClassList(OmniDebuggerUiClasses.OpenButtonAlerting);
 
 			_pulse ??= _alert.schedule.Execute(Pulse).Every(PulseFrameMs);
 			_pulse.Resume();
@@ -454,6 +460,8 @@ namespace DTech.OmniDebugger.UI
 			{
 				_alert.style.display = DisplayStyle.None;
 			}
+
+			_button?.RemoveFromClassList(OmniDebuggerUiClasses.OpenButtonAlerting);
 
 			if (_logs != null)
 			{

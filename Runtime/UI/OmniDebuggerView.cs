@@ -16,16 +16,20 @@ namespace DTech.OmniDebugger.UI
 		public event Action OnClosed;
 
 		private const float OrientationHysteresis = 1.1f;
+		private const long WindowScaleSaveDelayMs = 400;
 
-		private readonly IOmniDebugger _debugger;
+		private readonly IOmniDebuggerHost _debugger;
 		private readonly ICommandCatalog _catalog;
 		private readonly IThemeRegistry _themeRegistry;
 		private readonly ITabRegistry _tabRegistry;
 		private readonly OmniDebuggerViewState _state;
 		private readonly IViewPrefs _prefs;
 		private readonly string _origin;
+		private readonly bool _overlay;
 		private readonly VisualElement _host;
 		private readonly VisualElement _root;
+		private readonly VisualElement _desk;
+		private readonly VisualElement _stage;
 		private readonly VisualElement _panel;
 		private readonly VisualElement _tabBar;
 		private readonly VisualElement _tabBody;
@@ -36,6 +40,9 @@ namespace DTech.OmniDebugger.UI
 		private readonly ViewServices _services;
 		private readonly SafeArea _safeArea;
 		private readonly WindowsHost _windows;
+		private readonly WindowRegistry _windowRegistry;
+		private readonly IVisualElementScheduledItem _saveWindowScale;
+		private readonly FloatingPanel _floating;
 
 		/// <summary>Whether the panel is showing. A closed panel keeps its state but stops working.</summary>
 		public bool IsOpen { get; private set; }
@@ -52,8 +59,12 @@ namespace DTech.OmniDebugger.UI
 
 		private ViewOrientation _orientation;
 		private bool _landscape;
+		private bool _fullScreen;
 		private bool _orientationResolved;
+		private bool _windowScaleDirty;
 		private bool _disposed;
+
+		private bool IsFloating => _overlay && _landscape && !_fullScreen;
 
 		public OmniDebuggerView(in OmniDebuggerViewSettings settings)
 		{
@@ -74,12 +85,14 @@ namespace DTech.OmniDebugger.UI
 			_state = settings.State ?? new OmniDebuggerViewState();
 			_prefs = settings.Prefs;
 			_origin = settings.Origin;
+			_overlay = settings.ShowCloseButton;
 			_catalog = _debugger.Catalog;
 			_themeRegistry = _debugger.Themes;
 			_tabRegistry = _debugger.Tabs;
 
 			_root = new VisualElement { name = OmniDebuggerUiClasses.Root, pickingMode = PickingMode.Ignore };
 			_root.AddToClassList(OmniDebuggerUiClasses.Root);
+			_root.EnableInClassList(OmniDebuggerUiClasses.RootOverlay, _overlay);
 			_themes = new ThemeApplier(_root);
 			_popups = new PopupLayer();
 
@@ -93,40 +106,58 @@ namespace DTech.OmniDebugger.UI
 				settings.HostWindows ? _state.Pins : null,
 				_popups);
 
-			if (settings.HostWindows && _debugger.Windows is WindowRegistry windowRegistry)
-			{
-				_windows = new WindowsHost(_root, _services, windowRegistry);
-			}
+			_desk = UiBuild.Element(OmniDebuggerUiClasses.Desk);
+			_desk.pickingMode = PickingMode.Ignore;
+			_root.Add(_desk);
 
-			if (settings.ShowCloseButton)
-			{
-				VisualElement scrim = UiBuild.Element(OmniDebuggerUiClasses.Scrim);
-				scrim.RegisterCallback<PointerUpEvent>(OnScrimTapped);
-				_root.Add(scrim);
-			}
+			_stage = UiBuild.Element(OmniDebuggerUiClasses.Stage);
+			_stage.pickingMode = PickingMode.Ignore;
+			_desk.Add(_stage);
 
 			_panel = UiBuild.Element(OmniDebuggerUiClasses.Panel);
-			_root.Add(_panel);
+			_panel.AddManipulator(new Halo());
+			_panel.RegisterCallback<PointerDownEvent>(OnPanelPointerDown, TrickleDown.TrickleDown);
+			_stage.Add(_panel);
 
-			_chrome = new PanelChrome(settings.ShowCloseButton, _popups);
+			if (settings.HostWindows && _debugger.Windows is WindowRegistry windowRegistry)
+			{
+				_windowRegistry = windowRegistry;
+				RestoreWindowScale();
+				_windows = new WindowsHost(_desk, _services, windowRegistry);
+				_saveWindowScale = _root.schedule.Execute(SaveWindowScale);
+				_saveWindowScale.Pause();
+				_windowRegistry.OnScaleChanged += OnWindowScaleChanged;
+			}
+
+			string version = _debugger is OmniDebuggerHost debuggerHost ? debuggerHost.Version.ToString() : null;
+			_chrome = new PanelChrome(_overlay, _popups, _debugger.Icons, version);
 			_chrome.OnThemeSelected += OnThemePicked;
 			_chrome.OnCloseRequested += Close;
-			_panel.Add(_chrome.Root);
 
-			VisualElement content = UiBuild.Element(OmniDebuggerUiClasses.Content);
-			_panel.Add(content);
+			VisualElement rail = UiBuild.Element(OmniDebuggerUiClasses.Rail);
+			_panel.Add(rail);
+			rail.Add(_chrome.Brand);
 
 			_tabBar = UiBuild.Element(OmniDebuggerUiClasses.TabBar);
-			content.Add(_tabBar);
+			rail.Add(_tabBar);
+			rail.Add(_chrome.Footer);
+
+			VisualElement main = UiBuild.Element(OmniDebuggerUiClasses.Main);
+			_panel.Add(main);
+			main.Add(_chrome.PageBar);
 
 			_tabBody = UiBuild.Element(OmniDebuggerUiClasses.TabBody);
-			content.Add(_tabBody);
+			main.Add(_tabBody);
+
+			_floating = new FloatingPanel(_stage, _panel, _state);
+			_floating.AddHandle(_chrome.Brand);
+			_floating.AddHandle(_chrome.PageBar);
 
 			_root.Add(_popups);
 
 			_tabHost = new TabHost(_tabBar, _tabBody, _debugger, _state, _origin, _services);
 			_tabHost.OnSelectionChanged += OnTabSelectionChanged;
-			_panel.RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
+			_stage.RegisterCallback<GeometryChangedEvent>(OnGeometryChanged);
 
 			_host.Add(_root);
 
@@ -146,6 +177,7 @@ namespace DTech.OmniDebugger.UI
 			_state.Favorites.OnChanged += SaveFavorites;
 
 			_tabHost.Rebuild();
+			RefreshPage();
 			SetOpen(settings.StartOpen || _state.IsOpen, notify: false);
 			RefreshThemePicker();
 		}
@@ -215,8 +247,22 @@ namespace DTech.OmniDebugger.UI
 			_popups.Hide();
 			_tabHost.OnSelectionChanged -= OnTabSelectionChanged;
 			_tabHost.Dispose();
+
+			if (_windowRegistry != null)
+			{
+				_windowRegistry.OnScaleChanged -= OnWindowScaleChanged;
+				_saveWindowScale.Pause();
+
+				if (_windowScaleDirty)
+				{
+					SaveWindowScale();
+				}
+			}
+
 			_windows?.Dispose();
-			_panel.UnregisterCallback<GeometryChangedEvent>(OnGeometryChanged);
+			_floating.Dispose();
+			_panel.UnregisterCallback<PointerDownEvent>(OnPanelPointerDown, TrickleDown.TrickleDown);
+			_stage.UnregisterCallback<GeometryChangedEvent>(OnGeometryChanged);
 
 			if (_safeArea != null)
 			{
@@ -248,7 +294,32 @@ namespace DTech.OmniDebugger.UI
 			}
 
 			_orientationResolved = false;
-			ResolveOrientation(_panel.layout.width, _panel.layout.height);
+			ResolveOrientation(_stage.layout.width, _stage.layout.height);
+		}
+
+		internal void SetLandscapeLayout(OmniDebuggerLandscapeLayout layout)
+		{
+			MainThreadGuard.Verify(nameof(SetLandscapeLayout));
+			ThrowIfDisposed();
+
+			_fullScreen = layout == OmniDebuggerLandscapeLayout.FullScreen;
+			ApplyFrame();
+		}
+
+		internal void SetFloatingScale(float scale)
+		{
+			MainThreadGuard.Verify(nameof(SetFloatingScale));
+			ThrowIfDisposed();
+
+			_floating.SetScale(scale);
+		}
+
+		internal void SetShortcutHint(string hint)
+		{
+			MainThreadGuard.Verify(nameof(SetShortcutHint));
+			ThrowIfDisposed();
+
+			_chrome.SetShortcutHint(hint);
 		}
 
 		private OmniDebuggerTheme ResolveTheme()
@@ -297,7 +368,30 @@ namespace DTech.OmniDebugger.UI
 
 		private void SaveFavorites() => _prefs?.SetFavorites(_state.Favorites.Keys);
 
+		private void RestoreWindowScale()
+		{
+			if (_prefs != null && _prefs.TryGetWindowScale(out float scale))
+			{
+				_windowRegistry.SetScale(scale);
+			}
+		}
+
+		private void OnWindowScaleChanged()
+		{
+			_windowScaleDirty = true;
+			_saveWindowScale.ExecuteLater(WindowScaleSaveDelayMs);
+		}
+
+		private void SaveWindowScale()
+		{
+			_windowScaleDirty = false;
+			_prefs?.SetWindowScale(_windowRegistry.Scale);
+		}
+
 		private void RefreshThemePicker() => _chrome.SetThemes(_themeRegistry.All, Theme);
+
+		private void RefreshPage() =>
+			_chrome.SetPage(_tabHost.TryGetSelectedFactory(out IOmniDebuggerTabFactory factory) ? factory : null);
 
 		private void SetOpen(bool open, bool notify)
 		{
@@ -305,10 +399,11 @@ namespace DTech.OmniDebugger.UI
 			_state.IsOpen = open;
 			_root.EnableInClassList(OmniDebuggerUiClasses.RootClosed, !open);
 			_tabHost.SetPanelOpen(open);
-			_windows?.SetPanelOpen(open);
+			RefreshWindows();
 
 			if (open)
 			{
+				_stage.SendToBack();
 				_tabHost.Refresh();
 				return;
 			}
@@ -325,9 +420,22 @@ namespace DTech.OmniDebugger.UI
 		{
 			_landscape = landscape;
 			_state.Landscape = landscape;
-			_panel.EnableInClassList(OmniDebuggerUiClasses.PanelLandscape, landscape);
+			_root.EnableInClassList(OmniDebuggerUiClasses.RootLandscape, landscape);
 			_tabHost.SetVertical(landscape);
+			_chrome.SetLandscape(landscape);
+			ApplyFrame();
 		}
+
+		private void ApplyFrame()
+		{
+			bool floating = IsFloating;
+			_root.EnableInClassList(OmniDebuggerUiClasses.RootFloating, floating);
+			_floating.SetActive(floating);
+			ApplySafeArea();
+			RefreshWindows();
+		}
+
+		private void RefreshWindows() => _windows?.SetVisible(!IsOpen || IsFloating);
 
 		private void OnGeometryChanged(GeometryChangedEvent evt) =>
 			ResolveOrientation(evt.newRect.width, evt.newRect.height);
@@ -361,26 +469,42 @@ namespace DTech.OmniDebugger.UI
 
 		private void ApplySafeArea()
 		{
-			Vector4 insets = _safeArea.Insets;
-
-			_panel.style.paddingLeft = insets.x;
-			_panel.style.paddingRight = insets.y;
-			_panel.style.paddingBottom = insets.w;
-			_chrome.Root.style.paddingTop = insets.z;
-			_windows?.SetInsets(insets);
-		}
-
-		private void OnScrimTapped(PointerUpEvent evt)
-		{
-			if (evt.target != evt.currentTarget)
+			if (_safeArea == null)
 			{
 				return;
 			}
 
-			Close();
+			Vector4 insets = _safeArea.Insets;
+			bool edgeToEdge = !IsFloating;
+			Vector4 stage = edgeToEdge ? Vector4.zero : insets;
+			Vector4 panel = edgeToEdge ? insets : Vector4.zero;
+
+			_stage.style.left = stage.x;
+			_stage.style.right = stage.y;
+			_stage.style.top = stage.z;
+			_stage.style.bottom = stage.w;
+
+			_panel.style.paddingLeft = panel.x;
+			_panel.style.paddingRight = panel.y;
+			_panel.style.paddingTop = panel.z;
+			_panel.style.paddingBottom = panel.w;
+
+			_windows?.SetInsets(insets);
 		}
 
-		private void OnTabSelectionChanged() => _popups.Hide();
+		private void OnPanelPointerDown(PointerDownEvent evt)
+		{
+			if (_windows != null && IsFloating)
+			{
+				_stage.BringToFront();
+			}
+		}
+
+		private void OnTabSelectionChanged()
+		{
+			_popups.Hide();
+			RefreshPage();
+		}
 
 		private void OnThemePicked(OmniDebuggerTheme theme) => SetTheme(theme);
 
@@ -399,7 +523,11 @@ namespace DTech.OmniDebugger.UI
 		private bool IsThemeChosen() =>
 			_prefs == null || (_prefs.TryGetThemeId(out string id) && _themeRegistry.TryGet(id, out _));
 
-		private void OnTabsChanged() => _tabHost.Rebuild();
+		private void OnTabsChanged()
+		{
+			_tabHost.Rebuild();
+			RefreshPage();
+		}
 
 		private void OnCatalogChanged() => Refresh();
 

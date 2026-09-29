@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace DTech.OmniDebugger.UI
 {
@@ -33,6 +34,8 @@ namespace DTech.OmniDebugger.UI
 
 		internal CommandKeySet Pins { get; } = new ();
 
+		internal Vector2 FloatingOffset { get; set; }
+
 		/// <summary>The state of one tab, created the first time that tab asks for it.</summary>
 		public OmniDebuggerTabState GetTabState(string tabId)
 		{
@@ -58,6 +61,7 @@ namespace DTech.OmniDebugger.UI
 			ThemeId = null;
 			Landscape = false;
 			IsOpen = false;
+			FloatingOffset = Vector2.zero;
 			Arguments.Clear();
 			Favorites.Clear();
 			Pins.Clear();

@@ -109,6 +109,7 @@ namespace DTech.OmniDebugger.UI
 
 			_follow = UiBuild.IconButton(IconGlyph.ArrowDown, FollowNewest, "Jump to the newest");
 			_follow.AddToClassList(OmniDebuggerUiClasses.LogsFollow);
+			_follow.AddManipulator(new Halo());
 			UiBuild.SetVisible(_follow, false);
 			_listPage.Add(_follow);
 

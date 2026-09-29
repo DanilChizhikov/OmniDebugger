@@ -1,14 +1,24 @@
 /*
- * Structure and skin. Every colour and length here is a token, never a literal — that is what makes
- * a theme a handful of variables instead of a fork of this file. A literal colour in this sheet is
- * a bug:
+ * Structure and skin — Glass HUD. Every colour and length here is a token, never a literal — that
+ * is what makes a theme a handful of variables instead of a fork of this file. A literal colour in
+ * this sheet is a bug:
  *
  *     grep -nE "rgb|rgba|#[0-9a-f]{3,8}" OmniDebuggerPanel.uss   must print nothing.
  *
  * The block right after the shell neutralises Unity's built-in control styling, because the editor
  * default theme and the runtime default theme skin the same controls differently and the panel must
  * look identical in both mounts. It comes first so every component rule after it, at equal
- * specificity, wins over it.
+ * specificity, wins over it. The default theme is a .tss and loses ties, but it wins where its
+ * selector is more specific — its hover and checked rules — so the rules that must hold in those
+ * states repeat the state themselves.
+ *
+ * Glows and shadows are drawn by the Halo manipulator from two custom properties: --od-halo-color
+ * and a unitless --od-halo-size. C# reads custom properties only from rules that match the element
+ * itself, never inherited from an ancestor, so every state sets them on the glowing element; .od-halo
+ * zeroes the size first.
+ *
+ * USS has no :first-child or :last-child. Lists part their items with a top divider and C# marks the
+ * first item with .od-first.
  */
 
 /* ---------- shell ---------- */
@@ -16,7 +26,7 @@
 /*
  * The root stays in the tree even while the panel is closed: it carries the style sheets, and the
  * open button and floating windows live inside it. It never takes input itself, so a closed panel
- * does not swallow a tap meant for the game.
+ * does not swallow a tap meant for the game, and neither does the game around a floating panel.
  */
 .od-root {
     position: absolute;
@@ -28,28 +38,80 @@
     font-size: var(--od-font-size-md);
 }
 
-.od-root--closed .od-panel,
-.od-root--closed .od-scrim {
+.od-halo {
+    --od-halo-size: 0;
+}
+
+.od-root--closed .od-stage {
     display: none;
 }
 
-.od-scrim {
+/*
+ * The desk holds the stage and the floating windows as siblings, so the one touched last is drawn on
+ * top: C# brings a window forward when it is pressed, and the stage when the panel is.
+ */
+.od-desk {
     position: absolute;
     left: 0;
     right: 0;
     top: 0;
     bottom: 0;
-    background-color: var(--od-color-scrim);
+}
+
+/*
+ * The stage is the screen, minus the safe area C# writes into its offsets while the panel floats. It
+ * never takes input either: a tap around a floating panel falls through to the game.
+ */
+.od-stage {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+.od-root--floating .od-stage {
+    padding: var(--od-panel-inset);
 }
 
 .od-panel {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
     flex-direction: column;
+    width: 100%;
+    height: 100%;
     background-color: var(--od-color-bg);
+}
+
+.od-root--landscape .od-panel {
+    flex-direction: row;
+}
+
+/*
+ * Over the game the panel is glass. Edge to edge — portrait, and landscape set to Full Screen — it
+ * reaches the screen's edges and C# moves the safe area into its padding.
+ */
+.od-root--overlay .od-panel {
+    background-color: var(--od-color-glass);
+}
+
+/*
+ * Floating, it is a window with a lit edge and a shadow. C# sizes it inline for the floating scale
+ * and moves it with translate; the caps here hold its unscaled size. It never shrinks: below scale 1
+ * C# sizes it past the stage, and the stage's column would squash its height back to the stage's.
+ */
+.od-root--floating .od-panel {
+    flex-shrink: 0;
+    max-width: var(--od-panel-max-width);
+    max-height: var(--od-panel-max-height);
+    border-width: var(--od-border-width);
+    border-top-color: var(--od-color-glass-edge);
+    border-left-color: var(--od-color-glass-edge);
+    border-right-color: var(--od-color-glass-edge-dim);
+    border-bottom-color: var(--od-color-glass-edge-dim);
+    border-radius: var(--od-radius-panel);
+    --od-halo-color: var(--od-color-shadow);
+    --od-halo-size: var(--od-shadow-size);
 }
 
 /* ---------- neutralising Unity's own control styling ---------- */
@@ -69,25 +131,19 @@
 .od-root .unity-button {
     min-height: var(--od-control-height);
     margin: 0;
-    padding-left: var(--od-space-4);
-    padding-right: var(--od-space-4);
+    padding-left: var(--od-space-5);
+    padding-right: var(--od-space-5);
     background-color: var(--od-color-control);
     border-width: 0;
     border-radius: var(--od-radius-md);
     color: var(--od-color-text);
     font-size: var(--od-font-size-md);
-    transition-property: scale, opacity;
-    transition-duration: var(--od-transition-duration), var(--od-transition-duration);
+    transition-property: background-color, scale, opacity;
+    transition-duration: var(--od-transition-duration), var(--od-transition-duration), var(--od-transition-duration);
 }
 
 .od-root .unity-button:hover {
     background-color: var(--od-color-control-hover);
-}
-
-.od-root .od-tab--selected:hover,
-.od-root .od-button--primary:hover,
-.od-root .od-command__execute:hover {
-    background-color: var(--od-color-control-selected);
 }
 
 .od-root .unity-button:disabled {
@@ -104,7 +160,12 @@
     color: var(--od-color-text-muted);
 }
 
-.od-root .unity-base-field__input {
+/*
+ * Only text inputs get the well: toggles, sliders and the scrollers' own sliders share
+ * .unity-base-field__input and must stay bare.
+ */
+.od-root .unity-base-text-field > .unity-base-field__input,
+.od-root .unity-base-text-field:hover > .unity-base-field__input {
     background-color: var(--od-color-input);
     border-width: var(--od-border-width);
     border-color: var(--od-color-input-border);
@@ -112,13 +173,13 @@
     color: var(--od-color-text);
 }
 
-.od-root .unity-base-field:focus > .unity-base-field__input {
+.od-root .unity-base-text-field:focus > .unity-base-field__input {
     border-color: var(--od-color-focus);
 }
 
 .od-root .unity-base-text-field__input {
-    padding-left: var(--od-space-3);
-    padding-right: var(--od-space-3);
+    padding-left: var(--od-space-4);
+    padding-right: var(--od-space-4);
     color: var(--od-color-text);
     --unity-cursor-color: var(--od-color-text);
     --unity-selection-color: var(--od-color-selection);
@@ -133,14 +194,16 @@
     overflow: visible;
 }
 
-.od-root .unity-toggle > .unity-toggle__input {
+.od-root .unity-toggle > .unity-toggle__input,
+.od-root .unity-toggle:hover > .unity-toggle__input {
     background-color: transparent;
     border-width: 0;
 }
 
-.od-root .unity-toggle__checkmark {
-    width: 20px;
-    height: 20px;
+.od-root .unity-toggle > .unity-toggle__input > .unity-toggle__checkmark,
+.od-root .unity-toggle:hover > .unity-toggle__input > .unity-toggle__checkmark {
+    width: var(--od-icon-size);
+    height: var(--od-icon-size);
     background-color: var(--od-color-input);
     border-width: var(--od-border-width);
     border-color: var(--od-color-input-border);
@@ -195,7 +258,7 @@
     margin: 0;
     background-color: var(--od-color-scrollbar-thumb);
     border-width: 0;
-    border-radius: var(--od-radius-xs);
+    border-radius: var(--od-scrollbar-radius);
 }
 
 .od-root .unity-scroller--vertical .unity-base-slider__dragger {
@@ -238,73 +301,90 @@
     background-color: transparent;
 }
 
-/* ---------- header ---------- */
+/* ---------- rail: brand, tabs, footer ---------- */
 
-.od-header {
-    flex-direction: row;
-    align-items: center;
+/* Portrait stacks the rail on top of the page; landscape turns it into a sidebar. */
+.od-rail {
+    flex-direction: column;
     flex-shrink: 0;
-    min-height: var(--od-header-height);
-    padding-left: var(--od-space-6);
-    padding-right: var(--od-space-5);
-    background-color: var(--od-color-header);
     border-bottom-width: var(--od-border-width);
     border-bottom-color: var(--od-color-divider);
 }
 
-.od-header__title {
-    font-size: var(--od-font-size-title);
-    color: var(--od-color-text);
-    -unity-font-style: bold;
+.od-root--landscape .od-rail {
+    width: var(--od-sidebar-width);
+    padding-bottom: var(--od-space-4);
+    background-color: var(--od-color-rail);
+    border-bottom-width: 0;
+    border-right-width: var(--od-border-width);
+    border-right-color: var(--od-color-divider);
 }
 
-.od-header__spacer {
+/* The panel does not clip, so the sidebar's own tint follows the floating panel's corners. */
+.od-root--floating .od-rail {
+    border-top-left-radius: var(--od-radius-panel);
+    border-bottom-left-radius: var(--od-radius-panel);
+}
+
+.od-brand {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: var(--od-bar-height);
+    padding-left: var(--od-space-6);
+    padding-right: var(--od-space-4);
+}
+
+.od-brand__title {
+    flex-shrink: 1;
+    font-size: var(--od-font-size-title);
+    -unity-font-style: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.od-spacer {
     flex-grow: 1;
 }
 
-.od-root .od-header .od-header__button {
-    margin-left: var(--od-space-3);
+.od-actions {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.od-root .od-actions .od-icon-button,
+.od-root .od-actions .od-actions__theme-picker {
+    margin-left: var(--od-space-2);
 }
 
 /*
  * The button clips a long theme name, not the label: an ellipsis on the label cut the descenders of
  * g, p and y. The button is a whole control high, so only its sides ever clip.
  */
-.od-root .od-header .od-header__theme-picker {
+.od-root .od-actions .od-actions__theme-picker {
     flex-grow: 0;
     flex-shrink: 1;
     min-width: 0;
-    max-width: 50%;
+    max-width: var(--od-picker-max-width);
     overflow: hidden;
 }
 
-.od-header__theme-picker .od-enum-button__text {
+.od-actions__theme-picker .od-enum-button__text {
     margin-right: var(--od-space-2);
-}
-
-/* ---------- content, tab bar ---------- */
-
-.od-content {
-    flex-grow: 1;
-    flex-shrink: 1;
-    flex-direction: column;
-    min-width: 0;
-    min-height: 0;
-}
-
-.od-panel--landscape .od-content {
-    flex-direction: row;
 }
 
 .od-tabbar {
     flex-shrink: 0;
-    height: var(--od-tabbar-height);
-    background-color: var(--od-color-tabbar);
+    height: var(--od-strip-height);
 }
 
-.od-panel--landscape .od-tabbar {
+.od-root--landscape .od-tabbar {
+    flex-grow: 1;
+    flex-shrink: 1;
     height: auto;
-    width: var(--od-sidebar-width);
+    min-height: 0;
 }
 
 .od-tabbar__scroll {
@@ -314,46 +394,181 @@
 /*
  * Unity nests the viewport inside a content-and-scroller container, so no child selector from the
  * scroll view reaches the content; the tab bar and every page scroll tag their content container
- * with a class of their own instead.
+ * with a class of their own instead. The padding leaves room for the selected tab's glow, which the
+ * viewport would clip.
  */
 .od-tabbar__content {
     flex-direction: row;
     align-items: center;
-    padding: var(--od-space-2);
+    padding: var(--od-space-4) var(--od-space-5);
 }
 
-.od-panel--landscape .od-tabbar__content {
+.od-root--landscape .od-tabbar__content {
     flex-direction: column;
     align-items: stretch;
+    padding: var(--od-space-2) var(--od-space-5);
 }
 
 .od-root .od-tab {
     flex-shrink: 0;
-    min-height: var(--od-tab-height);
-    height: auto;
-    margin: var(--od-space-1);
-    padding-left: var(--od-space-5);
-    padding-right: var(--od-space-5);
-    background-color: var(--od-color-control);
-    border-width: 0;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: var(--od-tab-tile-width);
+    height: var(--od-tab-tile-height);
+    min-height: 0;
+    margin: 0 var(--od-space-1);
+    padding: 0;
+    background-color: transparent;
+    border-width: var(--od-border-width);
+    border-color: transparent;
     border-radius: var(--od-radius-lg);
+    color: var(--od-color-text-muted);
+    transition-property: background-color, border-color, color, scale, opacity;
+    transition-duration: var(--od-transition-duration), var(--od-transition-duration), var(--od-transition-duration), var(--od-transition-duration), var(--od-transition-duration);
+}
+
+.od-root .od-tab:hover {
+    background-color: var(--od-color-control);
     color: var(--od-color-text);
-    font-size: var(--od-font-size-xl);
+}
+
+.od-tab__image {
+    width: var(--od-icon-size);
+    height: var(--od-icon-size);
+    flex-shrink: 0;
+    -unity-background-scale-mode: scale-to-fit;
+    -unity-background-image-tint-color: var(--od-color-text-muted);
+}
+
+.od-tab__label {
+    max-width: 100%;
+    margin-top: var(--od-space-2);
+    font-size: var(--od-font-size-sm);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     -unity-text-align: middle-center;
+}
+
+.od-root .od-tab--selected,
+.od-root .od-tab--selected:hover {
+    background-color: var(--od-color-accent);
+    border-color: var(--od-color-accent-edge);
+    color: var(--od-color-accent-text);
+    --od-halo-color: var(--od-color-glow);
+    --od-halo-size: var(--od-glow-size-sm);
+}
+
+.od-tab--selected .od-tab__image {
+    -unity-background-image-tint-color: var(--od-color-accent-text);
+}
+
+.od-root--landscape .od-tab {
+    flex-direction: row;
+    justify-content: flex-start;
+    width: auto;
+    height: var(--od-tab-height);
+    margin: var(--od-space-1) 0;
+    padding: 0 var(--od-space-5);
+    border-radius: var(--od-radius-md);
+}
+
+.od-root--landscape .od-tab__label {
+    flex-shrink: 1;
+    margin-top: 0;
+    margin-left: var(--od-space-5);
+    font-size: var(--od-font-size-md);
+    -unity-text-align: middle-left;
+}
+
+.od-root--landscape .od-tab--selected,
+.od-root--landscape .od-tab--selected:hover {
+    background-color: var(--od-color-control-selected);
+    color: var(--od-color-text);
+}
+
+.od-root--landscape .od-tab--selected .od-icon {
+    color: var(--od-color-accent);
+}
+
+.od-root--landscape .od-tab--selected .od-tab__image {
+    -unity-background-image-tint-color: var(--od-color-accent);
+}
+
+.od-rail__footer {
+    display: none;
+    flex-shrink: 0;
+    padding: var(--od-space-4) var(--od-space-6) 0 var(--od-space-6);
+}
+
+.od-root--landscape .od-rail__footer {
+    display: flex;
+}
+
+.od-rail__version {
+    color: var(--od-color-text-faint);
+    font-size: var(--od-font-size-xs);
+    letter-spacing: var(--od-letter-spacing-label);
+}
+
+/* ---------- main: page bar, tab body ---------- */
+
+.od-main {
+    flex-grow: 1;
+    flex-shrink: 1;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
+.od-page-bar {
+    display: none;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    min-height: var(--od-bar-height);
+    padding-left: var(--od-space-6);
+    padding-right: var(--od-space-4);
+    border-bottom-width: var(--od-border-width);
+    border-bottom-color: var(--od-color-divider);
+}
+
+.od-root--landscape .od-page-bar {
+    display: flex;
+}
+
+.od-page-bar__icon {
+    flex-shrink: 0;
+    margin-right: var(--od-space-4);
+    color: var(--od-color-accent);
+}
+
+.od-page-bar__icon .od-tab__image {
+    -unity-background-image-tint-color: var(--od-color-accent);
+}
+
+.od-page-bar__title {
+    flex-shrink: 1;
+    font-size: var(--od-font-size-title);
+    -unity-font-style: bold;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.od-panel--landscape .od-tab {
-    height: 44px;
-    padding-left: var(--od-space-3);
-    padding-right: var(--od-space-3);
-    font-size: var(--od-font-size-lg);
-}
-
-.od-root .od-tab--selected {
-    background-color: var(--od-color-control-selected);
+.od-keycap {
+    flex-shrink: 0;
+    margin-left: var(--od-space-5);
+    padding: var(--od-space-1) var(--od-space-3);
+    background-color: var(--od-color-card-inset);
+    border-width: var(--od-border-width);
+    border-bottom-width: 2px;
+    border-color: var(--od-color-card-edge);
+    border-radius: var(--od-radius-sm);
+    color: var(--od-color-text-muted);
+    font-size: var(--od-font-size-sm);
+    -unity-font-style: bold;
 }
 
 .od-tabbody {
@@ -371,6 +586,7 @@
     flex-direction: column;
     min-width: 0;
     min-height: 0;
+    --od-pulse-ms: var(--od-value-refresh-ms);
 }
 
 .od-status {
@@ -382,7 +598,7 @@
 }
 
 .od-empty {
-    padding: var(--od-space-6);
+    padding: var(--od-space-7) var(--od-space-6);
     color: var(--od-color-text-muted);
     font-size: var(--od-font-size-lg);
     white-space: normal;
@@ -406,14 +622,15 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    background-color: var(--od-color-control);
+    background-color: transparent;
     border-width: 0;
     border-radius: var(--od-radius-md);
-    color: var(--od-color-text);
+    color: var(--od-color-text-muted);
 }
 
-.od-root .od-icon-button--active {
-    color: var(--od-color-accent);
+.od-root .od-icon-button:hover {
+    background-color: var(--od-color-control);
+    color: var(--od-color-text);
 }
 
 /* A scroll view takes the press away from the button under it, so it marks the button itself. */
@@ -421,6 +638,10 @@
 .od-root .unity-button.od-pressed {
     scale: 0.94 0.94;
     opacity: var(--od-opacity-pressed);
+}
+
+.od-root .od-tappable.od-pressed {
+    background-color: var(--od-color-control);
 }
 
 .od-scroll {
@@ -431,6 +652,14 @@
 
 .od-scroll__content {
     padding: var(--od-space-6);
+}
+
+.od-popup-list {
+    flex-grow: 0;
+}
+
+.od-popup-list .od-scroll__content {
+    padding: 0;
 }
 
 /*
@@ -473,11 +702,11 @@
 
 .od-grid--two-columns > .od-grid__column--end {
     display: flex;
-    padding-left: var(--od-space-2);
+    padding-left: var(--od-space-3);
 }
 
 .od-grid--two-columns > .od-grid__column--start {
-    padding-right: var(--od-space-2);
+    padding-right: var(--od-space-3);
 }
 
 .od-grid__cell {
@@ -493,11 +722,11 @@
 }
 
 .od-grid--two-columns > .od-grid__row > .od-grid__cell--start {
-    padding-right: var(--od-space-2);
+    padding-right: var(--od-space-3);
 }
 
 .od-grid--two-columns > .od-grid__row > .od-grid__cell--end {
-    padding-left: var(--od-space-2);
+    padding-left: var(--od-space-3);
 }
 
 .od-grid__cell--filler {
@@ -512,9 +741,13 @@
     flex-grow: 1;
 }
 
+/* A glass tile: a faint wash over the panel, lit along its top edge. */
 .od-card {
     padding: var(--od-space-4);
     background-color: var(--od-color-card);
+    border-width: var(--od-border-width);
+    border-color: var(--od-color-card-edge);
+    border-top-color: var(--od-color-glass-edge);
     border-radius: var(--od-radius-lg);
 }
 
@@ -528,19 +761,43 @@
 .od-page-header__title {
     flex-grow: 1;
     flex-shrink: 1;
-    margin-left: var(--od-space-4);
+    margin-left: var(--od-space-3);
     font-size: var(--od-font-size-xl);
     -unity-font-style: bold;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.od-page-header .od-icon-button {
+.od-page-header__count {
+    flex-shrink: 0;
     margin-left: var(--od-space-3);
+    padding: var(--od-space-1) var(--od-space-3);
+    background-color: var(--od-color-card-inset);
+    border-radius: var(--od-radius-sm);
+    color: var(--od-color-text-faint);
+    font-size: var(--od-font-size-xs);
 }
 
-.od-page-header .od-icon-button:first-child {
-    margin-left: 0;
+.od-page-header__caption {
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-right: var(--od-space-5);
+    color: var(--od-color-text-muted);
+    font-size: var(--od-font-size-sm);
+    white-space: normal;
+}
+
+/* A toolbar sits above a page's scroll view, padded like the scroll content under it. */
+.od-toolbar {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    padding: var(--od-space-6) var(--od-space-6) 0 var(--od-space-6);
+}
+
+.od-root .od-toolbar .od-toolbar__chip {
+    margin: 0 0 0 var(--od-space-3);
 }
 
 .od-search-box {
@@ -548,10 +805,12 @@
     align-items: center;
     flex-grow: 1;
     height: var(--od-control-height);
-    padding-left: var(--od-space-4);
-    background-color: var(--od-color-control);
-    border-radius: var(--od-radius-md);
-    color: var(--od-color-text-muted);
+    padding-left: var(--od-space-5);
+    background-color: var(--od-color-input);
+    border-width: var(--od-border-width);
+    border-color: var(--od-color-input-border);
+    border-radius: var(--od-capsule-radius);
+    color: var(--od-color-text-faint);
 }
 
 .od-search-box .od-icon {
@@ -570,43 +829,56 @@
     overflow: hidden;
 }
 
-.od-root .od-search-box__field > .unity-base-field__input {
+.od-root .od-search-box__field > .unity-base-field__input,
+.od-root .od-search-box__field:hover > .unity-base-field__input,
+.od-root .od-search-box__field:focus > .unity-base-field__input {
     background-color: transparent;
     border-width: 0;
     overflow: visible;
 }
 
+.od-chips {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
 .od-root .od-chip {
-    height: 26px;
-    margin-top: 0;
-    margin-right: var(--od-space-2);
-    margin-bottom: var(--od-space-2);
-    margin-left: 0;
-    padding-left: var(--od-space-4);
-    padding-right: var(--od-space-4);
+    height: var(--od-chip-height);
+    min-height: var(--od-chip-height);
+    margin: 0 var(--od-space-2) var(--od-space-2) 0;
+    padding-left: var(--od-space-5);
+    padding-right: var(--od-space-5);
     background-color: var(--od-color-control);
     border-width: var(--od-border-width);
     border-color: transparent;
-    border-radius: var(--od-radius-md);
+    border-radius: var(--od-chip-radius);
+    color: var(--od-color-text-muted);
     font-size: var(--od-font-size-sm);
 }
 
-.od-root .od-chip--active {
+.od-root .od-chip--active,
+.od-root .od-chip--active:hover {
     background-color: var(--od-color-control-selected);
-    border-color: var(--od-color-accent);
-}
-
-.od-root .od-button--primary {
-    background-color: var(--od-color-control-selected);
+    border-color: var(--od-color-accent-edge);
     color: var(--od-color-text);
 }
 
-.od-root .od-button--destructive {
+.od-root .od-button--primary,
+.od-root .od-button--primary:hover {
+    background-color: var(--od-color-accent);
+    color: var(--od-color-accent-text);
+    -unity-font-style: bold;
+    --od-halo-color: var(--od-color-glow);
+    --od-halo-size: var(--od-glow-size-sm);
+}
+
+.od-root .od-button--destructive,
+.od-root .od-button--destructive:hover {
     background-color: var(--od-color-destructive);
-    color: var(--od-color-text);
+    color: var(--od-color-danger);
 }
 
-/* ---------- popups ---------- */
+/* ---------- popups and menus ---------- */
 
 .od-popup-layer {
     position: absolute;
@@ -626,15 +898,20 @@
     position: absolute;
     max-width: 90%;
     max-height: 80%;
-    padding: var(--od-space-5);
-    background-color: var(--od-color-card);
+    padding: var(--od-space-6);
+    background-color: var(--od-color-popup);
     border-width: var(--od-border-width);
-    border-color: var(--od-color-divider);
-    border-radius: var(--od-radius-lg);
+    border-color: var(--od-color-card-edge);
+    border-top-color: var(--od-color-glass-edge);
+    border-radius: var(--od-radius-xl);
+    --od-halo-color: var(--od-color-shadow);
+    --od-halo-size: var(--od-shadow-size);
 }
 
 .od-popup--anchored {
     padding: var(--od-space-2);
+    border-radius: var(--od-radius-lg);
+    --od-halo-size: var(--od-shadow-size-sm);
 }
 
 .od-popup-layer--anchored {
@@ -657,31 +934,69 @@
     height: var(--od-control-height);
     margin: 0;
     padding-left: var(--od-space-4);
+    padding-right: var(--od-space-4);
     background-color: transparent;
     border-width: 0;
     border-radius: var(--od-radius-sm);
     -unity-text-align: middle-left;
 }
 
-.od-root .od-popup__option--selected {
+.od-root .od-popup__option--selected,
+.od-root .od-popup__option--selected:hover {
     background-color: var(--od-color-control-selected);
+}
+
+.od-menu {
+    flex-direction: column;
+}
+
+.od-menu__title {
+    padding: var(--od-space-3) var(--od-space-4) 0 var(--od-space-4);
+    -unity-font-style: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.od-menu__caption {
+    margin-bottom: var(--od-space-2);
+    padding: var(--od-space-1) var(--od-space-4) var(--od-space-3) var(--od-space-4);
+    border-bottom-width: var(--od-border-width);
+    border-bottom-color: var(--od-color-divider);
+    color: var(--od-color-text-faint);
+    font-size: var(--od-font-size-xs);
+    white-space: normal;
+}
+
+.od-root .od-menu__item {
+    flex-direction: row;
+    align-items: center;
+}
+
+.od-menu__item .od-icon {
+    width: var(--od-icon-size-sm);
+    height: var(--od-icon-size-sm);
+    margin-right: var(--od-space-4);
+    color: var(--od-color-text-muted);
+}
+
+.od-menu__item-label {
+    flex-grow: 1;
+    -unity-text-align: middle-left;
 }
 
 .od-toast {
     position: absolute;
     bottom: var(--od-space-7);
     align-self: center;
-    padding-top: var(--od-space-3);
-    padding-right: var(--od-space-5);
-    padding-bottom: var(--od-space-3);
-    padding-left: var(--od-space-5);
-    background-color: var(--od-color-card);
+    padding: var(--od-space-3) var(--od-space-6);
+    background-color: var(--od-color-popup);
     border-width: var(--od-border-width);
-    border-color: var(--od-color-accent);
-    border-radius: var(--od-radius-md);
+    border-color: var(--od-color-accent-edge);
+    border-radius: var(--od-radius-lg);
     opacity: 0;
     transition-property: opacity;
-    transition-duration: 150ms;
+    transition-duration: var(--od-transition-duration);
 }
 
 .od-toast--visible {
@@ -691,31 +1006,32 @@
 /* ---------- info tab ---------- */
 
 .od-section {
-    padding-top: var(--od-space-4);
-    padding-right: var(--od-space-5);
-    padding-bottom: var(--od-space-4);
-    padding-left: var(--od-space-5);
+    padding: var(--od-space-5) var(--od-space-6) var(--od-space-4) var(--od-space-6);
     background-color: var(--od-color-card);
+    border-width: var(--od-border-width);
+    border-color: var(--od-color-card-edge);
+    border-top-color: var(--od-color-glass-edge);
     border-radius: var(--od-radius-lg);
 }
 
 .od-section__title {
     margin-bottom: var(--od-space-3);
-    color: var(--od-color-accent-soft);
-    font-size: var(--od-font-size-xl);
+    color: var(--od-color-text-muted);
+    font-size: var(--od-font-size-sm);
     -unity-font-style: bold;
+    letter-spacing: var(--od-letter-spacing-label);
 }
 
 .od-kv-row {
     flex-direction: row;
     align-items: center;
-    min-height: 26px;
-    border-bottom-width: var(--od-border-width);
-    border-bottom-color: var(--od-color-divider);
+    min-height: var(--od-kv-row-height);
+    border-top-width: var(--od-border-width);
+    border-top-color: var(--od-color-divider);
 }
 
-.od-kv-row:last-child {
-    border-bottom-width: 0;
+.od-kv-row.od-first {
+    border-top-width: 0;
 }
 
 .od-kv-row__key {
@@ -731,197 +1047,230 @@
     -unity-text-align: middle-right;
 }
 
-/* ---------- commands: groups ---------- */
+/* ---------- commands: group sections ---------- */
 
-.od-group-card {
+.od-group {
     padding: 0;
 }
 
-.od-root .od-group-card__head {
-    background-color: transparent;
-    border-radius: var(--od-radius-lg);
+.od-root .od-group__head {
     flex-direction: row;
     align-items: center;
-    min-height: 44px;
-    padding-top: var(--od-space-3);
-    padding-right: var(--od-space-3);
-    padding-bottom: var(--od-space-3);
-    padding-left: var(--od-space-4);
+    min-height: var(--od-row-min-height);
+    height: auto;
+    margin: 0;
+    padding: var(--od-space-2) var(--od-space-5) var(--od-space-2) var(--od-space-2);
+    background-color: transparent;
+    border-width: 0;
+    border-radius: var(--od-radius-lg);
+    color: var(--od-color-text-muted);
 }
 
-.od-root .od-group-card__toggle {
-    width: 24px;
-    height: 24px;
-    min-width: 24px;
-    background-color: var(--od-color-card-inset);
-}
-
-.od-root .od-group-card__head:hover {
+.od-root .od-group__head:hover {
     background-color: var(--od-color-control);
 }
 
-.od-group-card__head > .od-icon {
-    margin-left: var(--od-space-4);
+.od-group__toggle .od-icon {
+    rotate: -90deg;
+    transition-property: rotate;
+    transition-duration: var(--od-transition-duration);
 }
 
-.od-group-card__title {
+.od-group--expanded .od-group__toggle .od-icon {
+    rotate: 0deg;
+}
+
+.od-group__star {
+    width: var(--od-icon-size-sm);
+    height: var(--od-icon-size-sm);
+    margin-left: var(--od-space-2);
+    color: var(--od-color-accent);
+}
+
+.od-group__title {
     flex-grow: 1;
     flex-shrink: 1;
-    margin-left: var(--od-space-4);
-    font-size: var(--od-font-size-lg);
+    margin-left: var(--od-space-3);
+    color: var(--od-color-text-muted);
+    font-size: var(--od-font-size-sm);
+    -unity-font-style: bold;
+    letter-spacing: var(--od-letter-spacing-label);
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.od-group-card__count {
-    margin-right: var(--od-space-3);
-    color: var(--od-color-text-faint);
-    font-size: var(--od-font-size-sm);
-}
-
-.od-group-card--favorites .od-group-card__title {
+.od-group--favorites .od-group__title {
     color: var(--od-color-accent-soft);
-    -unity-font-style: bold;
 }
 
-.od-group-card__preview {
-    padding-top: var(--od-space-3);
-    padding-right: var(--od-space-4);
-    padding-bottom: var(--od-space-4);
-    padding-left: var(--od-space-4);
-    margin-top: 0;
-    margin-right: var(--od-space-3);
-    margin-bottom: var(--od-space-3);
-    margin-left: var(--od-space-3);
-    background-color: var(--od-color-card-inset);
-    border-radius: var(--od-radius-md);
-}
-
-.od-group-card__preview-item {
-    color: var(--od-color-text-muted);
-    font-size: var(--od-font-size-sm);
-    margin-top: var(--od-space-1);
-}
-
-/* ---------- commands: cards ---------- */
-
-.od-command {
-    flex-direction: column;
-}
-
-.od-command__header {
-    flex-direction: row;
-    align-items: flex-start;
-}
-
-.od-command__icon {
-    width: 32px;
-    height: 32px;
-    margin-right: var(--od-space-4);
+.od-group__count {
     flex-shrink: 0;
-    border-radius: var(--od-radius-md);
-    -unity-background-scale-mode: scale-to-fit;
+    margin-left: var(--od-space-3);
+    margin-right: var(--od-space-3);
+    padding: var(--od-space-1) var(--od-space-3);
+    background-color: var(--od-color-card-inset);
+    border-radius: var(--od-radius-sm);
+    color: var(--od-color-text-faint);
+    font-size: var(--od-font-size-xs);
 }
 
-.od-command__titles {
+.od-group__open {
+    width: var(--od-icon-size-sm);
+    height: var(--od-icon-size-sm);
+    color: var(--od-color-text-faint);
+}
+
+.od-group__body {
+    display: none;
+    padding: 0 var(--od-space-5) var(--od-space-2) var(--od-space-5);
+}
+
+.od-group--expanded .od-group__body {
+    display: flex;
+}
+
+/* ---------- commands: rows ---------- */
+
+.od-row-list {
+    padding: 0 var(--od-space-5);
+}
+
+.od-row {
+    flex-direction: column;
+    border-top-width: var(--od-border-width);
+    border-top-color: var(--od-color-divider);
+}
+
+.od-row.od-first {
+    border-top-width: 0;
+}
+
+.od-row__main {
+    flex-direction: row;
+    align-items: center;
+    min-height: var(--od-row-min-height);
+    padding: var(--od-space-2) 0;
+}
+
+.od-row__icon {
+    width: var(--od-icon-size);
+    height: var(--od-icon-size);
+    flex-shrink: 0;
+    margin-right: var(--od-space-5);
+    align-items: center;
+    justify-content: center;
+    -unity-background-scale-mode: scale-to-fit;
+    color: var(--od-color-warning);
+}
+
+.od-row__titles {
     flex-grow: 1;
     flex-shrink: 1;
+    min-width: 0;
+    margin-right: var(--od-space-4);
 }
 
-.od-command__name {
-    font-size: var(--od-font-size-lg);
-    -unity-font-style: bold;
-    white-space: normal;
+.od-row__name {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.od-command__meta {
+.od-row__caption {
     margin-top: var(--od-space-1);
     color: var(--od-color-text-faint);
     font-size: var(--od-font-size-xs);
-    white-space: normal;
 }
 
-.od-command__actions {
-    flex-direction: row;
-    flex-shrink: 0;
-    margin-left: var(--od-space-3);
+.od-row__chevron {
+    width: var(--od-icon-size-sm);
+    height: var(--od-icon-size-sm);
+    color: var(--od-color-text-faint);
 }
 
-.od-command__actions .od-icon-button {
-    margin-left: var(--od-space-2);
-    width: 28px;
-    height: 28px;
-    min-width: 28px;
-}
-
-.od-command__body {
-    margin-top: var(--od-space-4);
-}
-
-.od-command__value-caption {
-    color: var(--od-color-text-muted);
-    font-size: var(--od-font-size-sm);
-}
-
-.od-command__value {
-    color: var(--od-color-accent-soft);
-    font-size: var(--od-font-size-lg);
-    white-space: normal;
-}
-
-.od-command__footer {
+.od-row__control {
     flex-direction: row;
     align-items: center;
-    margin-top: var(--od-space-3);
+    flex-shrink: 0;
+    max-width: 60%;
 }
 
-.od-command__status {
-    flex-grow: 1;
-    flex-shrink: 1;
-    margin-right: var(--od-space-4);
+.od-row__control > .od-arguments {
+    flex-direction: row;
+    align-items: center;
+}
+
+.od-root .od-row__control .od-field {
+    margin: 0;
+}
+
+.od-root .od-row__control .unity-base-text-field {
+    width: var(--od-inline-field-width);
+}
+
+.od-root .od-row__control .od-enum-button {
+    min-width: var(--od-inline-field-width);
+}
+
+.od-row__value {
+    color: var(--od-color-accent-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    -unity-text-align: middle-right;
+}
+
+.od-root .od-row__run,
+.od-root .od-row__run:hover {
+    margin-left: var(--od-space-3);
+    background-color: var(--od-color-accent);
+    color: var(--od-color-accent-text);
+    --od-halo-color: var(--od-color-glow);
+    --od-halo-size: var(--od-glow-size-sm);
+}
+
+.od-root .od-row__more {
+    margin-left: var(--od-space-2);
+    color: var(--od-color-text-faint);
+}
+
+.od-row__extra {
+    padding-bottom: var(--od-space-4);
+}
+
+.od-row__status {
+    margin-bottom: var(--od-space-3);
     font-size: var(--od-font-size-sm);
     white-space: normal;
 }
 
-.od-command__status--success {
+.od-row__status--success {
     color: var(--od-color-success);
 }
 
-.od-command__status--error {
+.od-row__status--error {
     color: var(--od-color-danger);
 }
 
-.od-root .od-command__execute {
-    min-width: 96px;
-    height: var(--od-control-height);
-    background-color: var(--od-color-control-selected);
-    border-width: 0;
-    border-radius: var(--od-radius-md);
-    font-size: var(--od-font-size-md);
-    -unity-font-style: bold;
+.od-row--compact .od-row__main {
+    min-height: var(--od-control-height);
 }
 
-.od-command--clickable .od-command__body {
-    display: none;
+.od-about {
+    margin-top: var(--od-card-gap);
+    padding: var(--od-space-5) var(--od-space-6);
 }
 
-.od-command--compact {
-    padding-top: var(--od-space-3);
-    padding-right: 0;
-    padding-bottom: var(--od-space-3);
-    padding-left: 0;
-    background-color: transparent;
-    border-radius: 0;
-    border-bottom-width: var(--od-border-width);
-    border-bottom-color: var(--od-color-divider);
+.od-about__text {
+    margin-bottom: var(--od-space-3);
+    white-space: normal;
 }
 
-.od-command--compact .od-command__name {
-    font-size: var(--od-font-size-md);
-}
-
-.od-command--compact .od-command__body {
-    margin-top: var(--od-space-2);
+.od-about__meta {
+    color: var(--od-color-text-faint);
+    font-size: var(--od-font-size-xs);
+    white-space: normal;
 }
 
 /* ---------- argument fields ---------- */
@@ -938,15 +1287,19 @@
     margin-left: 0;
 }
 
-.od-root .od-field > .unity-base-field__label {
+.od-root .od-field > .unity-base-field__label,
+.od-field__label {
     min-width: 0;
     width: 35%;
+    flex-shrink: 0;
     font-size: var(--od-font-size-sm);
     color: var(--od-color-text-muted);
     -unity-text-align: middle-left;
 }
 
 .od-root .od-field--invalid > .unity-base-field__input,
+.od-root .od-field--invalid:hover > .unity-base-field__input,
+.od-root .od-field--invalid:focus > .unity-base-field__input,
 .od-root .od-field--invalid .od-enum-button {
     border-color: var(--od-color-danger);
 }
@@ -958,10 +1311,11 @@
 }
 
 .od-field__nullable {
-    margin-right: var(--od-space-2);
+    margin-right: var(--od-space-3);
 }
 
-.od-root .od-enum-button {
+.od-root .od-enum-button,
+.od-root .od-enum-button:hover {
     flex-grow: 1;
     flex-direction: row;
     align-items: center;
@@ -980,6 +1334,133 @@
     -unity-text-align: middle-left;
 }
 
+.od-enum-button .od-icon {
+    width: var(--od-icon-size-sm);
+    height: var(--od-icon-size-sm);
+    color: var(--od-color-text-muted);
+}
+
+/*
+ * A switch is a field whose input is a button drawn as the track, with a knob inside it. It is not
+ * Unity's toggle: a toggle's checkmark restyled into a track was not painted in the runtime panel.
+ * The track keeps the button's transitions and press feedback; its rules repeat :hover because the
+ * button rules above set the background in that state too.
+ */
+.od-root .od-switch {
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 0;
+    flex-shrink: 0;
+    min-height: var(--od-switch-height);
+}
+
+.od-root .od-switch__track,
+.od-root .od-switch__track:hover {
+    width: var(--od-switch-width);
+    min-width: var(--od-switch-width);
+    height: var(--od-switch-height);
+    min-height: var(--od-switch-height);
+    flex-grow: 0;
+    flex-shrink: 0;
+    margin: 0;
+    padding: 0;
+    background-color: var(--od-color-switch-track);
+    border-width: 0;
+    border-radius: var(--od-switch-radius);
+}
+
+.od-root .od-switch--on > .od-switch__track,
+.od-root .od-switch--on > .od-switch__track:hover {
+    background-color: var(--od-color-accent);
+    --od-halo-color: var(--od-color-glow);
+    --od-halo-size: var(--od-glow-size-sm);
+}
+
+.od-switch__knob {
+    position: absolute;
+    left: var(--od-knob-inset);
+    top: var(--od-knob-inset);
+    width: var(--od-knob-size);
+    height: var(--od-knob-size);
+    background-color: var(--od-color-switch-knob);
+    border-radius: var(--od-knob-radius);
+    transition-property: left, background-color;
+    transition-duration: var(--od-transition-duration), var(--od-transition-duration);
+}
+
+.od-switch--on .od-switch__knob {
+    left: var(--od-knob-on-left);
+    background-color: var(--od-color-accent-text);
+}
+
+/*
+ * A ranged number: Unity's slider with every box pinned — track and thumb centred on the drag area,
+ * the fill Unity sizes inline — and a value box beside it.
+ */
+.od-range {
+    flex-direction: row;
+    align-items: center;
+    min-height: var(--od-control-height);
+}
+
+.od-root .od-range__slider {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    margin: 0 var(--od-space-5) 0 0;
+}
+
+.od-root .od-range__slider .unity-base-slider__input,
+.od-root .od-range__slider .unity-base-slider__drag-container {
+    margin: 0;
+    padding: 0;
+}
+
+.od-root .od-range__slider .unity-base-slider__tracker,
+.od-root .od-range__slider:hover .unity-base-slider__tracker,
+.od-root .od-range__slider:focus .unity-base-slider__tracker {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: var(--od-slider-track-height);
+    margin-top: var(--od-slider-track-offset);
+    background-color: var(--od-color-slider-track);
+    border-width: 0;
+    border-radius: var(--od-slider-track-radius);
+}
+
+.od-root .od-range__slider .unity-base-slider__fill {
+    position: absolute;
+    background-color: var(--od-color-accent);
+    border-radius: var(--od-slider-track-radius);
+}
+
+.od-root .od-range__slider .unity-base-slider__dragger-border {
+    display: none;
+}
+
+.od-root .od-range__slider .unity-base-slider__dragger,
+.od-root .od-range__slider:hover .unity-base-slider__dragger,
+.od-root .od-range__slider:focus .unity-base-slider__dragger {
+    position: absolute;
+    top: 50%;
+    width: var(--od-slider-thumb-size);
+    height: var(--od-slider-thumb-size);
+    margin: 0;
+    margin-top: var(--od-slider-thumb-offset);
+    background-color: var(--od-color-accent-text);
+    border-width: var(--od-slider-thumb-border);
+    border-color: var(--od-color-accent);
+    border-radius: var(--od-slider-thumb-radius);
+}
+
+.od-root .od-range__box {
+    flex-shrink: 0;
+    width: var(--od-range-box-width);
+    margin: 0;
+}
+
 /* ---------- logs ---------- */
 
 /*
@@ -991,10 +1472,7 @@
 .od-logs-toolbar {
     flex-direction: column;
     flex-shrink: 0;
-    padding-top: var(--od-space-5);
-    padding-right: var(--od-space-6);
-    padding-bottom: var(--od-space-4);
-    padding-left: var(--od-space-6);
+    padding: var(--od-space-6) var(--od-space-6) var(--od-space-4) var(--od-space-6);
 }
 
 .od-logs-toolbar--wide {
@@ -1011,7 +1489,7 @@
 .od-logs-toolbar--wide > .od-search-box {
     flex-grow: 1;
     flex-shrink: 1;
-    min-width: 160px;
+    min-width: var(--od-search-min-width);
     margin-right: var(--od-space-3);
     margin-bottom: 0;
 }
@@ -1026,13 +1504,14 @@
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    height: var(--od-icon-button-size);
-    min-height: var(--od-icon-button-size);
+    height: var(--od-control-height);
+    min-height: var(--od-control-height);
     margin-right: var(--od-space-2);
     padding-top: 0;
     padding-bottom: 0;
     padding-left: var(--od-space-4);
     padding-right: var(--od-space-4);
+    border-radius: var(--od-capsule-radius);
     color: var(--od-color-text-muted);
 }
 
@@ -1041,11 +1520,12 @@
     flex-grow: 1;
     flex-shrink: 1;
     min-width: 0;
-    height: var(--od-icon-button-size);
-    min-height: var(--od-icon-button-size);
+    height: var(--od-control-height);
+    min-height: var(--od-control-height);
     margin-left: var(--od-space-2);
     padding-top: 0;
     padding-bottom: 0;
+    border-radius: var(--od-capsule-radius);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1109,7 +1589,7 @@
     background-color: var(--od-color-card);
     border-left-width: var(--od-log-stripe-width);
     border-left-color: var(--od-color-log-stripe-log);
-    border-radius: var(--od-radius-sm);
+    border-radius: var(--od-radius-md);
 }
 
 .od-log--warning {
@@ -1125,9 +1605,43 @@
     flex-shrink: 1;
 }
 
+/*
+ * The record's header, one line: time, type and tags. Muted rather than faint — faint grey on the
+ * card's grey read as one smudge. The tags wrap inside their own label, never as a wrapping line.
+ */
 .od-log__meta {
-    color: var(--od-color-text-faint);
-    font-size: var(--od-font-size-xs);
+    flex-direction: row;
+    align-items: flex-start;
+    font-size: var(--od-font-size-sm);
+}
+
+.od-log__time {
+    flex-shrink: 0;
+    color: var(--od-color-text-muted);
+}
+
+.od-log__type {
+    flex-shrink: 0;
+    margin-left: var(--od-space-4);
+    color: var(--od-color-text);
+    -unity-font-style: bold;
+    letter-spacing: var(--od-letter-spacing-label);
+}
+
+.od-log--warning .od-log__type {
+    color: var(--od-color-warning);
+}
+
+.od-log--error .od-log__type {
+    color: var(--od-color-danger);
+}
+
+.od-log__tags {
+    flex-grow: 1;
+    flex-shrink: 1;
+    margin-left: var(--od-space-4);
+    color: var(--od-color-accent-soft);
+    white-space: normal;
 }
 
 .od-log__message {
@@ -1144,49 +1658,56 @@
     color: var(--od-color-danger);
 }
 
-.od-log .od-icon-button {
-    width: 26px;
-    height: 26px;
-    min-width: 26px;
+.od-root .od-log .od-icon-button {
+    width: var(--od-log-button-size);
+    height: var(--od-log-button-size);
+    min-width: var(--od-log-button-size);
     margin-left: var(--od-space-2);
-    background-color: transparent;
-    color: var(--od-color-text-muted);
+    color: var(--od-color-text-faint);
 }
 
-.od-root .od-logs-follow {
+.od-root .od-logs-follow,
+.od-root .od-logs-follow:hover {
     position: absolute;
     right: var(--od-space-7);
     bottom: var(--od-space-7);
-    width: 40px;
-    height: 40px;
-    border-radius: var(--od-radius-md);
-    background-color: var(--od-color-control-selected);
+    width: var(--od-follow-button-size);
+    height: var(--od-follow-button-size);
+    min-width: var(--od-follow-button-size);
+    background-color: var(--od-color-accent);
+    border-radius: var(--od-follow-button-radius);
+    color: var(--od-color-accent-text);
+    --od-halo-color: var(--od-color-glow);
+    --od-halo-size: var(--od-glow-size);
 }
 
 /* ---------- floating windows ---------- */
 
-.od-windows-layer {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-}
-
+/* No clipping here: the header is transparent, and a clip would cut the window's own shadow. */
 .od-window {
     position: absolute;
     width: var(--od-window-width);
     max-height: var(--od-window-max-height);
     background-color: var(--od-color-window-bg);
     border-width: var(--od-border-width);
-    border-color: var(--od-color-divider);
+    border-color: var(--od-color-card-edge);
+    border-top-color: var(--od-color-glass-edge);
     border-radius: var(--od-radius-lg);
-    opacity: 0.55;
-    overflow: hidden;
+    transform-origin: 0 0;
+    opacity: var(--od-opacity-window-idle);
+    transition-property: opacity;
+    transition-duration: var(--od-transition-duration);
+    --od-halo-color: var(--od-color-shadow);
+    --od-halo-size: var(--od-shadow-size-sm);
+}
+
+/* Shares the desk with the stage, so windows are hidden one by one while the panel covers the screen. */
+.od-desk--windows-hidden > .od-window {
+    display: none;
 }
 
 .od-window--active {
-    opacity: 0.96;
+    opacity: 1;
     border-color: var(--od-color-window-border);
 }
 
@@ -1194,48 +1715,55 @@
     flex-direction: row;
     align-items: center;
     flex-shrink: 0;
-    min-height: 32px;
-    padding-top: var(--od-space-2);
-    padding-right: var(--od-space-2);
-    padding-bottom: var(--od-space-2);
-    padding-left: var(--od-space-4);
-    background-color: var(--od-color-window-header);
+    min-height: var(--od-window-header-height);
+    padding: var(--od-space-1) var(--od-space-2) var(--od-space-1) var(--od-space-5);
+    border-bottom-width: var(--od-border-width);
+    border-bottom-color: var(--od-color-divider);
 }
 
 .od-window__title {
     flex-grow: 1;
     flex-shrink: 1;
+    color: var(--od-color-text-muted);
     font-size: var(--od-font-size-sm);
     -unity-font-style: bold;
+    letter-spacing: var(--od-letter-spacing-label);
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.od-window__header .od-icon-button {
-    width: 24px;
-    height: 24px;
-    min-width: 24px;
-    margin-left: var(--od-space-2);
-    background-color: transparent;
+.od-root .od-window__header .od-icon-button {
+    width: var(--od-window-button-size);
+    height: var(--od-window-button-size);
+    min-width: var(--od-window-button-size);
+    margin-left: var(--od-space-1);
 }
 
 .od-window__content {
     flex-shrink: 1;
-    padding-top: var(--od-space-3);
-    padding-right: var(--od-space-4);
-    padding-bottom: var(--od-space-3);
-    padding-left: var(--od-space-4);
+    padding: var(--od-space-1) var(--od-space-5) var(--od-space-3) var(--od-space-5);
     font-size: var(--od-font-size-sm);
 }
 
+.od-window__content .od-scroll__content {
+    padding: 0;
+}
+
 .od-window__footer {
+    display: none;
     flex-direction: row;
     justify-content: flex-end;
     flex-shrink: 0;
-    padding-top: 0;
-    padding-right: var(--od-space-4);
-    padding-bottom: var(--od-space-3);
-    padding-left: var(--od-space-4);
+    padding: 0 var(--od-space-5) var(--od-space-4) var(--od-space-5);
+}
+
+.od-window--with-footer .od-window__footer {
+    display: flex;
+}
+
+.od-window--collapsed .od-window__header {
+    border-bottom-width: 0;
 }
 
 .od-window--collapsed .od-window__content,
@@ -1246,16 +1774,50 @@
 .od-window-row {
     flex-direction: row;
     align-items: center;
+    min-height: var(--od-row-min-height);
+    border-top-width: var(--od-border-width);
+    border-top-color: var(--od-color-divider);
+}
+
+.od-window-row.od-first {
+    border-top-width: 0;
 }
 
 .od-window-row__title {
     flex-grow: 1;
     flex-shrink: 1;
-    font-size: var(--od-font-size-lg);
+    min-width: 0;
+    margin-right: var(--od-space-5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.od-root .od-window-row .unity-button {
-    min-width: 88px;
+.od-window-row__control {
+    flex-direction: row;
+    align-items: center;
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+
+.od-window-scale {
+    margin-bottom: var(--od-card-gap);
+}
+
+.od-window-row--scale .od-window-row__title {
+    flex-grow: 0;
+}
+
+.od-window-row--scale .od-range {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.od-window-scale__value {
+    flex-shrink: 0;
+    width: var(--od-range-box-width);
+    -unity-text-align: middle-right;
 }
 
 /* ---------- open button ---------- */
@@ -1264,11 +1826,22 @@
     position: absolute;
     width: var(--od-open-button-size);
     height: var(--od-open-button-size);
+    align-items: center;
+    justify-content: center;
     background-color: var(--od-color-open-button-fill);
-    border-width: 2px;
+    border-width: var(--od-border-width);
     border-color: var(--od-color-open-button-border);
+    border-radius: var(--od-open-button-radius);
+    color: var(--od-color-text);
     transition-property: opacity, scale, border-color;
     transition-duration: var(--od-transition-duration), var(--od-transition-duration), var(--od-transition-duration);
+    --od-halo-color: var(--od-color-shadow);
+    --od-halo-size: var(--od-glow-size);
+}
+
+.od-open-button__mark {
+    width: var(--od-icon-size-lg);
+    height: var(--od-icon-size-lg);
 }
 
 .od-open-button--pressed {
@@ -1277,18 +1850,29 @@
 
 .od-open-button--lit {
     border-color: var(--od-color-open-button-indicator);
+    color: var(--od-color-open-button-indicator);
+    --od-halo-color: var(--od-color-glow);
 }
 
 .od-open-button--dragging {
     scale: 1 1;
 }
 
+.od-open-button--alerting {
+    border-color: var(--od-color-alert);
+    --od-halo-color: var(--od-color-alert-glow);
+}
+
+.od-open-button--alerting .od-open-button__mark {
+    display: none;
+}
+
 .od-open-button__alert {
     position: absolute;
-    left: 10%;
-    top: 10%;
-    right: 10%;
-    bottom: 10%;
+    left: 12%;
+    top: 12%;
+    right: 12%;
+    bottom: 12%;
     color: var(--od-color-alert);
 }
 
@@ -1310,8 +1894,8 @@
 /* ---------- lock ---------- */
 
 /*
- * Not an od-scrim: the prompt shows while the panel is still closed, and a closed root hides every
- * scrim inside it. The overlay takes input itself, so a tap beside the card never reaches the game.
+ * Outside the stage: the prompt shows while the panel is still closed, and a closed root hides the
+ * stage. The overlay takes input itself, so a tap beside the card never reaches the game.
  */
 .od-lock {
     position: absolute;
@@ -1326,13 +1910,16 @@
 }
 
 .od-lock__card {
-    width: 300px;
+    width: var(--od-lock-width);
     max-width: 90%;
-    padding: var(--od-space-5);
-    background-color: var(--od-color-card);
+    padding: var(--od-space-6);
+    background-color: var(--od-color-popup);
     border-width: var(--od-border-width);
-    border-color: var(--od-color-divider);
-    border-radius: var(--od-radius-lg);
+    border-color: var(--od-color-card-edge);
+    border-top-color: var(--od-color-glass-edge);
+    border-radius: var(--od-radius-xl);
+    --od-halo-color: var(--od-color-shadow);
+    --od-halo-size: var(--od-shadow-size);
 }
 
 .od-lock__header {
@@ -1352,23 +1939,23 @@
     flex-direction: row;
     flex-shrink: 0;
     justify-content: center;
-    min-height: 14px;
+    min-height: var(--od-lock-dot-size);
     margin-bottom: var(--od-space-5);
 }
 
 .od-lock__dot {
-    width: 14px;
-    height: 14px;
+    width: var(--od-lock-dot-size);
+    height: var(--od-lock-dot-size);
     margin-left: var(--od-space-2);
     margin-right: var(--od-space-2);
     border-width: 2px;
-    border-color: var(--od-color-text-muted);
-    border-radius: 7px;
+    border-color: var(--od-color-text-faint);
+    border-radius: var(--od-lock-dot-radius);
 }
 
 .od-lock__dot--filled {
-    background-color: var(--od-color-text);
-    border-color: var(--od-color-text);
+    background-color: var(--od-color-accent);
+    border-color: var(--od-color-accent);
 }
 
 .od-lock__password {
@@ -1400,7 +1987,7 @@
 .od-lock__keypad-row {
     flex-direction: row;
     flex-shrink: 1;
-    height: 56px;
+    height: var(--od-lock-key-height);
     min-height: var(--od-control-height);
     margin-top: var(--od-space-3);
 }
@@ -1419,10 +2006,18 @@
     min-width: 0;
     margin: 0;
     padding: 0;
-    border-radius: var(--od-radius-md);
+    background-color: var(--od-color-control);
+    border-radius: var(--od-radius-lg);
+    color: var(--od-color-text);
     font-size: var(--od-font-size-xl);
 }
 
 .od-root .od-lock__key--gap {
     margin-left: var(--od-space-3);
+}
+
+.od-root .od-lock__key.od-button--primary,
+.od-root .od-lock__key.od-button--primary:hover {
+    background-color: var(--od-color-accent);
+    color: var(--od-color-accent-text);
 }

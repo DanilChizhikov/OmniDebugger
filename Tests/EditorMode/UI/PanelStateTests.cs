@@ -7,10 +7,10 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 	[TestFixture]
 	internal sealed class PanelStateTests
 	{
-		private OmniDebugger _debugger;
+		private OmniDebuggerHost _debugger;
 
 		[SetUp]
-		public void SetUp() => _debugger = new OmniDebugger(new RecordingLogSink());
+		public void SetUp() => _debugger = new OmniDebuggerHost(new RecordingLogSink());
 
 		[TearDown]
 		public void TearDown() => _debugger.Dispose();
@@ -141,18 +141,23 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			Assert.That(options.CreateOnStartup, Is.False);
 			Assert.That(options.CreatePanel, Is.True);
 			Assert.That(options.Panel.ScaleMode, Is.EqualTo(OmniDebuggerScaleMode.Auto));
+			Assert.That(options.Panel.LandscapeLayout, Is.EqualTo(OmniDebuggerLandscapeLayout.Floating));
+			Assert.That(options.Panel.FloatingScale, Is.EqualTo(1.0f));
 			Assert.That(options.Panel.Open.ButtonEnabled, Is.True);
 			Assert.That(options.Panel.Open.ButtonOpacity, Is.EqualTo(0.5f));
 			Assert.That(options.Panel.Open.Shortcuts, Is.Empty);
 
 			options.Panel.Scale = -1.0f;
 			Assert.That(options.Panel.Scale, Is.EqualTo(1.0f));
+
+			options.Panel.FloatingScale = 0.0f;
+			Assert.That(options.Panel.FloatingScale, Is.EqualTo(1.0f));
 		}
 
 		[Test]
 		public void Debugger_BuiltInEditMode_CreatesNoPanelButRegistersForTheEditorWindow()
 		{
-			OmniDebugger debugger = new OmniDebugger(new OmniDebuggerOptions());
+			OmniDebuggerHost debugger = new OmniDebuggerHost(new OmniDebuggerOptions());
 
 			try
 			{

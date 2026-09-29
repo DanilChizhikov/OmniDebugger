@@ -4,7 +4,7 @@ namespace DTech.OmniDebugger.UI
 {
 	internal static class PanelLauncher
 	{
-		public static OmniDebuggerPanel Launch(IOmniDebugger debugger, OmniDebuggerPanelOptions options)
+		public static OmniDebuggerPanel Launch(IOmniDebuggerHost debugger, OmniDebuggerPanelOptions options)
 		{
 			if (!Application.isPlaying)
 			{

@@ -28,5 +28,11 @@ namespace DTech.OmniDebugger.UI
 		Moon = 23,
 		Check = 24,
 		Trash = 25,
+		Sliders = 27,
+		Terminal = 28,
+		Window = 29,
+		Grid = 30,
+		More = 31,
+		ChevronDown = 32,
 	}
 }

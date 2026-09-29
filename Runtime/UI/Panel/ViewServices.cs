@@ -2,7 +2,7 @@ namespace DTech.OmniDebugger.UI
 {
 	internal sealed class ViewServices
 	{
-		public IOmniDebugger Debugger { get; }
+		public IOmniDebuggerHost Debugger { get; }
 
 		public string Origin { get; }
 
@@ -15,7 +15,7 @@ namespace DTech.OmniDebugger.UI
 		public PopupLayer Popups { get; }
 
 		public ViewServices(
-			IOmniDebugger debugger,
+			IOmniDebuggerHost debugger,
 			string origin,
 			ArgumentMemory arguments,
 			CommandKeySet favorites,

@@ -27,20 +27,20 @@ namespace DTech.OmniDebugger.UI
 			_scroll = UiBuild.Scroll();
 			_root.Add(_scroll);
 
-			VisualElement header = UiBuild.Element(OmniDebuggerUiClasses.PageHeader);
+			VisualElement header = UiBuild.Element(OmniDebuggerUiClasses.Toolbar);
 			header.Add(UiBuild.IconButton(IconGlyph.Back, back, "Back to the logs"));
 			header.Add(UiBuild.Label("Tags", OmniDebuggerUiClasses.PageHeaderTitle));
 
 			_modeButton = UiBuild.TextButton(string.Empty, ToggleMode, OmniDebuggerUiClasses.Chip);
+			_modeButton.AddToClassList(OmniDebuggerUiClasses.ToolbarChip);
 			_modeButton.tooltip = "Whether a log needs every selected tag or any one of them";
 			header.Add(_modeButton);
-			header.Add(UiBuild.TextButton("Clear", ClearTags, OmniDebuggerUiClasses.Chip));
+
+			Button clear = UiBuild.TextButton("Clear", ClearTags, OmniDebuggerUiClasses.Chip);
+			clear.AddToClassList(OmniDebuggerUiClasses.ToolbarChip);
+			header.Add(clear);
 
 			_root.Insert(0, header);
-			header.style.paddingLeft = 18.0f;
-			header.style.paddingRight = 18.0f;
-			header.style.paddingTop = 18.0f;
-			header.style.marginBottom = 0.0f;
 		}
 
 		public void Show(ILogFeed feed)
@@ -67,9 +67,7 @@ namespace DTech.OmniDebugger.UI
 				return;
 			}
 
-			VisualElement chips = new VisualElement();
-			chips.style.flexDirection = FlexDirection.Row;
-			chips.style.flexWrap = Wrap.Wrap;
+			VisualElement chips = UiBuild.Element(OmniDebuggerUiClasses.Chips);
 			_scroll.Add(chips);
 
 			for (int i = 0; i < _known.Count; i++)

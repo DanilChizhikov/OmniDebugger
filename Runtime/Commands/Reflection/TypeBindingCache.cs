@@ -121,7 +121,10 @@ namespace DTech.OmniDebugger
 
 			ArgumentDefinition[] arguments =
 			{
-				new ArgumentDefinition(property.Name, property.PropertyType),
+				new ArgumentDefinition(
+					property.Name,
+					property.PropertyType,
+					range: property.GetCustomAttribute<DebugRangeAttribute>()?.Range ?? default),
 			};
 
 			CommandDefinition definition = new CommandDefinition(
@@ -185,7 +188,8 @@ namespace DTech.OmniDebugger
 					name: parameter.Name,
 					type: parameter.ParameterType,
 					defaultValue: parameter.HasDefaultValue ? parameter.DefaultValue : null,
-					isOptional: parameter.IsOptional);
+					isOptional: parameter.IsOptional,
+					range: parameter.GetCustomAttribute<DebugRangeAttribute>()?.Range ?? default);
 			}
 
 			CommandDefinition definition = new CommandDefinition(

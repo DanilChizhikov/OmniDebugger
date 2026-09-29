@@ -11,7 +11,7 @@ namespace DTech.OmniDebugger
 	/// screen and takes it down again, set up as <c>Project Settings → DTech → OmniDebugger → Panel</c>
 	/// says — see <see cref="OmniDebuggerOptions"/>.
 	/// </summary>
-	public sealed class OmniDebugger : IOmniDebugger
+	public sealed class OmniDebuggerHost : IOmniDebuggerHost
 	{
 		private readonly CommandCatalog _catalog;
 		private readonly CommandInvoker _invoker;
@@ -35,7 +35,7 @@ namespace DTech.OmniDebugger
 		/// not build one, such as <c>OnDisable</c> or <c>OnDestroy</c>, reads <see cref="TryGetShared"/> instead.
 		/// </para>
 		/// </summary>
-		public static OmniDebugger Shared
+		public static OmniDebuggerHost Shared
 		{
 			get
 			{
@@ -43,7 +43,7 @@ namespace DTech.OmniDebugger
 
 				if (_shared == null)
 				{
-					OmniDebugger created = new OmniDebugger();
+					OmniDebuggerHost created = new OmniDebuggerHost();
 					_ownsShared = ReferenceEquals(_shared, created);
 				}
 
@@ -148,7 +148,9 @@ namespace DTech.OmniDebugger
 		/// </summary>
 		public OmniDebuggerPanel Panel => _disposed || _panel == null ? null : _panel;
 
-		private static OmniDebugger _shared;
+		internal Version Version => new Version(1, 0, 0);
+
+		private static OmniDebuggerHost _shared;
 		private static bool _ownsShared;
 
 		private OmniDebuggerOptions _options;
@@ -160,7 +162,7 @@ namespace DTech.OmniDebugger
 		/// <c>Project Settings → DTech → OmniDebugger → Panel</c>. In play mode it keeps following them:
 		/// edits made there apply to the running debugger and its panel at once.
 		/// </summary>
-		public OmniDebugger() : this(UnityLogSink.Default, null)
+		public OmniDebuggerHost() : this(UnityLogSink.Default, null)
 		{
 		}
 
@@ -170,22 +172,22 @@ namespace DTech.OmniDebugger
 		/// <see cref="OmniDebuggerOptions.Default"/> and keeps following the project settings, as the
 		/// parameterless constructor does; options given here are never touched by them.
 		/// </param>
-		public OmniDebugger(OmniDebuggerOptions options) : this(UnityLogSink.Default, options)
+		public OmniDebuggerHost(OmniDebuggerOptions options) : this(UnityLogSink.Default, options)
 		{
 		}
 
-		internal OmniDebugger(ILogSink log) : this(log, new OmniDebuggerOptions { CreatePanel = false })
+		internal OmniDebuggerHost(ILogSink log) : this(log, new OmniDebuggerOptions { CreatePanel = false })
 		{
 		}
 
-		internal OmniDebugger(ILogSink log, OmniDebuggerOptions options)
+		internal OmniDebuggerHost(ILogSink log, OmniDebuggerOptions options)
 		{
 			if (log == null)
 			{
 				throw new ArgumentNullException(nameof(log));
 			}
 
-			MainThreadGuard.Verify(nameof(OmniDebugger));
+			MainThreadGuard.Verify(nameof(OmniDebuggerHost));
 
 			_followsProject = options == null;
 			_options = options ?? OmniDebuggerOptions.Default;
@@ -222,7 +224,7 @@ namespace DTech.OmniDebugger
 			{
 				log.Warning(
 					"Another debugger already shows its panel, so two panels are on screen now. Read " +
-					$"{nameof(OmniDebugger)}.{nameof(Shared)} instead of building a second debugger, or turn off " +
+					$"{nameof(OmniDebuggerHost)}.{nameof(Shared)} instead of building a second debugger, or turn off " +
 					"'Create On Startup' in Project Settings → DTech → OmniDebugger → Panel.");
 			}
 		}
@@ -230,7 +232,7 @@ namespace DTech.OmniDebugger
 		/// <summary>
 		/// Reads <see cref="Shared"/> without building it: false while no debugger is alive. Main thread only.
 		/// </summary>
-		public static bool TryGetShared(out OmniDebugger debugger)
+		public static bool TryGetShared(out OmniDebuggerHost debugger)
 		{
 			MainThreadGuard.Verify(nameof(TryGetShared));
 
@@ -393,7 +395,7 @@ namespace DTech.OmniDebugger
 		{
 			if (_disposed)
 			{
-				throw new ObjectDisposedException(nameof(OmniDebugger));
+				throw new ObjectDisposedException(nameof(OmniDebuggerHost));
 			}
 		}
 	}

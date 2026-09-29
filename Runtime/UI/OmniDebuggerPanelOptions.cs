@@ -34,6 +34,29 @@ namespace DTech.OmniDebugger.UI
 			set => _sortingOrder = value;
 		}
 
+		/// <summary>
+		/// How the panel sits on a landscape screen: a floating window over the game, or edge to edge.
+		/// <see cref="OmniDebuggerLandscapeLayout.Floating"/> by default. Read when the panel is built
+		/// and whenever the project settings are edited in play mode.
+		/// </summary>
+		public OmniDebuggerLandscapeLayout LandscapeLayout
+		{
+			get => _landscapeLayout;
+			set => _landscapeLayout = value;
+		}
+
+		/// <summary>
+		/// Scale of the floating panel, on top of <see cref="Scale"/>: 1 is the compact default window, below 1
+		/// makes it smaller, above 1 bigger, never past the screen. 1 by default; values at or below zero read
+		/// as 1. Only the floating window scales — edge to edge, the panel ignores it. Read like
+		/// <see cref="LandscapeLayout"/>.
+		/// </summary>
+		public float FloatingScale
+		{
+			get => _floatingScale > 0.0f ? _floatingScale : 1.0f;
+			set => _floatingScale = value;
+		}
+
 		/// <summary>Opens the panel as soon as it is built.</summary>
 		public bool OpenOnStart
 		{
@@ -77,6 +100,12 @@ namespace DTech.OmniDebugger.UI
 		[Tooltip("Raise this above your own UI if the panel ends up behind it.")]
 		[SerializeField, Min(0f)] private float _sortingOrder = 1000.0f;
 
+		[Tooltip("How the panel sits on a landscape screen. Floating keeps the game visible and playable around a window you can drag by its top bar; Full Screen goes edge to edge. Portrait always goes edge to edge.")]
+		[SerializeField] private OmniDebuggerLandscapeLayout _landscapeLayout = OmniDebuggerLandscapeLayout.Floating;
+
+		[Tooltip("Scale of the floating window on top of Scale. 1 is the compact default window; below 1 makes it smaller, above 1 bigger; it never grows past the screen. Full Screen and portrait ignore it.")]
+		[SerializeField, Range(0.5f, 2.0f)] private float _floatingScale = 1.0f;
+
 		[Tooltip("Opens the panel as soon as it is built.")]
 		[SerializeField] private bool _openOnStart;
 
@@ -94,6 +123,8 @@ namespace DTech.OmniDebugger.UI
 				_scaleMode = _scaleMode,
 				_scale = _scale,
 				_sortingOrder = _sortingOrder,
+				_landscapeLayout = _landscapeLayout,
+				_floatingScale = _floatingScale,
 				_openOnStart = _openOnStart,
 				_panelSettings = _panelSettings,
 				_open = Open.Clone(),

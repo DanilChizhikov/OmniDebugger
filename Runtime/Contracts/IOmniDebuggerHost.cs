@@ -6,9 +6,9 @@ namespace DTech.OmniDebugger
 	/// <summary>
 	/// The debugger: its commands, captured logs, and everything the panel offers — windows, tabs,
 	/// themes, icons and argument fields. Constructed and owned by the game — see
-	/// <see cref="OmniDebugger"/>. Every registry lives and dies with the debugger.
+	/// <see cref="OmniDebuggerHost"/>. Every registry lives and dies with the debugger.
 	/// </summary>
-	public interface IOmniDebugger : IDisposable
+	public interface IOmniDebuggerHost : IDisposable
 	{
 		/// <summary>Which commands exist.</summary>
 		ICommandCatalog Catalog { get; }
@@ -22,7 +22,7 @@ namespace DTech.OmniDebugger
 		/// <summary>Unity's console, captured since the debugger was built.</summary>
 		ILogFeed Logs { get; }
 
-		/// <summary>Floating windows shown over the game while the panel is closed.</summary>
+		/// <summary>Floating windows shown over the game while the panel is closed or floating.</summary>
 		IWindowRegistry Windows { get; }
 
 		/// <summary>Tabs the panel offers.</summary>

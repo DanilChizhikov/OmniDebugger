@@ -9,33 +9,33 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		[SetUp]
 		public void SetUp()
 		{
-			OmniDebugger.ReleaseShared();
-			Assert.That(OmniDebugger.TryGetShared(out _), Is.False, "a debugger from another test is still alive");
+			OmniDebuggerHost.ReleaseShared();
+			Assert.That(OmniDebuggerHost.TryGetShared(out _), Is.False, "a debugger from another test is still alive");
 		}
 
 		[TearDown]
-		public void TearDown() => OmniDebugger.ReleaseShared();
+		public void TearDown() => OmniDebuggerHost.ReleaseShared();
 
 		[Test]
 		public void Shared_BuildsOneDebuggerAndKeepsHandingItOut()
 		{
-			OmniDebugger shared = OmniDebugger.Shared;
+			OmniDebuggerHost shared = OmniDebuggerHost.Shared;
 
 			Assert.That(shared, Is.Not.Null);
-			Assert.That(OmniDebugger.Shared, Is.SameAs(shared));
-			Assert.That(OmniDebugger.TryGetShared(out OmniDebugger found), Is.True);
+			Assert.That(OmniDebuggerHost.Shared, Is.SameAs(shared));
+			Assert.That(OmniDebuggerHost.TryGetShared(out OmniDebuggerHost found), Is.True);
 			Assert.That(found, Is.SameAs(shared));
 		}
 
 		[Test]
 		public void Constructor_TakesAnEmptySlotButNeverReplacesTheShared()
 		{
-			OmniDebugger first = new OmniDebugger(new RecordingLogSink());
-			OmniDebugger second = new OmniDebugger(new RecordingLogSink());
+			OmniDebuggerHost first = new OmniDebuggerHost(new RecordingLogSink());
+			OmniDebuggerHost second = new OmniDebuggerHost(new RecordingLogSink());
 
 			try
 			{
-				Assert.That(OmniDebugger.Shared, Is.SameAs(first));
+				Assert.That(OmniDebuggerHost.Shared, Is.SameAs(first));
 			}
 			finally
 			{
@@ -47,23 +47,23 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		[Test]
 		public void Dispose_EmptiesTheSlotAndTheNextReadBuildsAFreshOne()
 		{
-			OmniDebugger first = OmniDebugger.Shared;
+			OmniDebuggerHost first = OmniDebuggerHost.Shared;
 			first.Dispose();
 
-			Assert.That(OmniDebugger.TryGetShared(out _), Is.False);
-			Assert.That(OmniDebugger.Shared, Is.Not.SameAs(first));
+			Assert.That(OmniDebuggerHost.TryGetShared(out _), Is.False);
+			Assert.That(OmniDebuggerHost.Shared, Is.Not.SameAs(first));
 		}
 
 		[Test]
 		public void ReleaseShared_DisposesOnlyADebuggerThePackageBuilt()
 		{
-			OmniDebugger own = new OmniDebugger(new RecordingLogSink());
+			OmniDebuggerHost own = new OmniDebuggerHost(new RecordingLogSink());
 
 			try
 			{
-				OmniDebugger.ReleaseShared();
+				OmniDebuggerHost.ReleaseShared();
 
-				Assert.That(OmniDebugger.TryGetShared(out OmniDebugger found), Is.True);
+				Assert.That(OmniDebuggerHost.TryGetShared(out OmniDebuggerHost found), Is.True);
 				Assert.That(found, Is.SameAs(own));
 				Assert.DoesNotThrow(() => _ = own.Catalog, "the game's own debugger stays alive");
 			}
@@ -72,10 +72,10 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 				own.Dispose();
 			}
 
-			OmniDebugger built = OmniDebugger.Shared;
-			OmniDebugger.ReleaseShared();
+			OmniDebuggerHost built = OmniDebuggerHost.Shared;
+			OmniDebuggerHost.ReleaseShared();
 
-			Assert.That(OmniDebugger.TryGetShared(out _), Is.False);
+			Assert.That(OmniDebuggerHost.TryGetShared(out _), Is.False);
 			Assert.Throws<ObjectDisposedException>(() => _ = built.Catalog);
 		}
 	}

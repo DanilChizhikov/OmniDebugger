@@ -12,7 +12,7 @@ namespace DTech.OmniDebugger.UI.Editor
 		private const string WindowTitle = "OmniDebugger";
 		private const string Origin = "Editor Window";
 		private const string WaitingMessage =
-			"No live debugger.\n\nEnter play mode with code that constructs an OmniDebugger; " +
+			"No live debugger.\n\nEnter play mode with code that constructs an OmniDebuggerHost; " +
 			"the newest one shows up here on its own.";
 
 		private readonly OmniDebuggerViewState _state = new ();
@@ -21,7 +21,7 @@ namespace DTech.OmniDebugger.UI.Editor
 		private VisualElement _canvas;
 		private Label _waiting;
 		private OmniDebuggerView _view;
-		private IOmniDebugger _bound;
+		private IOmniDebuggerHost _bound;
 
 		[MenuItem(MenuPath)]
 		private static void Open()
@@ -112,7 +112,7 @@ namespace DTech.OmniDebugger.UI.Editor
 
 		private void Bind()
 		{
-			IOmniDebugger debugger = OmniDebuggerViews.Current;
+			IOmniDebuggerHost debugger = OmniDebuggerViews.Current;
 
 			if (ReferenceEquals(debugger, _bound) && (_view != null || debugger == null))
 			{

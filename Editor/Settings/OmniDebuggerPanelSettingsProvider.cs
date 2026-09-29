@@ -20,6 +20,8 @@ namespace DTech.OmniDebugger.Editor
 		private const string ScaleModeField = "_scaleMode";
 		private const string ScaleField = "_scale";
 		private const string SortingOrderField = "_sortingOrder";
+		private const string LandscapeLayoutField = "_landscapeLayout";
+		private const string FloatingScaleField = "_floatingScale";
 		private const string OpenOnStartField = "_openOnStart";
 		private const string PanelSettingsField = "_panelSettings";
 		private const string OpenField = "_open";
@@ -110,7 +112,7 @@ namespace DTech.OmniDebugger.Editor
 			EditorGUILayout.Space();
 
 			EditorGUILayout.HelpBox(
-				"These options are what new OmniDebugger() and OmniDebuggerOptions.Default read. In play mode, edits " +
+				"These options are what new OmniDebuggerHost() and OmniDebuggerOptions.Default read. In play mode, edits " +
 				"made here apply at once to a debugger built without options in code and to its panel; a player " +
 				"reads the copy taken when it was built, and " +
 				$"only a build with {OmniDebuggerDefines.Symbol} on carries them and the assets they reference. " +
@@ -130,16 +132,25 @@ namespace DTech.OmniDebugger.Editor
 				DrawField(panel, OpenOnStartField);
 
 				EditorGUILayout.HelpBox(
-					"Create On Startup builds OmniDebugger.Shared before the first scene loads. Code reaches it through " +
-					"OmniDebugger.Shared, or through OmniDebugger.TryGetShared where it must not build one, such as " +
+					"Create On Startup builds OmniDebuggerHost.Shared before the first scene loads. Code reaches it through " +
+					"OmniDebuggerHost.Shared, or through OmniDebuggerHost.TryGetShared where it must not build one, such as " +
 					"OnDestroy. A debugger built with new next to it puts a second panel on screen.",
 					MessageType.None);
 			}
 
-			DrawHeader("Scaling and Layering");
+			DrawHeader("Layout, Scaling and Layering");
 
 			using (new EditorGUI.IndentLevelScope())
 			{
+				SerializedProperty landscapeLayout = panel.FindPropertyRelative(LandscapeLayoutField);
+				EditorGUILayout.PropertyField(landscapeLayout);
+
+				using (new EditorGUI.DisabledScope(
+					landscapeLayout.enumValueIndex == (int)OmniDebuggerLandscapeLayout.FullScreen))
+				{
+					DrawField(panel, FloatingScaleField);
+				}
+
 				DrawField(panel, ScaleModeField);
 				DrawField(panel, ScaleField);
 				DrawField(panel, SortingOrderField);

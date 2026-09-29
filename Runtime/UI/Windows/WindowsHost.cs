@@ -21,20 +21,19 @@ namespace DTech.OmniDebugger.UI
 		private readonly List<string> _stale = new ();
 
 		private Vector4 _insets;
-		private bool _panelOpen;
+		private bool _visible = true;
 		private bool _disposed;
 
-		public WindowsHost(VisualElement root, ViewServices services, WindowRegistry registry)
+		public WindowsHost(VisualElement layer, ViewServices services, WindowRegistry registry)
 		{
+			_layer = layer ?? throw new ArgumentNullException(nameof(layer));
 			_services = services ?? throw new ArgumentNullException(nameof(services));
 			_registry = registry ?? throw new ArgumentNullException(nameof(registry));
 
-			_layer = UiBuild.Element(OmniDebuggerUiClasses.WindowsLayer);
-			_layer.pickingMode = PickingMode.Ignore;
-			root.Add(_layer);
 			_layer.RegisterCallback<GeometryChangedEvent>(OnLayerGeometryChanged);
 
 			_registry.OnChanged += Sync;
+			_registry.OnScaleChanged += ApplyScale;
 			_catalog = _services.Debugger.Catalog;
 			_catalog.OnChanged += OnCatalogChanged;
 
@@ -47,12 +46,17 @@ namespace DTech.OmniDebugger.UI
 			Sync();
 		}
 
-		public void SetPanelOpen(bool open)
+		public void SetVisible(bool visible)
 		{
-			_panelOpen = open;
-			UiBuild.SetVisible(_layer, !open);
+			if (visible == _visible)
+			{
+				return;
+			}
 
-			if (!open)
+			_visible = visible;
+			_layer.EnableInClassList(OmniDebuggerUiClasses.DeskWindowsHidden, !visible);
+
+			if (visible)
 			{
 				Sync();
 			}
@@ -73,6 +77,7 @@ namespace DTech.OmniDebugger.UI
 
 			_disposed = true;
 			_registry.OnChanged -= Sync;
+			_registry.OnScaleChanged -= ApplyScale;
 			_catalog.OnChanged -= OnCatalogChanged;
 
 			if (_services.Pins != null)
@@ -94,7 +99,7 @@ namespace DTech.OmniDebugger.UI
 
 			_frames.Clear();
 			_layer.UnregisterCallback<GeometryChangedEvent>(OnLayerGeometryChanged);
-			_layer.RemoveFromHierarchy();
+			_layer.RemoveFromClassList(OmniDebuggerUiClasses.DeskWindowsHidden);
 		}
 
 		private static bool IsRegistered(IReadOnlyList<WindowRegistration> registrations, string id)
@@ -169,6 +174,7 @@ namespace DTech.OmniDebugger.UI
 		private void Show(WindowRegistration registration, int cascade)
 		{
 			WindowFrame frame = new WindowFrame(registration, GetBounds, OnFrameMoved);
+			frame.SetScale(_registry.Scale);
 			_frames.Add(registration.Id, frame);
 			_layer.Add(frame);
 
@@ -204,7 +210,7 @@ namespace DTech.OmniDebugger.UI
 
 				case WindowKind.Pinned:
 					FillCommands(frame, _services.Pins.Keys);
-					UiBuild.SetVisible(frame.Footer, true);
+					frame.ShowFooter();
 					frame.Footer.Add(UiBuild.TextButton(PinnedWindow.ClearLabel, ClearPins, OmniDebuggerUiClasses.ButtonDestructive));
 					break;
 
@@ -229,9 +235,10 @@ namespace DTech.OmniDebugger.UI
 					continue;
 				}
 
-				CommandCard card = new CommandCard(_services, pulse, definition, CommandCardMode.Compact);
-				frame.Own(card);
-				frame.Content.Add(card);
+				CommandRow row = new CommandRow(_services, pulse, definition, CommandRowMode.Compact);
+				row.EnableInClassList(OmniDebuggerUiClasses.First, shown == 0);
+				frame.Own(row);
+				frame.Content.Add(row);
 				shown++;
 			}
 
@@ -312,6 +319,16 @@ namespace DTech.OmniDebugger.UI
 
 		private void OnLayerGeometryChanged(GeometryChangedEvent evt) => ClampAll();
 
+		private void ApplyScale()
+		{
+			foreach (KeyValuePair<string, WindowFrame> pair in _frames)
+			{
+				pair.Value.SetScale(_registry.Scale);
+			}
+
+			ClampAll();
+		}
+
 		private void ClampAll()
 		{
 			foreach (KeyValuePair<string, WindowFrame> pair in _frames)
@@ -334,7 +351,7 @@ namespace DTech.OmniDebugger.UI
 		private Vector2 StartPosition(WindowFrame frame, int cascade)
 		{
 			Rect bounds = GetBounds();
-			float width = frame.resolvedStyle.width;
+			float width = frame.resolvedStyle.width * _registry.Scale;
 			float offset = CascadeStep * cascade;
 
 			return new Vector2(

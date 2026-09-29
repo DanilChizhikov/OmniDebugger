@@ -42,6 +42,16 @@ namespace DTech.OmniDebugger.UI
 			}
 		}
 
+		public static Button MenuItem(IconGlyph glyph, string text, Action clicked)
+		{
+			Button item = new Button(clicked);
+			item.AddToClassList(OmniDebuggerUiClasses.PopupOption);
+			item.AddToClassList(OmniDebuggerUiClasses.MenuItem);
+			item.Add(new OmniIcon(glyph));
+			item.Add(Label(text, OmniDebuggerUiClasses.MenuItemLabel));
+			return item;
+		}
+
 		public static Button TextButton(string text, Action clicked, string className = null)
 		{
 			Button button = new Button(clicked) { text = text };

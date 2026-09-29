@@ -286,7 +286,9 @@ namespace DTech.OmniDebugger.UI
 		{
 			while (element != null && element != _scroll)
 			{
-				if (element is Scroller || element.ClassListContains(TextInputBaseField<string>.ussClassName))
+				if (element is Scroller ||
+					element.ClassListContains(TextInputBaseField<string>.ussClassName) ||
+					element.ClassListContains(BaseSlider<float>.ussClassName))
 				{
 					return true;
 				}
