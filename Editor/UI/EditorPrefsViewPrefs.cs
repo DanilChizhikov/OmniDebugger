@@ -1,6 +1,7 @@
 #if OMNI_DEBUGGER
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEngine;
 
 namespace DTech.OmniDebugger.UI.Editor
 {
@@ -41,6 +42,29 @@ namespace DTech.OmniDebugger.UI.Editor
 		}
 
 		public void SetWindowScale(float scale) => EditorPrefs.SetFloat(ViewStateKeys.WindowScale, scale);
+
+		public bool TryGetOpenButton(out OpenButtonAnchor anchor, out Vector2 position)
+		{
+			if (!EditorPrefs.HasKey(ViewStateKeys.OpenButtonAnchor) ||
+				!EditorPrefs.HasKey(ViewStateKeys.OpenButtonX) ||
+				!EditorPrefs.HasKey(ViewStateKeys.OpenButtonY))
+			{
+				anchor = default;
+				position = default;
+				return false;
+			}
+
+			anchor = (OpenButtonAnchor)EditorPrefs.GetInt(ViewStateKeys.OpenButtonAnchor);
+			position = new Vector2(EditorPrefs.GetFloat(ViewStateKeys.OpenButtonX), EditorPrefs.GetFloat(ViewStateKeys.OpenButtonY));
+			return true;
+		}
+
+		public void SetOpenButton(OpenButtonAnchor anchor, Vector2 position)
+		{
+			EditorPrefs.SetInt(ViewStateKeys.OpenButtonAnchor, (int)anchor);
+			EditorPrefs.SetFloat(ViewStateKeys.OpenButtonX, position.x);
+			EditorPrefs.SetFloat(ViewStateKeys.OpenButtonY, position.y);
+		}
 	}
 }
 #endif

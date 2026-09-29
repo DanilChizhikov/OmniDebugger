@@ -51,5 +51,29 @@ namespace DTech.OmniDebugger.UI
 			PlayerPrefs.SetFloat(ViewStateKeys.WindowScale, scale);
 			PlayerPrefs.Save();
 		}
+
+		public bool TryGetOpenButton(out OpenButtonAnchor anchor, out Vector2 position)
+		{
+			if (!PlayerPrefs.HasKey(ViewStateKeys.OpenButtonAnchor) ||
+				!PlayerPrefs.HasKey(ViewStateKeys.OpenButtonX) ||
+				!PlayerPrefs.HasKey(ViewStateKeys.OpenButtonY))
+			{
+				anchor = default;
+				position = default;
+				return false;
+			}
+
+			anchor = (OpenButtonAnchor)PlayerPrefs.GetInt(ViewStateKeys.OpenButtonAnchor);
+			position = new Vector2(PlayerPrefs.GetFloat(ViewStateKeys.OpenButtonX), PlayerPrefs.GetFloat(ViewStateKeys.OpenButtonY));
+			return true;
+		}
+
+		public void SetOpenButton(OpenButtonAnchor anchor, Vector2 position)
+		{
+			PlayerPrefs.SetInt(ViewStateKeys.OpenButtonAnchor, (int)anchor);
+			PlayerPrefs.SetFloat(ViewStateKeys.OpenButtonX, position.x);
+			PlayerPrefs.SetFloat(ViewStateKeys.OpenButtonY, position.y);
+			PlayerPrefs.Save();
+		}
 	}
 }

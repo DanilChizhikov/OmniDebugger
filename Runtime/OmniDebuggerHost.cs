@@ -13,6 +13,9 @@ namespace DTech.OmniDebugger
 	/// </summary>
 	public sealed class OmniDebuggerHost : IOmniDebuggerHost
 	{
+		/// <inheritdoc/>
+		public event Action OnRefreshRequested;
+
 		private static readonly Version _version = new (1, 0, 0);
 		private static readonly List<OmniDebuggerHost> _alive = new ();
 
@@ -246,11 +249,21 @@ namespace DTech.OmniDebugger
 			return debugger != null;
 		}
 
+		/// <inheritdoc/>
+		public void Refresh()
+		{
+			MainThreadGuard.Verify(nameof(Refresh));
+			ThrowIfDisposed();
+
+			OnRefreshRequested?.Invoke();
+		}
+
 		/// <summary>
 		/// Releases every registered source — MonoBehaviours included — empties every registry and
-		/// clears their <c>OnChanged</c> subscriber lists. Every member throws
-		/// <see cref="ObjectDisposedException"/> afterwards. Disposing <see cref="Shared"/> hands its slot
-		/// to the oldest debugger still alive, or empties it. Safe to call more than once.
+		/// clears their <c>OnChanged</c> subscriber lists, and the one of <see cref="OnRefreshRequested"/>.
+		/// Every member throws <see cref="ObjectDisposedException"/> afterwards. Disposing
+		/// <see cref="Shared"/> hands its slot to the oldest debugger still alive, or empties it. Safe to call
+		/// more than once.
 		/// </summary>
 		public void Dispose()
 		{
@@ -285,6 +298,8 @@ namespace DTech.OmniDebugger
 			_themes.Clear();
 			_icons.Clear();
 			_fields.Clear();
+
+			OnRefreshRequested = null;
 		}
 
 		internal static void ReleaseShared()

@@ -33,6 +33,10 @@ namespace DTech.OmniDebugger.UI
 		private Button _moreButton;
 		private Label _value;
 		private Label _status;
+		private object _lastRead;
+		private object _lastShown;
+		private bool _readable;
+		private bool _hasRead;
 		private bool _disposed;
 
 		public CommandRow(
@@ -78,14 +82,24 @@ namespace DTech.OmniDebugger.UI
 
 		public void RefreshValue()
 		{
-			if (_disposed || _value == null)
+			if (_disposed)
 			{
 				return;
 			}
 
-			_value.text = _services.Debugger.Commands.TryGetValue(_definition.Key, out object value)
-				? Format(value)
-				: MissingValue;
+			if (_value != null)
+			{
+				_value.text = _services.Debugger.Commands.TryGetValue(_definition.Key, out object value)
+					? Format(value)
+					: MissingValue;
+
+				return;
+			}
+
+			if (_readable && !IsEdited())
+			{
+				ReadValueIntoField(force: false);
+			}
 		}
 
 		public void Dispose()
@@ -171,7 +185,7 @@ namespace DTech.OmniDebugger.UI
 				case CommandKind.Value:
 					BuildArguments(control, showLabels: false);
 					_arguments.OnCommitted += OnArgumentsCommitted;
-					ReadValueIntoField();
+					BindValue();
 					BindSwitch();
 					break;
 
@@ -214,6 +228,24 @@ namespace DTech.OmniDebugger.UI
 			Add(extra);
 		}
 
+		private void BindValue()
+		{
+			_readable = _services.Debugger.Catalog.TryGetCommand(_definition.Key, out IDebugCommand command) &&
+				command is IReadableCommand;
+
+			if (!_readable)
+			{
+				return;
+			}
+
+			ReadValueIntoField(force: true);
+
+			if (_hasRead)
+			{
+				_pulse?.Register(this);
+			}
+		}
+
 		private void BindSwitch()
 		{
 			_switch = _arguments.Root.Q<SwitchField>();
@@ -253,7 +285,11 @@ namespace DTech.OmniDebugger.UI
 
 			if (_definition.Kind == CommandKind.Value)
 			{
-				ReadValueIntoField();
+				if (_readable)
+				{
+					ReadValueIntoField(force: true);
+				}
+
 				SetStatus(null, false);
 				return;
 			}
@@ -269,12 +305,34 @@ namespace DTech.OmniDebugger.UI
 			}
 		}
 
-		private void ReadValueIntoField()
+		private void ReadValueIntoField(bool force)
 		{
-			if (_services.Debugger.Commands.TryGetValue(_definition.Key, out object value))
+			if (!_services.Debugger.Commands.TryGetValue(_definition.Key, out object value))
 			{
-				_arguments.SetSingleValue(value);
+				_pulse?.Unregister(this);
+				return;
 			}
+
+			if (!force && _hasRead && Equals(value, _lastRead))
+			{
+				return;
+			}
+
+			_lastRead = value;
+			_hasRead = true;
+			_arguments.SetSingleValue(value);
+			_arguments.TryGetSingleValue(out _lastShown);
+		}
+
+		private bool IsEdited()
+		{
+			if (!_hasRead)
+			{
+				return false;
+			}
+
+			_arguments.TryGetSingleValue(out object shown);
+			return !Equals(shown, _lastShown);
 		}
 
 		private void SetStatus(string message, bool success)

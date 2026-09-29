@@ -68,6 +68,33 @@ namespace DTech.OmniDebugger.UI
 			ClampAll();
 		}
 
+		public void Refresh()
+		{
+			if (_disposed)
+			{
+				return;
+			}
+
+			foreach (KeyValuePair<string, WindowFrame> pair in _frames)
+			{
+				if (pair.Value.Registration.Kind != WindowKind.Custom)
+				{
+					_stale.Add(pair.Key);
+				}
+			}
+
+			for (int i = 0; i < _stale.Count; i++)
+			{
+				WindowFrame frame = _frames[_stale[i]];
+				_positions[_stale[i]] = frame.Position;
+				frame.Dispose();
+				_frames.Remove(_stale[i]);
+			}
+
+			_stale.Clear();
+			Sync();
+		}
+
 		public void Dispose()
 		{
 			if (_disposed)
@@ -293,27 +320,7 @@ namespace DTech.OmniDebugger.UI
 
 		private void ClearPins() => _services.Pins?.Clear();
 
-		private void OnCatalogChanged()
-		{
-			foreach (KeyValuePair<string, WindowFrame> pair in _frames)
-			{
-				if (pair.Value.Registration.Kind != WindowKind.Custom)
-				{
-					_stale.Add(pair.Key);
-				}
-			}
-
-			for (int i = 0; i < _stale.Count; i++)
-			{
-				WindowFrame frame = _frames[_stale[i]];
-				_positions[_stale[i]] = frame.Position;
-				frame.Dispose();
-				_frames.Remove(_stale[i]);
-			}
-
-			_stale.Clear();
-			Sync();
-		}
+		private void OnCatalogChanged() => Refresh();
 
 		private void OnFrameMoved(WindowFrame frame) => _positions[frame.Registration.Id] = frame.Position;
 

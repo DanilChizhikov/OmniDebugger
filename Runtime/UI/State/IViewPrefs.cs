@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace DTech.OmniDebugger.UI
 {
@@ -10,5 +11,7 @@ namespace DTech.OmniDebugger.UI
 		void SetFavorites(IReadOnlyList<string> keys);
 		bool TryGetWindowScale(out float scale);
 		void SetWindowScale(float scale);
+		bool TryGetOpenButton(out OpenButtonAnchor anchor, out Vector2 position);
+		void SetOpenButton(OpenButtonAnchor anchor, Vector2 position);
 	}
 }

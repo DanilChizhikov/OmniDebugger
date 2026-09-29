@@ -59,6 +59,10 @@ Initial release.
   a run button or a live value — and a ⋯ menu for favourite, pin and description), Search (debounced, optional case
   sensitivity), Logs (captured console with type/text/tag filters, copy, clear, follow mode, older pages on demand)
   and Windows (a switch per window, hide all, and one scale for every window).
+- Live values: every row on screen re-reads its command four times a second, so a property changed from code moves
+  its switch, slider or field too; a control being edited is left alone until the edit is committed.
+  `IOmniDebuggerHost.Refresh()` redraws every view of the debugger at once (merged to one redraw per frame), and
+  `IOmniDebuggerHost.OnRefreshRequested` passes the request on to content of your own.
 - `[DebugRange]` on a numeric property or parameter, carried as `ArgumentDefinition.Range` (`ArgumentRange`): the
   panel edits it with a slider and a value box, snapped to an optional `Step`.
 - `ILogFeed` on `IOmniDebuggerHost.Logs`: thread-safe capture of `Application.logMessageReceivedThreaded`, `[Tag]`
@@ -69,7 +73,8 @@ Initial release.
   is closed or floating — the one touched last, window or panel, on top — draggable and collapsible, plus a built-in
   Pinned window. One scale, ×0.5 to ×2 from the Windows tab, sizes every window and is saved.
 - Open button: a square glass button; tap it (or a configurable series of taps), it lights up on every tap, hold
-  0.6 seconds to drag with animated corner brackets, position kept for the session, turns red and pulses on new errors. Starts at any corner or edge middle, with a
+  0.6 seconds to drag with animated corner brackets, position remembered on the device until `ButtonAnchor` changes,
+  turns red and pulses on new errors. Starts at any corner or edge middle, with a
   configurable resting opacity. Keyboard shortcuts (single keys or chords, modifiers on either side) toggle the panel
   under either input backend, and are bound in Project Settings by pressing the keys.
 - `[DebugIcon]` with Resources, `OmniDebuggerIconCatalog` and `IOmniDebuggerIconProvider` lookups;

@@ -378,7 +378,7 @@ namespace DTech.OmniDebugger.UI
 		}
 
 		private IOmniDebuggerGesture CreateDefaultGesture() =>
-			new HoldToDragButtonGesture(Options.Open, _debugger?.Logs);
+			new HoldToDragButtonGesture(Options.Open, _debugger?.Logs, PlayerPrefsViewPrefs.Default);
 
 		private void AttachGesture()
 		{

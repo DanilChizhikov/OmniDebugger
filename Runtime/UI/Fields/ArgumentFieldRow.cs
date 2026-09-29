@@ -73,6 +73,17 @@ namespace DTech.OmniDebugger.UI
 			_fields[0].SetValue(value);
 		}
 
+		public bool TryGetSingleValue(out object value)
+		{
+			if (_fields.Count != 1)
+			{
+				value = null;
+				return false;
+			}
+
+			return _fields[0].TryGetValue(out value);
+		}
+
 		public bool TryGetValues(out object[] values)
 		{
 			values = null;

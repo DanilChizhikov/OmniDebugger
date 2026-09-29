@@ -290,8 +290,20 @@ The panel is one view (`OmniDebuggerView`) mounted in two places: over the runni
 window. Both show the same tabs and themes; they differ only in where they draw and where they save choices.
 
 The theme and favourites are the only choices the panel saves, plus the scale of the floating windows over the
-game. Pins, the open tab and group, where the open button was dragged to and where a floating panel was moved to
+game and where the open button was dragged to. Pins, the open tab and group and where a floating panel was moved to
 survive the panel being rebuilt, but not a restart.
+
+What the panel shows follows the game on its own. While a row is on screen — in the Commands tab, a search result
+or a floating window — its value is re-read four times a second: a read-only value, and the control of a property too, so a property your code changes moves its switch, slider or
+field. A control being edited is left alone until the edit is committed or undone. When that is not soon enough, or
+after a change only a redraw picks up — an icon registered late, a tab of your own — ask for a redraw:
+
+```csharp
+OmniDebuggerHost.Shared.Refresh();   // every view of this debugger: runtime panel, editor window, floating windows
+```
+
+Calls made within one frame are merged into one redraw. The selected tab gets `IOmniDebuggerTab.Refresh`, and
+`IOmniDebuggerHost.OnRefreshRequested` reaches content of your own, such as a custom floating window.
 
 ### At Runtime
 
@@ -384,8 +396,9 @@ EventSystem and creating a new one does not leave it deaf to taps.
 The button is a small glass square. It starts at the corner or edge `ButtonAnchor` names, at `ButtonOpacity`
 (0.5 by default), and lights up — full opacity, accent ring and glow — on every tap, so a series of taps shows each
 one landed.
-Hold the button for 0.6 seconds and corner brackets slide out: now it can be dragged. It stays where it was dropped
-for the session, and inside the safe area when the screen turns. It turns red and pulses for 45 seconds whenever an
+Hold the button for 0.6 seconds and corner brackets slide out: now it can be dragged. It stays where it was dropped,
+across restarts too (saved in `PlayerPrefs`) until `ButtonAnchor` changes, and inside the safe area when the screen
+turns. It turns red and pulses for 45 seconds whenever an
 error is logged, until it is tapped. Hide it at runtime with `SetOpenButtonEnabled(false)`, or replace it with
 `SetGesture(IOmniDebuggerGesture)`.
 
@@ -416,7 +429,7 @@ With a mode picked but no secret set, the panel opens without asking and the set
 | Tab | What it does |
 |---|---|
 | **Info** | Build, application, display, device, and live runtime figures (FPS, frame time, memory, battery, network) |
-| **Commands** | A section per group, favourites first: unfold one to use its commands right there, or tap its header to open the group on a page of its own. Each command is a row — icon, name and its control: a switch for a `bool`, a slider for a ranged number, a field, a dropdown, a ▶ that runs it (arguments beside it or under it), or a live read-only value. *⋯* holds the favourite star, the pin, the description, the id and the tags |
+| **Commands** | A section per group, favourites first: unfold one to use its commands right there, or tap its header to open the group on a page of its own. Each command is a row — icon, name and its control: a switch for a `bool`, a slider for a ranged number, a field, a dropdown, a ▶ that runs it (arguments beside it or under it), or a read-only value. Values and property controls follow the game live. *⋯* holds the favourite star, the pin, the description, the id and the tags |
 | **Search** | Finds commands by name, group or tag, optionally case-sensitive; tap a result for its row and details |
 | **Logs** | Unity's console, captured since the debugger was built: type toggles with counts, text search over messages and stack traces, `[Tag]` prefixes to filter by (all or any), copy one or everything, clear. It follows new logs while scrolled to the bottom and loads older ones at the top |
 | **Windows** | Every floating window, with a switch to show or hide it, *Hide all*, and one *Window scale* slider (×0.5 to ×2) shared by every window |
@@ -517,8 +530,8 @@ layered: a translucent panel (`--od-color-glass`) with a lighter top edge, tiles
 sunk into darker wells, and one accent (`--od-color-accent`) kept for what is selected, on or runnable. Soft
 glows and shadows are drawn by the panel itself in `--od-color-glow` and `--od-color-shadow`.
 
-A few variables are read from C# and must stay unitless: `--od-value-refresh-ms` (how often read-only values are
-re-read) and the halo sizes `--od-shadow-size`, `--od-shadow-size-sm`, `--od-glow-size` and `--od-glow-size-sm`.
+A few variables are read from C# and must stay unitless: `--od-value-refresh-ms` (how often values in the Commands
+tab are re-read) and the halo sizes `--od-shadow-size`, `--od-shadow-size-sm`, `--od-glow-size` and `--od-glow-size-sm`.
 
 Use `.uss`, not `.tss`: Unity marks a theme style sheet as a default sheet, and default sheets lose every
 specificity tie, so overrides in a `.tss` would silently do nothing. The one `.tss` the package ships is the

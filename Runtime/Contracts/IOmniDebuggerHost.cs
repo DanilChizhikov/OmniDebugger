@@ -10,6 +10,12 @@ namespace DTech.OmniDebugger
 	/// </summary>
 	public interface IOmniDebuggerHost : IDisposable
 	{
+		/// <summary>
+		/// Raised by <see cref="Refresh"/>. Every view of this debugger listens to it; a window or tab of
+		/// your own can too, to redraw what it built.
+		/// </summary>
+		event Action OnRefreshRequested;
+
 		/// <summary>Which commands exist.</summary>
 		ICommandCatalog Catalog { get; }
 
@@ -36,5 +42,14 @@ namespace DTech.OmniDebugger
 
 		/// <summary>Which control edits which argument type.</summary>
 		IArgumentFieldRegistry Fields { get; }
+
+		/// <summary>
+		/// Makes every view of this debugger — the runtime panel, the editor window and the floating windows —
+		/// re-read and redraw what it shows. Values on screen already follow the game on their own a few times
+		/// a second, so a property changed from code shows up without this; call it when that is not soon
+		/// enough, or after a change only a redraw picks up, such as an icon registered late. Calls made within
+		/// one frame are merged into one redraw. Main thread only.
+		/// </summary>
+		void Refresh();
 	}
 }

@@ -42,6 +42,7 @@ namespace DTech.OmniDebugger.UI
 		private readonly WindowsHost _windows;
 		private readonly WindowRegistry _windowRegistry;
 		private readonly IVisualElementScheduledItem _saveWindowScale;
+		private readonly IVisualElementScheduledItem _pendingRefresh;
 		private readonly FloatingPanel _floating;
 
 		/// <summary>Whether the panel is showing. A closed panel keeps its state but stops working.</summary>
@@ -171,6 +172,10 @@ namespace DTech.OmniDebugger.UI
 			ApplyTheme(ResolveTheme());
 			ApplyOrientation(_state.Landscape);
 
+			_pendingRefresh = _root.schedule.Execute(Refresh);
+			_pendingRefresh.Pause();
+
+			_debugger.OnRefreshRequested += OnRefreshRequested;
 			_catalog.OnChanged += OnCatalogChanged;
 			_themeRegistry.OnChanged += OnThemesChanged;
 			_tabRegistry.OnChanged += OnTabsChanged;
@@ -214,15 +219,16 @@ namespace DTech.OmniDebugger.UI
 		}
 
 		/// <summary>
-		/// Re-reads everything the panel shows. Called on its own whenever the catalog changes.
+		/// Re-reads and redraws everything the view shows: the selected tab and the floating windows.
+		/// Called on its own, once per frame at most, whenever <see cref="IOmniDebuggerHost.Refresh"/> is.
 		/// </summary>
 		public void Refresh()
 		{
 			MainThreadGuard.Verify(nameof(Refresh));
 			ThrowIfDisposed();
 
-			RefreshThemePicker();
-			_tabHost.Refresh();
+			RefreshTabs();
+			_windows?.Refresh();
 		}
 
 		/// <summary>
@@ -239,6 +245,8 @@ namespace DTech.OmniDebugger.UI
 
 			_disposed = true;
 
+			_pendingRefresh.Pause();
+			_debugger.OnRefreshRequested -= OnRefreshRequested;
 			_catalog.OnChanged -= OnCatalogChanged;
 			_themeRegistry.OnChanged -= OnThemesChanged;
 			_tabRegistry.OnChanged -= OnTabsChanged;
@@ -388,6 +396,12 @@ namespace DTech.OmniDebugger.UI
 			_prefs?.SetWindowScale(_windowRegistry.Scale);
 		}
 
+		private void RefreshTabs()
+		{
+			RefreshThemePicker();
+			_tabHost.Refresh();
+		}
+
 		private void RefreshThemePicker() => _chrome.SetThemes(_themeRegistry.All, Theme);
 
 		private void RefreshPage() =>
@@ -529,7 +543,9 @@ namespace DTech.OmniDebugger.UI
 			RefreshPage();
 		}
 
-		private void OnCatalogChanged() => Refresh();
+		private void OnCatalogChanged() => RefreshTabs();
+
+		private void OnRefreshRequested() => _pendingRefresh.ExecuteLater(0);
 
 		private void ThrowIfDisposed()
 		{
