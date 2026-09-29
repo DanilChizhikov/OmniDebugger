@@ -8,7 +8,9 @@ namespace DTech.OmniDebugger.UI
 	/// <summary>
 	/// Puts the panel on screen in a running game. <see cref="DTech.OmniDebugger.OmniDebugger"/> builds one for itself
 	/// by default; drop the component on a GameObject and call <see cref="Bind"/> only when the
-	/// debugger was built with <see cref="OmniDebuggerOptions.CreatePanel"/> off.
+	/// debugger was built with <see cref="OmniDebuggerOptions.CreatePanel"/> off. The component carries no
+	/// options of its own: it reads <c>Project Settings → DTech → OmniDebugger → Panel</c>, and code can
+	/// change <see cref="Options"/> before binding.
 	/// </summary>
 	[Preserve]
 	[AddComponentMenu("DTech/OmniDebugger Panel")]
@@ -26,20 +28,22 @@ namespace DTech.OmniDebugger.UI
 		public IOmniDebugger Debugger => _debugger;
 
 		/// <summary>
-		/// How the panel is scaled and opened. Changes to scaling apply through
-		/// <see cref="SetScale"/>, changes to the button through <see cref="SetOpenButtonVisible"/>;
-		/// shortcuts and tap counts are read live.
+		/// How the panel is scaled, skinned and opened: a copy of the project settings, read the first
+		/// time it is touched, or what <see cref="Create"/> was given. Panel settings and sorting order
+		/// are read when the panel is built, so change them before <see cref="Bind"/>. Changes to
+		/// scaling apply through <see cref="SetScale"/>, changes to the button through
+		/// <see cref="SetOpenButtonEnabled"/>; shortcuts and tap counts are read live. Unless
+		/// <see cref="Create"/> was given options, play mode in the editor replaces this copy whenever the
+		/// project settings are edited, and the panel applies the edit at once.
 		/// </summary>
-		public OmniDebuggerPanelOptions Options => _options ??= new OmniDebuggerPanelOptions();
+		public OmniDebuggerPanelOptions Options => _options ??= OmniDebuggerOptions.Default.Panel;
 
 		[Tooltip("Left empty, a document is created as a child of this object.")]
 		[SerializeField] private UIDocument _document;
 
-		[Tooltip("Left empty, the settings shipped with the package are used. Always cloned, never edited.")]
-		[SerializeField] private PanelSettings _panelSettings;
-
-		[SerializeField] private OmniDebuggerPanelOptions _options = new ();
-
+		private OmniDebuggerPanelOptions _options;
+		private bool _optionsGiven;
+		private bool _everBuilt;
 		private IOmniDebuggerGesture _gesture;
 		private ShortcutTrigger _shortcuts;
 		private PanelSettings _runtimeSettings;
@@ -55,7 +59,7 @@ namespace DTech.OmniDebugger.UI
 		/// Creates a panel from nothing: a new object that survives scene loads, already bound.
 		/// <see cref="DTech.OmniDebugger.OmniDebugger"/> calls this itself unless told otherwise.
 		/// </summary>
-		/// <param name="options">Null uses the defaults.</param>
+		/// <param name="options">Null uses the project settings.</param>
 		public static OmniDebuggerPanel Create(IOmniDebugger debugger, OmniDebuggerPanelOptions options = null)
 		{
 			if (debugger == null)
@@ -68,7 +72,8 @@ namespace DTech.OmniDebugger.UI
 			DontDestroyOnLoad(host);
 
 			OmniDebuggerPanel panel = host.AddComponent<OmniDebuggerPanel>();
-			panel._options = options ?? new OmniDebuggerPanelOptions();
+			panel._options = options;
+			panel._optionsGiven = options != null;
 			panel.Bind(debugger);
 
 			host.SetActive(true);
@@ -126,11 +131,11 @@ namespace DTech.OmniDebugger.UI
 		}
 
 		/// <summary>Shows or hides the floating button, and remembers it in <see cref="Options"/>.</summary>
-		public void SetOpenButtonVisible(bool visible)
+		public void SetOpenButtonEnabled(bool enabled)
 		{
-			Options.Open.ShowButton = visible;
+			Options.Open.ButtonEnabled = enabled;
 
-			if (!visible)
+			if (!enabled)
 			{
 				SetGesture(null);
 				return;
@@ -186,8 +191,52 @@ namespace DTech.OmniDebugger.UI
 			}
 		}
 
+		internal void Apply(OmniDebuggerPanelOptions next)
+		{
+			if (next == null)
+			{
+				throw new ArgumentNullException(nameof(next));
+			}
+
+			OmniDebuggerPanelOptions previous = Options;
+			_options = next;
+
+			if (_gesture is HoldToDragButtonGesture button)
+			{
+				button.SetOptions(next.Open);
+			}
+
+			if (previous.Open.ButtonEnabled != next.Open.ButtonEnabled)
+			{
+				SetOpenButtonEnabled(next.Open.ButtonEnabled);
+			}
+
+			if (_view == null)
+			{
+				return;
+			}
+
+			if (previous.PanelSettings != next.PanelSettings)
+			{
+				ReleaseView();
+				BuildView();
+				return;
+			}
+
+			if (_runtimeSettings != null)
+			{
+				_runtimeSettings.sortingOrder = next.SortingOrder;
+				PanelScaling.Apply(_runtimeSettings, next.ScaleMode, next.Scale);
+			}
+		}
+
 		private void OnEnable()
 		{
+			if (!_optionsGiven)
+			{
+				ProjectOptions.OnEditorChanged += OnProjectOptionsChanged;
+			}
+
 			if (_debugger == null)
 			{
 				return;
@@ -196,7 +245,11 @@ namespace DTech.OmniDebugger.UI
 			BuildView();
 		}
 
-		private void OnDisable() => ReleaseView();
+		private void OnDisable()
+		{
+			ProjectOptions.OnEditorChanged -= OnProjectOptionsChanged;
+			ReleaseView();
+		}
 
 		private void Update()
 		{
@@ -236,12 +289,13 @@ namespace DTech.OmniDebugger.UI
 				_debugger,
 				_state,
 				PlayerPrefsViewPrefs.Default,
-				Options.Theme,
 				OmniDebuggerViewSettings.DefaultOrigin,
 				useScreenSafeArea: true,
 				showCloseButton: true,
-				startOpen: Options.OpenOnStart,
+				startOpen: Options.OpenOnStart && !_everBuilt,
 				hostWindows: true);
+
+			_everBuilt = true;
 
 			_view = new OmniDebuggerView(settings);
 			_view.OnClosed += OnViewClosed;
@@ -252,13 +306,15 @@ namespace DTech.OmniDebugger.UI
 			_inputBinding.Sync(document.rootVisualElement.panel);
 #endif
 
-			if (Options.Open.ShowButton)
+			if (Options.Open.ButtonEnabled)
 			{
 				_gesture ??= CreateDefaultGesture();
 			}
 
 			AttachGesture();
 		}
+
+		private void OnProjectOptionsChanged() => Apply(OmniDebuggerOptions.Default.Panel);
 
 		private IOmniDebuggerGesture CreateDefaultGesture() =>
 			new HoldToDragButtonGesture(Options.Open, _debugger?.Logs);
@@ -287,13 +343,14 @@ namespace DTech.OmniDebugger.UI
 				return _ownedDocument;
 			}
 
-			PanelSettings source = _panelSettings != null ? _panelSettings : OmniDebuggerUiAssets.PanelSettings;
+			PanelSettings source = Options.PanelSettings != null ? Options.PanelSettings : OmniDebuggerUiAssets.PanelSettings;
 
 			if (source == null)
 			{
 				UnityLogSink.Default.Error(
 					"Panel settings could not be loaded, so the runtime panel cannot be built. " +
-					"Assign one on the component, or restore Runtime/UI/Resources/OmniDebugger.");
+					"Assign one in Project Settings → DTech → OmniDebugger → Panel, " +
+					"or restore Runtime/UI/Resources/OmniDebugger.");
 				return null;
 			}
 

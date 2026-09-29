@@ -266,6 +266,22 @@
     margin-left: var(--od-space-3);
 }
 
+/*
+ * The button clips a long theme name, not the label: an ellipsis on the label cut the descenders of
+ * g, p and y. The button is a whole control high, so only its sides ever clip.
+ */
+.od-root .od-header .od-header__theme-picker {
+    flex-grow: 0;
+    flex-shrink: 1;
+    min-width: 0;
+    max-width: 50%;
+    overflow: hidden;
+}
+
+.od-header__theme-picker .od-enum-button__text {
+    margin-right: var(--od-space-2);
+}
+
 /* ---------- content, tab bar ---------- */
 
 .od-content {
@@ -1251,18 +1267,19 @@
     background-color: var(--od-color-open-button-fill);
     border-width: 2px;
     border-color: var(--od-color-open-button-border);
-    opacity: 0.4;
-    transition-property: opacity, scale;
-    transition-duration: var(--od-transition-duration), var(--od-transition-duration);
+    transition-property: opacity, scale, border-color;
+    transition-duration: var(--od-transition-duration), var(--od-transition-duration), var(--od-transition-duration);
 }
 
 .od-open-button--pressed {
-    opacity: 0.8;
     scale: 0.92 0.92;
 }
 
+.od-open-button--lit {
+    border-color: var(--od-color-open-button-indicator);
+}
+
 .od-open-button--dragging {
-    opacity: 0.8;
     scale: 1 1;
 }
 

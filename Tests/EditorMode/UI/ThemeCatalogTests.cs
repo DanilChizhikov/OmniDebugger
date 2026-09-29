@@ -40,6 +40,141 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		}
 
 		[Test]
+		public void SetDefault_AloneReplacesTheBuiltInThemes()
+		{
+			OmniDebuggerTheme theme = Theme("ocean", "Ocean");
+
+			try
+			{
+				_catalog.SetDefault(theme);
+
+				Assert.That(_catalog.Default, Is.SameAs(theme));
+				Assert.That(Ids(_catalog.All), Is.EqualTo(new[] { "ocean" }), "a lone default theme is the only one offered");
+			}
+			finally
+			{
+				Object.DestroyImmediate(theme);
+			}
+		}
+
+		[Test]
+		public void SetDefault_NullBringsTheBuiltInThemesBack()
+		{
+			OmniDebuggerTheme theme = Theme("ocean", "Ocean");
+
+			try
+			{
+				_catalog.SetDefault(theme);
+				_catalog.SetDefault(null);
+
+				Assert.That(_catalog.Default.Id, Is.EqualTo(ThemeCatalog.DarkThemeId));
+				Assert.That(_catalog.TryGet(ThemeCatalog.LightThemeId, out _), Is.True);
+				Assert.That(_catalog.TryGet("ocean", out _), Is.False, "the former default was never registered");
+			}
+			finally
+			{
+				Object.DestroyImmediate(theme);
+			}
+		}
+
+		[Test]
+		public void SetDefault_WithRegisteredThemesKeepsTheBuiltInThemes()
+		{
+			OmniDebuggerTheme listed = Theme("ocean", "Ocean");
+			OmniDebuggerTheme preferred = Theme("sunset", "Sunset");
+
+			try
+			{
+				_catalog.Register(listed);
+				_catalog.SetDefault(preferred);
+
+				Assert.That(Ids(_catalog.All), Is.EquivalentTo(new[]
+				{
+					ThemeCatalog.DarkThemeId,
+					ThemeCatalog.LightThemeId,
+					"ocean",
+					"sunset",
+				}));
+				Assert.That(_catalog.Default, Is.SameAs(preferred));
+			}
+			finally
+			{
+				Object.DestroyImmediate(listed);
+				Object.DestroyImmediate(preferred);
+			}
+		}
+
+		[Test]
+		public void Unregister_TheLastThemeNextToADefaultDropsTheBuiltInThemes()
+		{
+			OmniDebuggerTheme listed = Theme("ocean", "Ocean");
+			OmniDebuggerTheme preferred = Theme("sunset", "Sunset");
+
+			try
+			{
+				_catalog.Register(listed);
+				_catalog.SetDefault(preferred);
+				_catalog.Unregister(listed);
+
+				Assert.That(Ids(_catalog.All), Is.EqualTo(new[] { "sunset" }));
+			}
+			finally
+			{
+				Object.DestroyImmediate(listed);
+				Object.DestroyImmediate(preferred);
+			}
+		}
+
+		[Test]
+		public void All_FlagsOnlyTheBuiltInThemes()
+		{
+			OmniDebuggerTheme theme = Theme("ocean", "Ocean");
+
+			try
+			{
+				_catalog.Register(theme);
+
+				Assert.That(_catalog.TryGet(ThemeCatalog.DarkThemeId, out OmniDebuggerTheme dark), Is.True);
+				Assert.That(dark.IsBuiltIn, Is.True);
+				Assert.That(theme.IsBuiltIn, Is.False);
+			}
+			finally
+			{
+				Object.DestroyImmediate(theme);
+			}
+		}
+
+		[Test]
+		public void SetDefault_AnnouncesEveryChangeOfTheDefaultOnce()
+		{
+			OmniDebuggerTheme theme = Theme("ocean", "Ocean");
+			int changes = 0;
+			_catalog.OnChanged += Count;
+
+			try
+			{
+				_catalog.Register(theme);
+				changes = 0;
+
+				_catalog.SetDefault(theme);
+				Assert.That(changes, Is.EqualTo(1), "an already registered theme becoming the default is a change");
+
+				_catalog.SetDefault(theme);
+				Assert.That(changes, Is.EqualTo(1), "the same default again is not");
+
+				_catalog.SetDefault(null);
+				Assert.That(changes, Is.EqualTo(2));
+			}
+			finally
+			{
+				_catalog.OnChanged -= Count;
+				Object.DestroyImmediate(theme);
+			}
+
+			void Count() => changes++;
+		}
+
+		[Test]
 		public void TryGet_FindsARegisteredThemeAndRejectsAnUnknownId()
 		{
 			OmniDebuggerTheme theme = Theme("ocean", "Ocean");
@@ -143,7 +278,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		}
 
 		private static OmniDebuggerTheme Theme(string id, string displayName, int sortOrder = 100) =>
-			OmniDebuggerTheme.CreateBuiltIn(id, displayName, sortOrder, null);
+			OmniDebuggerTheme.Create(id, displayName, sortOrder, null);
 
 		private static string[] Ids(IReadOnlyList<OmniDebuggerTheme> themes)
 		{

@@ -1,11 +1,12 @@
 using System;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace DTech.OmniDebugger.UI
 {
 	/// <summary>
-	/// How the runtime panel is scaled, layered and opened. Shared by
-	/// <see cref="OmniDebuggerOptions.Panel"/> and the <see cref="OmniDebuggerPanel"/> inspector.
+	/// How the runtime panel is scaled, layered, skinned and opened. Read through
+	/// <see cref="OmniDebuggerOptions.Panel"/> and by <see cref="OmniDebuggerPanel.Options"/>.
 	/// </summary>
 	[Serializable]
 	public sealed class OmniDebuggerPanelOptions
@@ -41,13 +42,13 @@ namespace DTech.OmniDebugger.UI
 		}
 
 		/// <summary>
-		/// Fixes the panel to this theme: the theme switcher is hidden and no choice is saved. Null lets
-		/// the user switch themes, restoring the last choice and then <see cref="IThemeRegistry.Default"/>.
+		/// Panel settings the runtime panel starts from. Always cloned, never edited: the clone gets
+		/// <see cref="SortingOrder"/> and the scaling on top. Null uses the asset shipped with the package.
 		/// </summary>
-		public OmniDebuggerTheme Theme
+		public PanelSettings PanelSettings
 		{
-			get => _theme;
-			set => _theme = value;
+			get => _panelSettings;
+			set => _panelSettings = value;
 		}
 
 		/// <summary>The floating button and keyboard shortcuts. Never null.</summary>
@@ -61,17 +62,30 @@ namespace DTech.OmniDebugger.UI
 		[SerializeField] private OmniDebuggerScaleMode _scaleMode = OmniDebuggerScaleMode.Auto;
 
 		[Tooltip("Multiplier on top of the scale mode. Above 1 makes everything bigger.")]
-		[SerializeField] private float _scale = 1.0f;
+		[SerializeField, Min(0.1f)] private float _scale = 1.0f;
 
 		[Tooltip("Raise this above your own UI if the panel ends up behind it.")]
-		[SerializeField] private float _sortingOrder = 1000.0f;
+		[SerializeField, Min(0f)] private float _sortingOrder = 1000.0f;
 
 		[Tooltip("Opens the panel as soon as it is built.")]
 		[SerializeField] private bool _openOnStart;
 
-		[Tooltip("Set, the panel always uses this theme and hides the switcher. Left empty, the user picks a theme, restored from PlayerPrefs, then the default.")]
-		[SerializeField] private OmniDebuggerTheme _theme;
+		[Tooltip("Left empty, the settings shipped with the package are used. Always cloned, never edited.")]
+		[SerializeField] private PanelSettings _panelSettings;
 
 		[SerializeField] private OmniDebuggerOpenOptions _open = new ();
+
+		internal OmniDebuggerPanelOptions Clone()
+		{
+			return new OmniDebuggerPanelOptions
+			{
+				_scaleMode = _scaleMode,
+				_scale = _scale,
+				_sortingOrder = _sortingOrder,
+				_openOnStart = _openOnStart,
+				_panelSettings = _panelSettings,
+				_open = Open.Clone(),
+			};
+		}
 	}
 }

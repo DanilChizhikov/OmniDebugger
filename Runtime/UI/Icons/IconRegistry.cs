@@ -63,6 +63,17 @@ namespace DTech.OmniDebugger.UI
 			ClearCache();
 		}
 
+		public bool RemoveCatalog(OmniDebuggerIconCatalog catalog)
+		{
+			if (catalog == null || !_catalogs.Remove(catalog))
+			{
+				return false;
+			}
+
+			ClearCache();
+			return true;
+		}
+
 		public bool TryGet(in CommandIcon icon, out Background background)
 		{
 			background = default;

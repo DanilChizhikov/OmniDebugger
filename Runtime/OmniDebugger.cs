@@ -1,11 +1,13 @@
 using System;
+using System.Collections.Generic;
 using DTech.OmniDebugger.UI;
 
 namespace DTech.OmniDebugger
 {
 	/// <summary>
 	/// The debugger core. The game constructs it, holds it, and disposes it. In play mode it also
-	/// puts the panel on screen and takes it down again — see <see cref="OmniDebuggerOptions"/>.
+	/// puts the panel on screen and takes it down again, set up as
+	/// <c>Project Settings → DTech → OmniDebugger → Panel</c> says — see <see cref="OmniDebuggerOptions"/>.
 	/// </summary>
 	public sealed class OmniDebugger : IOmniDebugger
 	{
@@ -19,7 +21,7 @@ namespace DTech.OmniDebugger
 		private readonly ThemeCatalog _themes;
 		private readonly IconRegistry _icons;
 		private readonly ArgumentFieldRegistry _fields;
-		private readonly OmniDebuggerPanel _panel;
+		private readonly bool _followsProject;
 
 		/// <inheritdoc/>
 		public ICommandCatalog Catalog
@@ -118,14 +120,25 @@ namespace DTech.OmniDebugger
 		/// </summary>
 		public OmniDebuggerPanel Panel => _disposed || _panel == null ? null : _panel;
 
+		private OmniDebuggerOptions _options;
+		private OmniDebuggerPanel _panel;
 		private bool _disposed;
 
-		/// <summary>Builds the debugger with <see cref="OmniDebuggerOptions.Default"/>.</summary>
-		public OmniDebugger() : this(UnityLogSink.Default, OmniDebuggerOptions.Default)
+		/// <summary>
+		/// Builds the debugger with <see cref="OmniDebuggerOptions.Default"/> — the project's options from
+		/// <c>Project Settings → DTech → OmniDebugger → Panel</c>. In play mode it keeps following them:
+		/// edits made there apply to the running debugger and its panel at once.
+		/// </summary>
+		public OmniDebugger() : this(UnityLogSink.Default, null)
 		{
 		}
 
-		/// <param name="options">Null reads as <see cref="OmniDebuggerOptions.Default"/>.</param>
+		/// <param name="options">
+		/// Used instead of the project settings, as a whole. Start from
+		/// <see cref="OmniDebuggerOptions.Default"/> to change only a few of them. Null reads as
+		/// <see cref="OmniDebuggerOptions.Default"/> and keeps following the project settings, as the
+		/// parameterless constructor does; options given here are never touched by them.
+		/// </param>
 		public OmniDebugger(OmniDebuggerOptions options) : this(UnityLogSink.Default, options)
 		{
 		}
@@ -143,7 +156,8 @@ namespace DTech.OmniDebugger
 
 			MainThreadGuard.Verify(nameof(OmniDebugger));
 
-			options ??= OmniDebuggerOptions.Default;
+			_followsProject = options == null;
+			_options = options ?? OmniDebuggerOptions.Default;
 
 			_groups = new GroupOrder();
 			_catalog = new CommandCatalog(log);
@@ -156,11 +170,17 @@ namespace DTech.OmniDebugger
 			_icons = new IconRegistry(log);
 			_fields = new ArgumentFieldRegistry(log);
 
+			RegisterAssets(_options);
 			OmniDebuggerViews.Register(this);
 
-			if (options.CreatePanel)
+			if (_options.CreatePanel)
 			{
-				_panel = PanelLauncher.Launch(this, options.Panel);
+				_panel = PanelLauncher.Launch(this, _followsProject ? null : _options.Panel);
+			}
+
+			if (_followsProject)
+			{
+				ProjectOptions.OnEditorChanged += OnProjectOptionsChanged;
 			}
 		}
 
@@ -178,7 +198,13 @@ namespace DTech.OmniDebugger
 
 			_disposed = true;
 
+			if (_followsProject)
+			{
+				ProjectOptions.OnEditorChanged -= OnProjectOptionsChanged;
+			}
+
 			PanelLauncher.Release(_panel);
+			_panel = null;
 			OmniDebuggerViews.Unregister(this);
 			_capture.Dispose();
 
@@ -189,6 +215,92 @@ namespace DTech.OmniDebugger
 			_themes.Clear();
 			_icons.Clear();
 			_fields.Clear();
+		}
+
+		private static bool Contains<T>(List<T> items, T item) where T : class
+		{
+			for (int i = 0; i < items.Count; i++)
+			{
+				if (ReferenceEquals(items[i], item))
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		private void RegisterAssets(OmniDebuggerOptions options)
+		{
+			for (int i = 0; i < options.Themes.Count; i++)
+			{
+				OmniDebuggerTheme theme = options.Themes[i];
+
+				if (theme != null)
+				{
+					_themes.Register(theme);
+				}
+			}
+
+			for (int i = 0; i < options.IconCatalogs.Count; i++)
+			{
+				OmniDebuggerIconCatalog catalog = options.IconCatalogs[i];
+
+				if (catalog != null)
+				{
+					_icons.AddCatalog(catalog);
+				}
+			}
+
+			_themes.SetDefault(options.DefaultTheme);
+		}
+
+		private void UnregisterDroppedAssets(OmniDebuggerOptions previous, OmniDebuggerOptions next)
+		{
+			for (int i = 0; i < previous.Themes.Count; i++)
+			{
+				OmniDebuggerTheme theme = previous.Themes[i];
+
+				if (theme != null && !Contains(next.Themes, theme))
+				{
+					_themes.Unregister(theme);
+				}
+			}
+
+			for (int i = 0; i < previous.IconCatalogs.Count; i++)
+			{
+				OmniDebuggerIconCatalog catalog = previous.IconCatalogs[i];
+
+				if (catalog != null && !Contains(next.IconCatalogs, catalog))
+				{
+					_icons.RemoveCatalog(catalog);
+				}
+			}
+		}
+
+		private void OnProjectOptionsChanged()
+		{
+			if (_disposed)
+			{
+				return;
+			}
+
+			OmniDebuggerOptions next = ProjectOptions.Load();
+
+			UnregisterDroppedAssets(_options, next);
+			RegisterAssets(next);
+
+			_options = next;
+
+			if (next.CreatePanel && _panel == null)
+			{
+				_panel = PanelLauncher.Launch(this, null);
+			}
+			else if (!next.CreatePanel && _panel != null)
+			{
+				PanelLauncher.Release(_panel);
+				_panel = null;
+			}
 		}
 
 		private void ThrowIfDisposed()

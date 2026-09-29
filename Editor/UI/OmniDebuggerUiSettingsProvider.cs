@@ -1,6 +1,7 @@
 #if OMNI_DEBUGGER
 using System;
 using System.Collections.Generic;
+using DTech.OmniDebugger.Editor;
 using UnityEditor;
 using UnityEngine;
 
@@ -12,7 +13,7 @@ namespace DTech.OmniDebugger.UI.Editor
 
 		private static ThemeCatalog _themes;
 
-		private static ThemeCatalog Themes => _themes ??= new ThemeCatalog(UnityLogSink.Default);
+		private static ThemeCatalog Themes => _themes ??= CreateThemes();
 
 		[SettingsProvider]
 		public static SettingsProvider Create()
@@ -20,6 +21,7 @@ namespace DTech.OmniDebugger.UI.Editor
 			return new SettingsProvider(SettingsPath, SettingsScope.Project)
 			{
 				label = "UI",
+				activateHandler = (_, _) => ReleaseThemes(),
 				guiHandler = _ => Draw(),
 				keywords = new HashSet<string>
 				{
@@ -41,7 +43,7 @@ namespace DTech.OmniDebugger.UI.Editor
 			EditorGUILayout.HelpBox(
 				"The theme and favourites are the only choices the panel saves. The editor window keeps them " +
 				"in EditorPrefs and the running game keeps its own in PlayerPrefs, so changing one never moves " +
-				"the other. Themes are OmniDebuggerTheme assets in any Resources/OmniDebugger folder.",
+				"the other. Themes are OmniDebuggerTheme assets set on the Panel page.",
 				MessageType.Info);
 
 			EditorGUILayout.Space();
@@ -58,14 +60,13 @@ namespace DTech.OmniDebugger.UI.Editor
 			IReadOnlyList<OmniDebuggerTheme> themes = Themes.All;
 			string[] labels = new string[themes.Count];
 			int selected = 0;
-
-			EditorPrefsViewPrefs.Default.TryGetThemeId(out string storedId);
+			string selectedId = themes.Count == 0 ? null : ResolveSelectedId();
 
 			for (int i = 0; i < themes.Count; i++)
 			{
 				labels[i] = themes[i].DisplayName;
 
-				if (string.Equals(themes[i].Id, storedId, StringComparison.Ordinal))
+				if (string.Equals(themes[i].Id, selectedId, StringComparison.Ordinal))
 				{
 					selected = i;
 				}
@@ -75,7 +76,7 @@ namespace DTech.OmniDebugger.UI.Editor
 			{
 				if (themes.Count == 0)
 				{
-					EditorGUILayout.LabelField("No themes were found.");
+					EditorGUILayout.LabelField("Theme", "No themes were found.");
 					return;
 				}
 
@@ -85,12 +86,42 @@ namespace DTech.OmniDebugger.UI.Editor
 				{
 					EditorPrefsViewPrefs.Default.SetThemeId(themes[picked].Id);
 				}
+			}
+		}
 
-				if (GUILayout.Button("Rescan Themes", GUILayout.Width(140f)))
+		private static ThemeCatalog CreateThemes()
+		{
+			ThemeCatalog themes = new ThemeCatalog(UnityLogSink.Default);
+			OmniDebuggerOptions options = OmniDebuggerProjectSettings.instance.Options;
+
+			for (int i = 0; i < options.Themes.Count; i++)
+			{
+				OmniDebuggerTheme theme = options.Themes[i];
+
+				if (theme != null)
 				{
-					Themes.Refresh();
+					themes.Register(theme);
 				}
 			}
+
+			themes.SetDefault(options.DefaultTheme);
+			return themes;
+		}
+
+		private static void ReleaseThemes()
+		{
+			_themes?.Clear();
+			_themes = null;
+		}
+
+		private static string ResolveSelectedId()
+		{
+			if (EditorPrefsViewPrefs.Default.TryGetThemeId(out string storedId) && Themes.TryGet(storedId, out _))
+			{
+				return storedId;
+			}
+
+			return Themes.Default.Id;
 		}
 
 		private static void DrawDiscovered()

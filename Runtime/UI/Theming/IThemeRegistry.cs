@@ -4,21 +4,26 @@ using System.Collections.Generic;
 namespace DTech.OmniDebugger.UI
 {
 	/// <summary>
-	/// The themes the panel offers. A consumer needs no code at all — an
-	/// <see cref="OmniDebuggerTheme"/> asset saved under any <c>Resources/OmniDebugger</c> folder
-	/// shows up on its own — and may still register one built at runtime through
-	/// <see cref="IOmniDebugger.Themes"/>.
+	/// The themes the panel offers. Nothing configured, they are the built-in dark and light
+	/// themes. <see cref="OmniDebuggerOptions.DefaultTheme"/> alone replaces both, so the panel keeps
+	/// that one theme and hides its switcher. Themes listed in <see cref="OmniDebuggerOptions.Themes"/>
+	/// or added through <see cref="Register"/> are offered next to the built-in ones.
 	/// </summary>
 	public interface IThemeRegistry
 	{
-		/// <summary>Raised after the set of themes changed, so open panels can rebuild their picker.</summary>
+		/// <summary>
+		/// Raised after the set of themes or <see cref="Default"/> changed, so open panels can rebuild
+		/// their picker.
+		/// </summary>
 		event Action OnChanged;
 
 		/// <summary>Every known theme, sorted by sort order and then by display name.</summary>
 		IReadOnlyList<OmniDebuggerTheme> All { get; }
 
 		/// <summary>
-		/// The theme used when nothing was chosen or the chosen one no longer exists. Never null.
+		/// The theme used when nothing was chosen or the chosen one no longer exists:
+		/// <see cref="OmniDebuggerOptions.DefaultTheme"/> when the debugger was given one, the built-in
+		/// dark theme otherwise. Never null.
 		/// </summary>
 		OmniDebuggerTheme Default { get; }
 
@@ -26,8 +31,8 @@ namespace DTech.OmniDebugger.UI
 		bool TryGet(string id, out OmniDebuggerTheme theme);
 
 		/// <summary>
-		/// Adds a theme that no <c>Resources</c> folder can find — one created at runtime, or one
-		/// loaded from Addressables or an asset bundle.
+		/// Adds a theme next to the built-in ones — one created at runtime, or one loaded from
+		/// Addressables or an asset bundle.
 		/// </summary>
 		/// <returns><c>false</c> when it was already registered.</returns>
 		bool Register(OmniDebuggerTheme theme);
@@ -35,11 +40,5 @@ namespace DTech.OmniDebugger.UI
 		/// <summary>Removes a theme added through <see cref="Register"/>.</summary>
 		/// <returns><c>false</c> when it was not registered.</returns>
 		bool Unregister(OmniDebuggerTheme theme);
-
-		/// <summary>
-		/// Re-reads the <c>Resources</c> folders. Needed only after a theme asset was created or
-		/// deleted while a panel was open; registered themes are kept.
-		/// </summary>
-		void Refresh();
 	}
 }

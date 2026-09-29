@@ -46,6 +46,12 @@ namespace DTech.OmniDebugger.Editor
 
 			EditorGUILayout.Space();
 			DrawAllTargets();
+
+			EditorGUILayout.Space();
+			EditorGUILayout.HelpBox(
+				"How the panel looks and opens is set on the Panel page below this one. It shows up while " +
+				$"{OmniDebuggerDefines.Symbol} is on for the active build target.",
+				MessageType.None);
 		}
 
 		private static void DrawActiveTarget()

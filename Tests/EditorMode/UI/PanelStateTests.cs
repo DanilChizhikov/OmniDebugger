@@ -126,11 +126,12 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		[Test]
 		public void Options_DefaultToAPanelAndAVisibleButton()
 		{
-			OmniDebuggerOptions options = OmniDebuggerOptions.Default;
+			OmniDebuggerOptions options = new OmniDebuggerOptions();
 
 			Assert.That(options.CreatePanel, Is.True);
 			Assert.That(options.Panel.ScaleMode, Is.EqualTo(OmniDebuggerScaleMode.Auto));
-			Assert.That(options.Panel.Open.ShowButton, Is.True);
+			Assert.That(options.Panel.Open.ButtonEnabled, Is.True);
+			Assert.That(options.Panel.Open.ButtonOpacity, Is.EqualTo(0.4f));
 			Assert.That(options.Panel.Open.Shortcuts, Is.Empty);
 
 			options.Panel.Scale = -1.0f;

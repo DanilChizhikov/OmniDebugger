@@ -105,6 +105,16 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			Assert.That(options.ButtonClicks, Is.EqualTo(OmniDebuggerOpenOptions.MaxButtonClicks));
 		}
 
+		[Test]
+		public void OpenOptions_ClampTheButtonOpacity()
+		{
+			OmniDebuggerOpenOptions options = new OmniDebuggerOpenOptions { ButtonOpacity = 0.0f };
+			Assert.That(options.ButtonOpacity, Is.EqualTo(OmniDebuggerOpenOptions.MinButtonOpacity));
+
+			options.ButtonOpacity = 2.0f;
+			Assert.That(options.ButtonOpacity, Is.EqualTo(1.0f));
+		}
+
 		private sealed class FakeInput : IInputBackend
 		{
 			private readonly HashSet<KeyCode> _held = new ();

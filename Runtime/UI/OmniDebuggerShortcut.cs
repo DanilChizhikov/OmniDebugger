@@ -28,5 +28,8 @@ namespace DTech.OmniDebugger.UI
 		}
 
 		public override string ToString() => string.Join("+", Keys);
+
+		internal OmniDebuggerShortcut Clone() =>
+			new OmniDebuggerShortcut(_keys == null ? Array.Empty<KeyCode>() : (KeyCode[])_keys.Clone());
 	}
 }

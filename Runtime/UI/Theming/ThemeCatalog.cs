@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace DTech.OmniDebugger.UI
 {
@@ -38,6 +37,11 @@ namespace DTech.OmniDebugger.UI
 			{
 				EnsureLoaded();
 
+				if (_defaultTheme != null && _byId.TryGetValue(_defaultTheme.Id, out OmniDebuggerTheme preferred))
+				{
+					return preferred;
+				}
+
 				if (_byId.TryGetValue(DarkThemeId, out OmniDebuggerTheme dark))
 				{
 					return dark;
@@ -47,6 +51,7 @@ namespace DTech.OmniDebugger.UI
 			}
 		}
 
+		private OmniDebuggerTheme _defaultTheme;
 		private bool _loaded;
 
 		public ThemeCatalog(ILogSink log)
@@ -111,10 +116,16 @@ namespace DTech.OmniDebugger.UI
 			return true;
 		}
 
-		public void Refresh()
+		public void SetDefault(OmniDebuggerTheme theme)
 		{
-			MainThreadGuard.Verify(nameof(Refresh));
+			MainThreadGuard.Verify(nameof(SetDefault));
 
+			if (ReferenceEquals(_defaultTheme, theme))
+			{
+				return;
+			}
+
+			_defaultTheme = theme;
 			Rebuild();
 			OnChanged?.Invoke();
 		}
@@ -124,6 +135,7 @@ namespace DTech.OmniDebugger.UI
 			_registered.Clear();
 			_themes.Clear();
 			_byId.Clear();
+			_defaultTheme = null;
 			_loaded = false;
 
 			for (int i = 0; i < _builtIn.Count; i++)
@@ -157,27 +169,27 @@ namespace DTech.OmniDebugger.UI
 			_themes.Clear();
 			_byId.Clear();
 
-			OmniDebuggerTheme[] discovered = Resources.LoadAll<OmniDebuggerTheme>(OmniDebuggerUiAssets.ResourcesFolder);
-
-			for (int i = 0; i < discovered.Length; i++)
-			{
-				Collect(discovered[i], reportDuplicates: true);
-			}
-
 			for (int i = 0; i < _registered.Count; i++)
 			{
 				Collect(_registered[i], reportDuplicates: true);
 			}
 
-			EnsureBuiltIns();
+			Collect(_defaultTheme, reportDuplicates: true);
 
-			for (int i = 0; i < _builtIn.Count; i++)
+			if (OffersBuiltIns())
 			{
-				Collect(_builtIn[i], reportDuplicates: false);
+				EnsureBuiltIns();
+
+				for (int i = 0; i < _builtIn.Count; i++)
+				{
+					Collect(_builtIn[i], reportDuplicates: false);
+				}
 			}
 
 			_themes.Sort(_order);
 		}
+
+		private bool OffersBuiltIns() => _defaultTheme == null || _registered.Count > 0;
 
 		private void EnsureBuiltIns()
 		{
