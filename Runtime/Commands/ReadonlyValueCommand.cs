@@ -11,8 +11,11 @@ namespace DTech.OmniDebugger
 	{
 		private readonly Func<object> _getter;
 
+		/// <inheritdoc/>
 		public CommandDefinition Definition { get; }
 
+		/// <summary>A value read by <paramref name="getter"/> whenever the panel or a caller asks for it.</summary>
+		/// <exception cref="ArgumentException">The definition is not a <see cref="CommandKind.ReadonlyValue"/>.</exception>
 		public ReadonlyValueCommand(CommandDefinition definition, Func<object> getter)
 		{
 			if (definition == null)
@@ -32,6 +35,7 @@ namespace DTech.OmniDebugger
 			_getter = getter ?? throw new ArgumentNullException(nameof(getter));
 		}
 
+		/// <inheritdoc/>
 		public object GetValue() => _getter.Invoke();
 	}
 }

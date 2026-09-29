@@ -12,7 +12,10 @@ namespace DTech.OmniDebugger.UI
 	[Serializable]
 	public sealed class OmniDebuggerLockOptions
 	{
+		/// <summary>Fewest digits a PIN may have.</summary>
 		public const int MinPinLength = 4;
+
+		/// <summary>Most digits a PIN may have.</summary>
 		public const int MaxPinLength = 12;
 
 		/// <summary>

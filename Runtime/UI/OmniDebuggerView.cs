@@ -67,6 +67,10 @@ namespace DTech.OmniDebugger.UI
 
 		private bool IsFloating => _overlay && _landscape && !_fullScreen;
 
+		/// <summary>
+		/// Builds the panel into <see cref="OmniDebuggerViewSettings.Root"/> as its one new child. Main thread only.
+		/// </summary>
+		/// <exception cref="ArgumentNullException">The settings carry no root or no debugger.</exception>
 		public OmniDebuggerView(in OmniDebuggerViewSettings settings)
 		{
 			MainThreadGuard.Verify(nameof(OmniDebuggerView));

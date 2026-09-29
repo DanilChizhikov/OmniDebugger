@@ -10,8 +10,10 @@ namespace DTech.OmniDebugger
 		/// <summary>Grows with every record, so a later record always has a bigger id.</summary>
 		public long Id { get; }
 
+		/// <summary>When the message reached the debugger, in UTC.</summary>
 		public DateTime TimestampUtc { get; }
 
+		/// <summary>The kind of message, as Unity reported it.</summary>
 		public LogType Type { get; }
 
 		/// <summary>The message, cut at the feed's limit. See <see cref="IsMessageTruncated"/>.</summary>
@@ -26,8 +28,10 @@ namespace DTech.OmniDebugger
 		/// </summary>
 		public IReadOnlyList<string> Tags { get; }
 
+		/// <summary>Whether <see cref="Message"/> was cut to fit the feed's limit.</summary>
 		public bool IsMessageTruncated { get; }
 
+		/// <summary>Whether <see cref="StackTrace"/> was cut to fit the feed's limit.</summary>
 		public bool IsStackTraceTruncated { get; }
 
 		/// <summary>Errors, asserts and exceptions.</summary>

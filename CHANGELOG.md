@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.0.0] - unreleased
+## [1.0.0] - 2026-09-26
 
 Initial release.
 
@@ -36,7 +36,8 @@ Initial release.
   loads.
 - A `link.xml` generated for every build with `OMNI_DEBUGGER` on: every type declaring a command, kept whole by the
   same rules the catalog registers commands with, and every enum used in a command signature. Only assemblies that
-  reference OmniDebugger are searched.
+  reference OmniDebugger are searched, and a type whose commands cannot be read is named in a warning rather than
+  dropped in silence.
 - `Project Settings → DTech → OmniDebugger` to toggle the `OMNI_DEBUGGER` define per build target, with a *Support*
   link to the author's DonationAlerts page at the bottom. The same link is in the README and in `.github/FUNDING.yml`
   (GitHub's *Sponsor* button).
@@ -66,11 +67,13 @@ Initial release.
 - `[DebugRange]` on a numeric property or parameter, carried as `ArgumentDefinition.Range` (`ArgumentRange`): the
   panel edits it with a slider and a value box, snapped to an optional `Step`.
 - `ILogFeed` on `IOmniDebuggerHost.Logs`: thread-safe capture of `Application.logMessageReceivedThreaded`, `[Tag]`
-  parsing and id-based paging. Storage is bounded twice — 16 384 records and a budget of about 8 MB of text — and
+  parsing and id-based paging. Storage is bounded twice — 16 384 records and a budget of about 4 million characters
+  of text (some 8 MB) — and
   a message repeated word for word is stored once, its tags parsed once, and read once per filter however many
   records share it.
-- Floating windows through `IOmniDebuggerHost.Windows` (custom content or a list of commands), shown while the panel
-  is closed or floating — the one touched last, window or panel, on top — draggable and collapsible, plus a built-in
+- Floating windows through `IOmniDebuggerHost.Windows` (custom content or a list of commands, each handed back as an
+  `IOmniDebuggerWindow` to open, close or collapse), shown while the panel is closed or floating — the one touched
+  last, window or panel, on top — draggable and collapsible, plus a built-in
   Pinned window. One scale, ×0.5 to ×2 from the Windows tab, sizes every window and is saved.
 - Open button: a square glass button; tap it (or a configurable series of taps), it lights up on every tap, hold
   0.6 seconds to drag with animated corner brackets, position remembered on the device until `ButtonAnchor` changes,
@@ -88,12 +91,16 @@ Initial release.
   button. `OmniDebuggerOptions.DefaultTheme` alone replaces both and hides the switcher; themes listed in
   `OmniDebuggerOptions.Themes` or added through `IOmniDebuggerHost.Themes.Register` are offered next to the built-in
   ones in a dropdown, starting from the default theme. The theme and favourites are the only choices the panel
-  saves, plus the floating windows' scale in the game: the editor window keeps them in `EditorPrefs` and the game in
-  `PlayerPrefs`, so the two are independent. Pins, the open tab and group, the open button position and the floating
-  panel's position last for the session only.
-- Extension seams: `IOmniDebuggerTabFactory` / `IOmniDebuggerHost.Tabs` for additional tabs,
-  `IArgumentFieldHandler` / `IOmniDebuggerHost.Fields` for additional argument types, `IOmniDebuggerGesture` for how the
-  panel is opened on a device.
+  saves, plus the floating windows' scale and the open button's position in the game: the editor window keeps them in
+  `EditorPrefs` and the game in `PlayerPrefs`, so the two are independent. Pins, the open tab and group and the
+  floating panel's position last for the session only.
+- Extension seams, all hanging off the debugger and documented with examples in the README: `IOmniDebuggerTabFactory`
+  / `IOmniDebuggerHost.Tabs` for additional tabs — the built-in ones (`info`, `commands`, `search`, `logs`, `windows`)
+  can be unregistered or replaced; `IOmniDebuggerHost.Windows` for floating windows of your own;
+  `IArgumentFieldHandler` / `IOmniDebuggerHost.Fields` for additional argument types; `IOmniDebuggerIconProvider` /
+  `IOmniDebuggerHost.Icons` for icons from anywhere; `IOmniDebuggerGesture` / `OmniDebuggerPanel.SetGesture` for how
+  the panel is opened on a device; `OmniDebuggerView` to mount the panel in UI of your own; and
+  `IOmniDebuggerHost.OnRefreshRequested` for content of your own to redraw with the panel.
 - An optional PIN or password in front of the runtime panel (`OmniDebuggerPanelOptions.Lock`): a keypad for a
   PIN, a masked field for a password, stored only as a salted SHA-256 hash. It is asked for on every open, once
   per session or once per device until the secret changes; a run of wrong entries pauses the prompt, and play mode
@@ -109,8 +116,9 @@ Initial release.
   and zoom; the window scales the panel to fit itself the way `ScreenSize` does on a device.
 - EditMode test suite covering scanning, ranges, the catalog, invocation, argument binding, search, group and command
   ordering, argument-array building, theme selection, view state, log storage, sharing and tags, shortcuts and tap
-  series, favourites and pins, the window registry, scaling, options and their project-settings copies, the shared
-  debugger and the generated `link.xml`.
+  series, favourites and pins, the window registry, scaling, options and their project-settings copies, the lock
+  (secret hashing, PIN rules, attempts and cooldown, unlock memory), `Refresh`, the shared debugger and the generated
+  `link.xml`.
 
 ### Notes
 - No package dependencies. No UniTask, no Newtonsoft. The Input System package and uGUI are used when present
@@ -120,3 +128,5 @@ Initial release.
 - `defineConstraints` gate code, not assets: the panel's `Runtime/UI/Resources/OmniDebugger` folder — three
   `.uss`, one `.tss`, one `PanelSettings`; icons are drawn as vectors — ships even with `OMNI_DEBUGGER` off. Delete that folder in a build
   that must not carry it.
+- The README's screenshots live in `Documentation~/`, a folder Unity never imports, so they reach neither a project's
+  assets nor a build.

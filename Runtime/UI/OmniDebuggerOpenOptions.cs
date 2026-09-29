@@ -12,7 +12,10 @@ namespace DTech.OmniDebugger.UI
 	[Serializable]
 	public sealed class OmniDebuggerOpenOptions
 	{
+		/// <summary>Most taps <see cref="ButtonClicks"/> can ask for.</summary>
 		public const int MaxButtonClicks = 10;
+
+		/// <summary>Lowest resting opacity of the button: fully transparent, yet still tappable.</summary>
 		public const float MinButtonOpacity = 0f;
 
 		/// <summary>Shows the floating button. True by default.</summary>
