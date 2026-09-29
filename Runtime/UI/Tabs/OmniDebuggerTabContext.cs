@@ -7,7 +7,7 @@ namespace DTech.OmniDebugger.UI
 	public readonly struct OmniDebuggerTabContext
 	{
 		/// <summary>The debugger whose commands are on show. Never null, never disposed by a tab.</summary>
-		public IOmniDebugger Debugger { get; }
+		public IOmniDebuggerHost Debugger { get; }
 
 		/// <summary>
 		/// The tab's own scratch pad, kept by the panel's owner. Anything a tab wants to survive a
@@ -24,7 +24,7 @@ namespace DTech.OmniDebugger.UI
 		internal ViewServices Services { get; }
 
 		public OmniDebuggerTabContext(
-			IOmniDebugger debugger,
+			IOmniDebuggerHost debugger,
 			OmniDebuggerTabState state,
 			string origin)
 			: this(debugger, state, origin, null)
@@ -32,7 +32,7 @@ namespace DTech.OmniDebugger.UI
 		}
 
 		internal OmniDebuggerTabContext(
-			IOmniDebugger debugger,
+			IOmniDebuggerHost debugger,
 			OmniDebuggerTabState state,
 			string origin,
 			ViewServices services)

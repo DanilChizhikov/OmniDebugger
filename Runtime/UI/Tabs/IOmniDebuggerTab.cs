@@ -26,8 +26,8 @@ namespace DTech.OmniDebugger.UI
 		void OnClose();
 
 		/// <summary>
-		/// Called when the catalog changed or the user asked for a refresh. The tab is visible and
-		/// should re-read whatever it shows.
+		/// Called when the tab is selected, when the panel opens, when the catalog changed and when
+		/// <see cref="IOmniDebuggerHost.Refresh"/> was called. The tab should re-read whatever it shows.
 		/// </summary>
 		void Refresh();
 	}

@@ -34,21 +34,21 @@ namespace DTech.OmniDebugger
 			}
 		}
 
-		public bool Matches(in LogRecord record)
+		public bool Matches(LogBody body)
 		{
-			if ((_types & MaskOf(record.Type)) == 0)
+			if ((_types & MaskOf(body.Type)) == 0)
 			{
 				return false;
 			}
 
-			if (_tags != null && !MatchesTags(record.Tags))
+			if (_tags != null && !MatchesTags(body.Tags))
 			{
 				return false;
 			}
 
 			return _text == null ||
-				record.Message.IndexOf(_text, StringComparison.OrdinalIgnoreCase) >= 0 ||
-				record.StackTrace.IndexOf(_text, StringComparison.OrdinalIgnoreCase) >= 0;
+				body.Message.IndexOf(_text, StringComparison.OrdinalIgnoreCase) >= 0 ||
+				body.StackTrace.IndexOf(_text, StringComparison.OrdinalIgnoreCase) >= 0;
 		}
 
 		private static bool Contains(IReadOnlyList<string> tags, string wanted)

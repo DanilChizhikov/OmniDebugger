@@ -6,7 +6,7 @@ namespace DTech.OmniDebugger.UI
 	internal sealed class OmniIcon : VisualElement
 	{
 		private const float Grid = 24.0f;
-		private const float StrokeWidth = 2.0f;
+		private const float StrokeWidth = 1.75f;
 
 		public IconGlyph Glyph
 		{

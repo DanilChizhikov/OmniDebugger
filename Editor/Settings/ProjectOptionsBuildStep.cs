@@ -20,7 +20,7 @@ namespace DTech.OmniDebugger.Editor
 		{
 			DeleteGenerated();
 
-			NamedBuildTarget target = ResolveTarget(report);
+			NamedBuildTarget target = OmniDebuggerDefines.ResolveTarget(report);
 
 			if (!OmniDebuggerDefines.IsEnabled(target))
 			{
@@ -40,15 +40,6 @@ namespace DTech.OmniDebugger.Editor
 
 		[InitializeOnLoadMethod]
 		private static void DeleteLeftovers() => EditorApplication.delayCall += DeleteGenerated;
-
-		private static NamedBuildTarget ResolveTarget(BuildReport report)
-		{
-			BuildTargetGroup group = BuildPipeline.GetBuildTargetGroup(report.summary.platform);
-
-			return group == BuildTargetGroup.Unknown
-				? OmniDebuggerDefines.ActiveTarget
-				: NamedBuildTarget.FromBuildTargetGroup(group);
-		}
 
 		private static void DeleteGenerated()
 		{

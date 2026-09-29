@@ -22,7 +22,7 @@ namespace DTech.OmniDebugger.UI
 
 			_text = UiBuild.Label(string.Empty, OmniDebuggerUiClasses.EnumButtonText);
 			_button.Add(_text);
-			_button.Add(new OmniIcon(IconGlyph.TriangleDown));
+			_button.Add(new OmniIcon(IconGlyph.ChevronDown));
 		}
 
 		public override void SetValueWithoutNotify(Enum newValue)
@@ -43,10 +43,7 @@ namespace DTech.OmniDebugger.UI
 			}
 
 			ScrollView list = UiBuild.Scroll();
-			list.contentContainer.style.paddingLeft = 0.0f;
-			list.contentContainer.style.paddingRight = 0.0f;
-			list.contentContainer.style.paddingTop = 0.0f;
-			list.contentContainer.style.paddingBottom = 0.0f;
+			list.AddToClassList(OmniDebuggerUiClasses.PopupList);
 
 			for (int i = 0; i < values.Length; i++)
 			{

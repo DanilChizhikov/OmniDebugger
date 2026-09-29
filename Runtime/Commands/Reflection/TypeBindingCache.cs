@@ -37,6 +37,16 @@ namespace DTech.OmniDebugger
 			return cached;
 		}
 
+		public static MemberBinding[] GetBindingsWithoutCaching(Type type)
+		{
+			if (type == null)
+			{
+				throw new ArgumentNullException(nameof(type));
+			}
+
+			return _cache.TryGetValue(type, out MemberBinding[] cached) ? cached : Build(type);
+		}
+
 		private static MemberBinding[] Build(Type type)
 		{
 			MemberInfo[] members = type.GetMembers(ScannedMembers);
@@ -121,7 +131,10 @@ namespace DTech.OmniDebugger
 
 			ArgumentDefinition[] arguments =
 			{
-				new ArgumentDefinition(property.Name, property.PropertyType),
+				new ArgumentDefinition(
+					property.Name,
+					property.PropertyType,
+					range: property.GetCustomAttribute<DebugRangeAttribute>()?.Range ?? default),
 			};
 
 			CommandDefinition definition = new CommandDefinition(
@@ -185,7 +198,8 @@ namespace DTech.OmniDebugger
 					name: parameter.Name,
 					type: parameter.ParameterType,
 					defaultValue: parameter.HasDefaultValue ? parameter.DefaultValue : null,
-					isOptional: parameter.IsOptional);
+					isOptional: parameter.IsOptional,
+					range: parameter.GetCustomAttribute<DebugRangeAttribute>()?.Range ?? default);
 			}
 
 			CommandDefinition definition = new CommandDefinition(

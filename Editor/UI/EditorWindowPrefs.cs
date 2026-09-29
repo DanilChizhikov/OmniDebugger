@@ -9,9 +9,9 @@ namespace DTech.OmniDebugger.UI.Editor
 	{
 		public static event Action OnChanged;
 
-		public const float MinZoom = 0.4f;
-		public const float MaxZoom = 1.0f;
-		public const float DefaultZoom = 0.66f;
+		public const float MinZoom = 0.5f;
+		public const float MaxZoom = 1.25f;
+		public const float DefaultZoom = 0.75f;
 
 		private const string Prefix = "DTech.OmniDebugger.UI.Editor.";
 		private const string ZoomKey = Prefix + "Zoom";

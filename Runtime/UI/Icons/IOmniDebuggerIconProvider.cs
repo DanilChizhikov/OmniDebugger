@@ -4,7 +4,7 @@ namespace DTech.OmniDebugger.UI
 {
 	/// <summary>
 	/// Resolves the icon a command declared with <see cref="DebugIconAttribute"/>. Register one with
-	/// <see cref="IOmniDebugger.Icons"/> to serve icons from an atlas, Addressables or anywhere else.
+	/// <see cref="IOmniDebuggerHost.Icons"/> to serve icons from an atlas, Addressables or anywhere else.
 	/// </summary>
 	public interface IOmniDebuggerIconProvider
 	{

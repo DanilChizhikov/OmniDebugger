@@ -6,7 +6,7 @@ using UnityEngine;
 namespace DTech.OmniDebugger
 {
 	/// <summary>
-	/// How an <see cref="OmniDebugger"/> sets itself up. The project's own copy is edited in
+	/// How an <see cref="OmniDebuggerHost"/> sets itself up. The project's own copy is edited in
 	/// <c>Project Settings → DTech → OmniDebugger → Panel</c> and read through <see cref="Default"/>;
 	/// a new instance holds the package's built-in defaults instead.
 	/// </summary>
@@ -14,8 +14,19 @@ namespace DTech.OmniDebugger
 	public sealed class OmniDebuggerOptions
 	{
 		/// <summary>
+		/// Builds <see cref="OmniDebuggerHost.Shared"/> before the first scene loads, so the log is captured from
+		/// the first frame and the panel is there without a line of code. Read from the project settings when
+		/// the game starts; a debugger built in code ignores it. Off by default.
+		/// </summary>
+		public bool CreateOnStartup
+		{
+			get => _createOnStartup;
+			set => _createOnStartup = value;
+		}
+
+		/// <summary>
 		/// Builds the runtime panel together with the debugger and destroys it on
-		/// <see cref="OmniDebugger.Dispose"/>. Turn it off when a scene already carries an
+		/// <see cref="OmniDebuggerHost.Dispose"/>. Turn it off when a scene already carries an
 		/// <see cref="OmniDebuggerPanel"/>, or when the debugger is only meant for the editor window.
 		/// Nothing is built outside play mode either way.
 		/// </summary>
@@ -44,7 +55,7 @@ namespace DTech.OmniDebugger
 		}
 
 		/// <summary>
-		/// Themes registered with <see cref="IOmniDebugger.Themes"/> when the debugger is built. Offered
+		/// Themes registered with <see cref="IOmniDebuggerHost.Themes"/> when the debugger is built. Offered
 		/// next to the built-in dark and light themes, so the panel's theme button becomes a dropdown.
 		/// Never null; null entries are skipped.
 		/// </summary>
@@ -55,7 +66,7 @@ namespace DTech.OmniDebugger
 		}
 
 		/// <summary>
-		/// Icon catalogs added to <see cref="IOmniDebugger.Icons"/> when the debugger is built, for
+		/// Icon catalogs added to <see cref="IOmniDebuggerHost.Icons"/> when the debugger is built, for
 		/// assets kept outside <c>Resources/OmniDebugger</c>. Never null; null entries are skipped.
 		/// </summary>
 		public List<OmniDebuggerIconCatalog> IconCatalogs
@@ -71,6 +82,9 @@ namespace DTech.OmniDebugger
 		/// Only a debugger built without options keeps following later edits in play mode.
 		/// </summary>
 		public static OmniDebuggerOptions Default => ProjectOptions.Load();
+
+		[Tooltip("Builds OmniDebuggerHost.Shared before the first scene loads: the log from the first frame and the panel without any code.")]
+		[SerializeField] private bool _createOnStartup;
 
 		[Tooltip("Builds the runtime panel together with the debugger. Ignored outside play mode.")]
 		[SerializeField] private bool _createPanel = true;
@@ -90,6 +104,7 @@ namespace DTech.OmniDebugger
 		{
 			return new OmniDebuggerOptions
 			{
+				_createOnStartup = _createOnStartup,
 				_createPanel = _createPanel,
 				_panel = Panel.Clone(),
 				_defaultTheme = _defaultTheme,

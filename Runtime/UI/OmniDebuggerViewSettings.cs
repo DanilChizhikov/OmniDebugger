@@ -20,7 +20,7 @@ namespace DTech.OmniDebugger.UI
 		public VisualElement Root { get; }
 
 		/// <summary>The debugger whose catalog is shown. The view never disposes it.</summary>
-		public IOmniDebugger Debugger { get; }
+		public IOmniDebuggerHost Debugger { get; }
 
 		/// <summary>
 		/// State that outlives the elements. Null starts from scratch; pass the same instance again
@@ -39,8 +39,9 @@ namespace DTech.OmniDebugger.UI
 		public bool UseScreenSafeArea { get; }
 
 		/// <summary>
-		/// Adds a close button and a tap-to-close backdrop. False in an editor window, where the
-		/// window's own tab closes the panel.
+		/// Adds a close button and draws the panel as glass over the game: edge to edge, or a floating
+		/// window the game stays live around. False in an editor window, where the window's own tab
+		/// closes the panel and the panel fills the window, opaque.
 		/// </summary>
 		public bool ShowCloseButton { get; }
 
@@ -51,7 +52,7 @@ namespace DTech.OmniDebugger.UI
 		public bool StartOpen { get; }
 
 		/// <summary>
-		/// Shows floating windows while the panel is closed, and lets commands be pinned into one.
+		/// Shows floating windows while the panel is closed or floating, and lets commands be pinned into one.
 		/// Runtime only: an editor window has no game view to float them over.
 		/// </summary>
 		public bool HostWindows { get; }
@@ -60,7 +61,7 @@ namespace DTech.OmniDebugger.UI
 
 		public OmniDebuggerViewSettings(
 			VisualElement root,
-			IOmniDebugger debugger,
+			IOmniDebuggerHost debugger,
 			OmniDebuggerViewState state = null,
 			string origin = null,
 			bool useScreenSafeArea = false,
@@ -73,7 +74,7 @@ namespace DTech.OmniDebugger.UI
 
 		internal OmniDebuggerViewSettings(
 			VisualElement root,
-			IOmniDebugger debugger,
+			IOmniDebuggerHost debugger,
 			OmniDebuggerViewState state,
 			IViewPrefs prefs,
 			string origin = null,

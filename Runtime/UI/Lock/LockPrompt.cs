@@ -46,6 +46,7 @@ namespace DTech.OmniDebugger.UI
 			_root.RegisterCallback<PointerDownEvent>(OnBackgroundPointerDown);
 
 			_card = UiBuild.Element(OmniDebuggerUiClasses.LockCard);
+			_card.AddManipulator(new Halo());
 			_card.focusable = true;
 			_card.RegisterCallback<KeyDownEvent>(OnKeyDown);
 			_root.Add(_card);

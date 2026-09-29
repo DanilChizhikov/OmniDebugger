@@ -166,13 +166,14 @@ namespace DTech.OmniDebugger.UI
 		private static VisualElement Section(string title)
 		{
 			VisualElement section = UiBuild.Element(OmniDebuggerUiClasses.Section);
-			section.Add(UiBuild.Label(title, OmniDebuggerUiClasses.SectionTitle));
+			section.Add(UiBuild.Label(title.ToUpperInvariant(), OmniDebuggerUiClasses.SectionTitle));
 			return section;
 		}
 
 		private static Label Row(VisualElement section, string key, string value)
 		{
 			VisualElement row = UiBuild.Element(OmniDebuggerUiClasses.KeyValueRow);
+			row.EnableInClassList(OmniDebuggerUiClasses.First, section.childCount == 1);
 			row.Add(UiBuild.Label(key, OmniDebuggerUiClasses.KeyValueKey));
 
 			Label label = UiBuild.Label(string.IsNullOrEmpty(value) ? Unknown : value, OmniDebuggerUiClasses.KeyValueValue);

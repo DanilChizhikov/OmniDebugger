@@ -8,6 +8,7 @@ namespace DTech.OmniDebugger
 	[AttributeUsage(AttributeTargets.Method | AttributeTargets.Property, AllowMultiple = false)]
 	public sealed class DebugIconAttribute : Attribute
 	{
+		/// <summary>The icon, carried over to <see cref="CommandDefinition.Icon"/>.</summary>
 		public CommandIcon Icon { get; }
 
 		public DebugIconAttribute(DebugIconSource source, string key)

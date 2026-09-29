@@ -6,18 +6,18 @@ namespace DTech.OmniDebugger.UI
 {
 	internal sealed class HoldToDragButtonGesture : IOmniDebuggerGesture
 	{
-		private const long UnlockDelayMs = 1000;
+		private const long UnlockDelayMs = 600;
 		private const long ErrorPollMs = 250;
 		private const long PulseFrameMs = 16;
 		private const long MinLitMs = 150;
-		private const float DragThreshold = 9.0f;
-		private const float EdgePadding = 9.0f;
-		private const float PulsePeriod = 0.55f;
+		private const float EdgePadding = 12.0f;
+		private const float PulsePeriod = 0.8f;
 		private const float PulseMinOpacity = 0.45f;
-		private const float PulseDuration = 60.0f;
+		private const float PulseDuration = 45.0f;
 		private const float LitOpacity = 1.0f;
 
 		private readonly ILogFeed _logs;
+		private readonly IViewPrefs _prefs;
 		private readonly ClickSeries _clicks = new ();
 
 		private OmniDebuggerOpenOptions _options;
@@ -33,6 +33,7 @@ namespace DTech.OmniDebugger.UI
 
 		private Vector2 _normalized;
 		private Vector2 _pointerStart;
+		private Vector2 _pointerLast;
 		private Vector2 _pressNormalized;
 		private int _pointerId = PointerId.invalidPointerId;
 		private bool _hasPosition;
@@ -45,10 +46,11 @@ namespace DTech.OmniDebugger.UI
 		private float _pulseStart;
 		private float _pressStart;
 
-		public HoldToDragButtonGesture(OmniDebuggerOpenOptions options, ILogFeed logs)
+		public HoldToDragButtonGesture(OmniDebuggerOpenOptions options, ILogFeed logs, IViewPrefs prefs)
 		{
 			_options = options ?? new OmniDebuggerOpenOptions();
 			_logs = logs;
+			_prefs = prefs;
 		}
 
 		public void Attach(VisualElement root, Action requestOpen)
@@ -70,6 +72,11 @@ namespace DTech.OmniDebugger.UI
 
 			_button = new VisualElement { name = OmniDebuggerUiClasses.OpenButton };
 			_button.AddToClassList(OmniDebuggerUiClasses.OpenButton);
+			_button.AddManipulator(new Halo());
+
+			OmniIcon mark = new OmniIcon(IconGlyph.Terminal);
+			mark.AddToClassList(OmniDebuggerUiClasses.OpenButtonMark);
+			_button.Add(mark);
 
 			_alert = new VisualElement();
 			_alert.AddToClassList(OmniDebuggerUiClasses.OpenButtonAlert);
@@ -91,7 +98,7 @@ namespace DTech.OmniDebugger.UI
 
 			if (!_hasPosition)
 			{
-				_normalized = GetDefaultPosition();
+				_normalized = TryRestorePosition(out Vector2 restored) ? restored : GetDefaultPosition();
 				_hasPosition = true;
 			}
 
@@ -198,6 +205,7 @@ namespace DTech.OmniDebugger.UI
 
 			_pointerId = evt.pointerId;
 			_pointerStart = evt.position;
+			_pointerLast = evt.position;
 			_pressNormalized = _normalized;
 			_pressedInside = true;
 			_unlocked = false;
@@ -222,6 +230,7 @@ namespace DTech.OmniDebugger.UI
 			}
 
 			Vector2 position = evt.position;
+			_pointerLast = position;
 
 			if (!_unlocked)
 			{
@@ -244,7 +253,7 @@ namespace DTech.OmniDebugger.UI
 
 			Vector2 delta = position - _pointerStart;
 
-			if (!_dragging && delta.magnitude < DragThreshold)
+			if (!_dragging && delta.magnitude < TouchSlop.Distance)
 			{
 				return;
 			}
@@ -268,9 +277,15 @@ namespace DTech.OmniDebugger.UI
 			}
 
 			bool wasUnlocked = _unlocked;
+			bool wasDragging = _dragging;
 			bool inside = _button.worldBound.Contains(evt.position);
 
 			EndPress();
+
+			if (wasDragging)
+			{
+				_prefs?.SetOpenButton(_options.ButtonAnchor, _normalized);
+			}
 
 			if (wasUnlocked)
 			{
@@ -401,6 +416,8 @@ namespace DTech.OmniDebugger.UI
 			}
 
 			_unlocked = true;
+			_pointerStart = _pointerLast;
+			_pressNormalized = _normalized;
 			_clicks.Reset();
 			_button.AddToClassList(OmniDebuggerUiClasses.OpenButtonDragging);
 			_corners.Show();
@@ -428,6 +445,7 @@ namespace DTech.OmniDebugger.UI
 		{
 			_pulseStart = Time.realtimeSinceStartup;
 			_alert.style.display = DisplayStyle.Flex;
+			_button.AddToClassList(OmniDebuggerUiClasses.OpenButtonAlerting);
 
 			_pulse ??= _alert.schedule.Execute(Pulse).Every(PulseFrameMs);
 			_pulse.Resume();
@@ -455,6 +473,8 @@ namespace DTech.OmniDebugger.UI
 			{
 				_alert.style.display = DisplayStyle.None;
 			}
+
+			_button?.RemoveFromClassList(OmniDebuggerUiClasses.OpenButtonAlerting);
 
 			if (_logs != null)
 			{
@@ -502,6 +522,20 @@ namespace DTech.OmniDebugger.UI
 			float yMax = Mathf.Max(yMin, area.height - insets.w - EdgePadding - height);
 
 			bounds = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
+			return true;
+		}
+
+		private bool TryRestorePosition(out Vector2 position)
+		{
+			position = default;
+
+			if (_prefs == null || !_prefs.TryGetOpenButton(out OpenButtonAnchor anchor, out Vector2 saved) ||
+				anchor != _options.ButtonAnchor)
+			{
+				return false;
+			}
+
+			position = new Vector2(Mathf.Clamp01(saved.x), Mathf.Clamp01(saved.y));
 			return true;
 		}
 

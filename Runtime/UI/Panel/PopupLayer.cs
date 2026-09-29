@@ -6,8 +6,8 @@ namespace DTech.OmniDebugger.UI
 {
 	internal sealed class PopupLayer : VisualElement
 	{
-		private const float AnchorGap = 2.0f;
-		private const float MinAnchoredWidth = 160.0f;
+		private const float AnchorGap = 4.0f;
+		private const float MinAnchoredWidth = 192.0f;
 
 		public bool IsShowing => _popup != null;
 
@@ -39,6 +39,7 @@ namespace DTech.OmniDebugger.UI
 		{
 			VisualElement popup = UiBuild.Element(OmniDebuggerUiClasses.Popup);
 			popup.style.position = Position.Relative;
+			popup.AddManipulator(new Halo());
 
 			if (!string.IsNullOrEmpty(title))
 			{
@@ -46,11 +47,7 @@ namespace DTech.OmniDebugger.UI
 			}
 
 			ScrollView scroll = UiBuild.Scroll();
-			scroll.style.flexGrow = 0.0f;
-			scroll.contentContainer.style.paddingLeft = 0.0f;
-			scroll.contentContainer.style.paddingRight = 0.0f;
-			scroll.contentContainer.style.paddingTop = 0.0f;
-			scroll.contentContainer.style.paddingBottom = 0.0f;
+			scroll.AddToClassList(OmniDebuggerUiClasses.PopupList);
 			scroll.Add(content);
 			popup.Add(scroll);
 
@@ -61,6 +58,7 @@ namespace DTech.OmniDebugger.UI
 		{
 			VisualElement popup = UiBuild.Element(OmniDebuggerUiClasses.Popup);
 			popup.AddToClassList(OmniDebuggerUiClasses.PopupAnchored);
+			popup.AddManipulator(new Halo());
 			popup.style.position = Position.Absolute;
 			popup.style.visibility = Visibility.Hidden;
 			popup.Add(content);

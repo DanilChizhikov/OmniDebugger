@@ -9,12 +9,12 @@ namespace DTech.OmniDebugger.UI
 		public event Action OnSelectionChanged;
 
 		private const string EmptyMessage =
-			"No tabs registered. Register one with IOmniDebugger.Tabs.Register(factory).";
+			"No tabs registered. Register one with IOmniDebuggerHost.Tabs.Register(factory).";
 
 		private readonly VisualElement _bar;
 		private readonly ScrollView _barScroll;
 		private readonly VisualElement _body;
-		private readonly IOmniDebugger _debugger;
+		private readonly IOmniDebuggerHost _debugger;
 		private readonly ITabRegistry _tabs;
 		private readonly OmniDebuggerViewState _state;
 		private readonly string _origin;
@@ -30,7 +30,7 @@ namespace DTech.OmniDebugger.UI
 		public TabHost(
 			VisualElement bar,
 			VisualElement body,
-			IOmniDebugger debugger,
+			IOmniDebuggerHost debugger,
 			OmniDebuggerViewState state,
 			string origin,
 			ViewServices services)
@@ -145,6 +145,17 @@ namespace DTech.OmniDebugger.UI
 			}
 
 			tab.Refresh();
+		}
+
+		public bool TryGetSelectedFactory(out IOmniDebuggerTabFactory factory)
+		{
+			if (_disposed || _selectedId == null)
+			{
+				factory = null;
+				return false;
+			}
+
+			return TryGetFactory(_selectedId, out factory);
 		}
 
 		public void Dispose()
@@ -309,12 +320,15 @@ namespace DTech.OmniDebugger.UI
 				IOmniDebuggerTabFactory factory = factories[i];
 				string id = factory.Id;
 
-				Button button = new Button(() => Select(id))
-				{
-					text = factory.DisplayName,
-				};
-
+				Button button = new Button(() => Select(id)) { tooltip = factory.DisplayName };
 				button.AddToClassList(OmniDebuggerUiClasses.Tab);
+				button.AddManipulator(new Halo());
+
+				VisualElement icon = TabIcon.Create(factory, _debugger.Icons);
+				icon.AddToClassList(OmniDebuggerUiClasses.TabIcon);
+				button.Add(icon);
+				button.Add(UiBuild.Label(factory.DisplayName, OmniDebuggerUiClasses.TabLabel));
+
 				_barScroll.Add(button);
 				_buttons[id] = button;
 			}

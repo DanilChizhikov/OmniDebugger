@@ -12,7 +12,10 @@ namespace DTech.OmniDebugger.UI
 	[Serializable]
 	public sealed class OmniDebuggerOpenOptions
 	{
+		/// <summary>Most taps <see cref="ButtonClicks"/> can ask for.</summary>
 		public const int MaxButtonClicks = 10;
+
+		/// <summary>Lowest resting opacity of the button: fully transparent, yet still tappable.</summary>
 		public const float MinButtonOpacity = 0f;
 
 		/// <summary>Shows the floating button. True by default.</summary>
@@ -51,7 +54,7 @@ namespace DTech.OmniDebugger.UI
 
 		/// <summary>
 		/// Opacity of the button while it is not touched, clamped to <see cref="MinButtonOpacity"/>..1.
-		/// A pressed button is always fully opaque. 0.4 by default.
+		/// A pressed button is always fully opaque. 0.5 by default.
 		/// </summary>
 		public float ButtonOpacity
 		{
@@ -83,7 +86,7 @@ namespace DTech.OmniDebugger.UI
 		[SerializeField] private OpenButtonAnchor _buttonAnchor = OpenButtonAnchor.Right;
 
 		[Tooltip("How visible the button is while it is not touched. A pressed button is always fully opaque.")]
-		[SerializeField] [Range(MinButtonOpacity, 1.0f)] private float _buttonOpacity = 0.4f;
+		[SerializeField] [Range(MinButtonOpacity, 1.0f)] private float _buttonOpacity = 0.5f;
 
 		[Tooltip("Each entry toggles the panel. An entry fires when all its keys are held and the last one goes down.")]
 		[SerializeField] private List<OmniDebuggerShortcut> _shortcuts = new ();

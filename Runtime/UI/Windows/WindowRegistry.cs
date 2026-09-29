@@ -9,12 +9,20 @@ namespace DTech.OmniDebugger.UI
 	{
 		public event Action OnChanged;
 
+		internal event Action OnScaleChanged;
+
+		internal const float MinScale = 0.5f;
+		internal const float MaxScale = 2.0f;
+		internal const float ScaleStep = 0.1f;
+
 		private readonly List<WindowRegistration> _windows = new ();
 		private readonly List<IOmniDebuggerWindow> _view = new ();
 
 		public IReadOnlyList<IOmniDebuggerWindow> All => _view;
 
 		internal IReadOnlyList<WindowRegistration> Registrations => _windows;
+
+		internal float Scale { get; private set; } = 1.0f;
 
 		public IOmniDebuggerWindow RegisterCustom(
 			string id,
@@ -93,6 +101,21 @@ namespace DTech.OmniDebugger.UI
 
 		internal WindowRegistration RegisterInternal(WindowRegistration registration) => Add(registration);
 
+		internal void SetScale(float scale)
+		{
+			MainThreadGuard.Verify(nameof(SetScale));
+
+			scale = Mathf.Round(Mathf.Clamp(scale, MinScale, MaxScale) / ScaleStep) * ScaleStep;
+
+			if (Mathf.Approximately(scale, Scale))
+			{
+				return;
+			}
+
+			Scale = scale;
+			OnScaleChanged?.Invoke();
+		}
+
 		internal void NotifyChanged(WindowRegistration registration)
 		{
 			if (registration.IsRegistered)
@@ -110,7 +133,9 @@ namespace DTech.OmniDebugger.UI
 
 			_windows.Clear();
 			_view.Clear();
+			Scale = 1.0f;
 			OnChanged = null;
+			OnScaleChanged = null;
 		}
 
 		private static string Validate(string id)

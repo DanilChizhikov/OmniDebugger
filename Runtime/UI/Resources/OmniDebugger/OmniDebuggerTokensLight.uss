@@ -1,47 +1,57 @@
 /*
- * Graphite + Teal, light. Only colours are redefined — spacing, shape, type and metrics are
- * inherited from the dark token sheet underneath, which is the point of layering rather than
- * duplicating.
+ * Glass + Electric Blue, light: frosted white glass over the game. Only colours are redefined —
+ * spacing, shape, type, metrics and halo sizes are inherited from the dark token sheet underneath,
+ * which is the point of layering rather than duplicating.
  *
  * A consumer theme that wants a light base lists this sheet first and its own tweaks after it.
  */
 .od-root {
-    --od-color-bg: rgb(243, 245, 247);
-    --od-color-header: rgb(255, 255, 255);
-    --od-color-tabbar: rgb(234, 238, 241);
-    --od-color-card: rgb(255, 255, 255);
-    --od-color-card-inset: rgb(243, 245, 247);
-    --od-color-control: rgb(228, 232, 236);
-    --od-color-control-hover: rgb(217, 223, 228);
-    --od-color-control-selected: rgb(205, 239, 234);
-    --od-color-accent: rgb(15, 148, 136);
-    --od-color-accent-soft: rgb(11, 111, 102);
+    --od-color-bg: rgb(242, 244, 247);
+    --od-color-glass: rgba(245, 247, 250, 0.88);
+    --od-color-glass-edge: rgba(255, 255, 255, 0.9);
+    --od-color-glass-edge-dim: rgba(15, 23, 42, 0.08);
+    --od-color-rail: rgba(15, 23, 42, 0.03);
+    --od-color-card: rgba(255, 255, 255, 0.72);
+    --od-color-card-edge: rgba(15, 23, 42, 0.07);
+    --od-color-card-inset: rgba(15, 23, 42, 0.05);
+    --od-color-popup: rgba(250, 251, 253, 0.97);
+    --od-color-control: rgba(15, 23, 42, 0.05);
+    --od-color-control-hover: rgba(15, 23, 42, 0.08);
+    --od-color-control-selected: rgba(22, 112, 245, 0.12);
+    --od-color-accent: rgb(22, 112, 245);
+    --od-color-accent-soft: rgb(20, 92, 204);
     --od-color-accent-text: rgb(255, 255, 255);
-    --od-color-text: rgb(26, 31, 36);
-    --od-color-text-muted: rgb(95, 107, 118);
-    --od-color-text-faint: rgb(154, 164, 173);
-    --od-color-divider: rgba(0, 0, 0, 0.08);
-    --od-color-input: rgb(247, 249, 250);
-    --od-color-input-border: rgba(0, 0, 0, 0.12);
-    --od-color-focus: rgb(15, 148, 136);
-    --od-color-selection: rgba(15, 148, 136, 0.22);
-    --od-color-success: rgb(30, 158, 87);
-    --od-color-danger: rgb(217, 58, 58);
-    --od-color-warning: rgb(183, 121, 31);
-    --od-color-destructive: rgb(217, 58, 58);
-    --od-color-log-stripe-log: rgb(159, 184, 191);
-    --od-color-log-stripe-warning: rgb(226, 184, 88);
-    --od-color-log-stripe-error: rgb(224, 122, 128);
-    --od-color-log-filter-log: rgb(220, 232, 235);
-    --od-color-log-filter-warning: rgb(246, 231, 196);
-    --od-color-log-filter-error: rgb(247, 217, 219);
-    --od-color-window-bg: rgba(255, 255, 255, 0.95);
-    --od-color-window-header: rgb(228, 232, 236);
-    --od-color-window-border: rgba(15, 148, 136, 0.4);
-    --od-color-scrim: rgba(20, 31, 36, 0.35);
-    --od-color-open-button-fill: rgb(255, 255, 255);
-    --od-color-open-button-border: rgb(26, 31, 36);
-    --od-color-open-button-indicator: rgb(15, 148, 136);
+    --od-color-accent-edge: rgba(22, 112, 245, 0.5);
+    --od-color-glow: rgba(22, 112, 245, 0.28);
+    --od-color-shadow: rgba(15, 23, 42, 0.18);
+    --od-color-text: rgb(17, 24, 39);
+    --od-color-text-muted: rgb(84, 96, 114);
+    --od-color-text-faint: rgb(146, 156, 171);
+    --od-color-divider: rgba(15, 23, 42, 0.07);
+    --od-color-input: rgba(255, 255, 255, 0.85);
+    --od-color-input-border: rgba(15, 23, 42, 0.12);
+    --od-color-focus: rgb(22, 112, 245);
+    --od-color-selection: rgba(22, 112, 245, 0.22);
+    --od-color-success: rgb(22, 163, 94);
+    --od-color-danger: rgb(220, 50, 64);
+    --od-color-warning: rgb(190, 125, 20);
+    --od-color-destructive: rgba(220, 50, 64, 0.12);
+    --od-color-switch-track: rgba(15, 23, 42, 0.16);
+    --od-color-switch-knob: rgb(255, 255, 255);
+    --od-color-slider-track: rgba(15, 23, 42, 0.12);
+    --od-color-log-stripe-log: rgba(84, 96, 114, 0.5);
+    --od-color-log-stripe-warning: rgb(214, 150, 30);
+    --od-color-log-stripe-error: rgb(224, 72, 86);
+    --od-color-log-filter-log: rgba(15, 23, 42, 0.08);
+    --od-color-log-filter-warning: rgba(214, 150, 30, 0.14);
+    --od-color-log-filter-error: rgba(224, 72, 86, 0.12);
+    --od-color-window-bg: rgba(248, 250, 252, 0.86);
+    --od-color-window-border: rgba(22, 112, 245, 0.45);
+    --od-color-scrim: rgba(10, 14, 22, 0.28);
+    --od-color-open-button-fill: rgba(255, 255, 255, 0.82);
+    --od-color-open-button-border: rgba(15, 23, 42, 0.14);
+    --od-color-open-button-indicator: rgb(22, 112, 245);
     --od-color-alert: rgb(229, 54, 74);
-    --od-color-scrollbar-thumb: rgba(0, 0, 0, 0.22);
+    --od-color-alert-glow: rgba(229, 54, 74, 0.32);
+    --od-color-scrollbar-thumb: rgba(15, 23, 42, 0.2);
 }

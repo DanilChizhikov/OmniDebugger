@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Scripting;
 using UnityEngine.UIElements;
@@ -6,7 +7,7 @@ using UnityEngine.UIElements;
 namespace DTech.OmniDebugger.UI
 {
 	/// <summary>
-	/// Puts the panel on screen in a running game. <see cref="DTech.OmniDebugger.OmniDebugger"/> builds one for itself
+	/// Puts the panel on screen in a running game. <see cref="OmniDebuggerHost"/> builds one for itself
 	/// by default; drop the component on a GameObject and call <see cref="Bind"/> only when the
 	/// debugger was built with <see cref="OmniDebuggerOptions.CreatePanel"/> off. The component carries no
 	/// options of its own: it reads <c>Project Settings → DTech → OmniDebugger → Panel</c>, and code can
@@ -26,7 +27,7 @@ namespace DTech.OmniDebugger.UI
 		public bool IsOpen => _view != null && _view.IsOpen;
 
 		/// <summary>The bound debugger, or null when nothing was bound yet.</summary>
-		public IOmniDebugger Debugger => _debugger;
+		public IOmniDebuggerHost Debugger => _debugger;
 
 		/// <summary>
 		/// How the panel is scaled, skinned, opened and locked: a copy of the project settings, read the first
@@ -52,7 +53,7 @@ namespace DTech.OmniDebugger.UI
 		private UIDocument _ownedDocument;
 		private OmniDebuggerView _view;
 		private LockPrompt _lockPrompt;
-		private IOmniDebugger _debugger;
+		private IOmniDebuggerHost _debugger;
 
 #if OMNI_DEBUGGER_UGUI
 		private PanelInputBinding _inputBinding;
@@ -64,10 +65,10 @@ namespace DTech.OmniDebugger.UI
 
 		/// <summary>
 		/// Creates a panel from nothing: a new object that survives scene loads, already bound.
-		/// <see cref="DTech.OmniDebugger.OmniDebugger"/> calls this itself unless told otherwise.
+		/// <see cref="OmniDebuggerHost"/> calls this itself unless told otherwise.
 		/// </summary>
 		/// <param name="options">Null uses the project settings.</param>
-		public static OmniDebuggerPanel Create(IOmniDebugger debugger, OmniDebuggerPanelOptions options = null)
+		public static OmniDebuggerPanel Create(IOmniDebuggerHost debugger, OmniDebuggerPanelOptions options = null)
 		{
 			if (debugger == null)
 			{
@@ -91,7 +92,7 @@ namespace DTech.OmniDebugger.UI
 		/// Points the panel at a debugger and makes it the one the editor window shows as well.
 		/// Binding a second debugger replaces the first.
 		/// </summary>
-		public void Bind(IOmniDebugger debugger)
+		public void Bind(IOmniDebuggerHost debugger)
 		{
 			if (debugger == null)
 			{
@@ -244,11 +245,28 @@ namespace DTech.OmniDebugger.UI
 				return;
 			}
 
+			ApplyLayout();
+
 			if (_runtimeSettings != null)
 			{
 				_runtimeSettings.sortingOrder = next.SortingOrder;
 				PanelScaling.Apply(_runtimeSettings, next.ScaleMode, next.Scale);
 			}
+		}
+
+		private static string DescribeShortcut(IReadOnlyList<OmniDebuggerShortcut> shortcuts)
+		{
+			for (int i = 0; i < shortcuts.Count; i++)
+			{
+				string hint = shortcuts[i]?.ToHint();
+
+				if (!string.IsNullOrEmpty(hint))
+				{
+					return hint;
+				}
+			}
+
+			return null;
 		}
 
 		private void OnEnable()
@@ -329,6 +347,7 @@ namespace DTech.OmniDebugger.UI
 
 			_view = new OmniDebuggerView(settings);
 			_view.OnClosed += OnViewClosed;
+			ApplyLayout();
 			document.rootVisualElement.RegisterCallback<GeometryChangedEvent>(OnDocumentGeometryChanged);
 
 #if OMNI_DEBUGGER_UGUI
@@ -351,8 +370,15 @@ namespace DTech.OmniDebugger.UI
 
 		private void OnProjectOptionsChanged() => _projectOptionsChanged = true;
 
+		private void ApplyLayout()
+		{
+			_view.SetLandscapeLayout(Options.LandscapeLayout);
+			_view.SetFloatingScale(Options.FloatingScale);
+			_view.SetShortcutHint(DescribeShortcut(Options.Open.Shortcuts));
+		}
+
 		private IOmniDebuggerGesture CreateDefaultGesture() =>
-			new HoldToDragButtonGesture(Options.Open, _debugger?.Logs);
+			new HoldToDragButtonGesture(Options.Open, _debugger?.Logs, PlayerPrefsViewPrefs.Default);
 
 		private void AttachGesture()
 		{

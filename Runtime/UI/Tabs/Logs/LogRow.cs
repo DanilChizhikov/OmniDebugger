@@ -6,7 +6,9 @@ namespace DTech.OmniDebugger.UI
 	internal sealed class LogRow : VisualElement
 	{
 		private readonly VisualElement _card;
-		private readonly Label _meta;
+		private readonly Label _time;
+		private readonly Label _type;
+		private readonly Label _tags;
 		private readonly Label _message;
 		private readonly Action<LogRecord> _copy;
 
@@ -22,9 +24,15 @@ namespace DTech.OmniDebugger.UI
 			Add(_card);
 
 			VisualElement body = UiBuild.Element(OmniDebuggerUiClasses.LogBody);
-			_meta = UiBuild.Label(string.Empty, OmniDebuggerUiClasses.LogMeta);
+			VisualElement meta = UiBuild.Element(OmniDebuggerUiClasses.LogMeta);
+			_time = UiBuild.Label(string.Empty, OmniDebuggerUiClasses.LogTime);
+			_type = UiBuild.Label(string.Empty, OmniDebuggerUiClasses.LogTypeLabel);
+			_tags = UiBuild.Label(string.Empty, OmniDebuggerUiClasses.LogTags);
+			meta.Add(_time);
+			meta.Add(_type);
+			meta.Add(_tags);
 			_message = UiBuild.Label(string.Empty, OmniDebuggerUiClasses.LogMessage);
-			body.Add(_meta);
+			body.Add(meta);
 			body.Add(_message);
 			_card.Add(body);
 
@@ -34,8 +42,13 @@ namespace DTech.OmniDebugger.UI
 		public void Bind(in LogRecord record)
 		{
 			_record = record;
-			_meta.text = LogFormat.Meta(record);
+			_time.text = LogFormat.Timestamp(record);
+			_type.text = LogFormat.TypeLabel(record.Type);
 			_message.text = record.Message;
+
+			string tags = LogFormat.TagLine(record);
+			_tags.text = tags;
+			UiBuild.SetVisible(_tags, tags.Length > 0);
 
 			LogTypeMask kind = LogFilter.MaskOf(record.Type);
 			_card.EnableInClassList(OmniDebuggerUiClasses.LogWarning, kind == LogTypeMask.Warning);

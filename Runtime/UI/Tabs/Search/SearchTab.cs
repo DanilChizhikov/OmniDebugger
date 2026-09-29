@@ -7,7 +7,7 @@ namespace DTech.OmniDebugger.UI
 {
 	internal sealed class SearchTab : IOmniDebuggerTab
 	{
-		private const long DebounceMs = 300;
+		private const long DebounceMs = 150;
 		private const string Placeholder = "Search commands…";
 		private const string PromptMessage = "Type to search by name, group or tag.";
 		private const string NothingFoundMessage = "No commands found.";
@@ -17,7 +17,7 @@ namespace DTech.OmniDebugger.UI
 		private readonly OmniDebuggerTabContext _context;
 		private readonly ViewServices _services;
 		private readonly PanelModel _model = new ();
-		private readonly List<CommandCard> _cards = new ();
+		private readonly List<CommandRow> _rows = new ();
 		private readonly VisualElement _root;
 		private readonly VisualElement _toolbar;
 		private readonly TextField _query;
@@ -41,20 +41,15 @@ namespace DTech.OmniDebugger.UI
 
 			_root = UiBuild.Element(OmniDebuggerUiClasses.TabPage);
 
-			_toolbar = UiBuild.Element(OmniDebuggerUiClasses.PageHeader);
-			_toolbar.style.paddingLeft = 18.0f;
-			_toolbar.style.paddingRight = 18.0f;
-			_toolbar.style.paddingTop = 18.0f;
-			_toolbar.style.marginBottom = 0.0f;
+			_toolbar = UiBuild.Element(OmniDebuggerUiClasses.Toolbar);
 			_root.Add(_toolbar);
 
 			_query = UiBuild.SearchBox(_toolbar, Placeholder);
 			_query.RegisterValueChangedCallback(OnQueryChanged);
 
 			_caseButton = UiBuild.TextButton("Aa", ToggleCase, OmniDebuggerUiClasses.Chip);
+			_caseButton.AddToClassList(OmniDebuggerUiClasses.ToolbarChip);
 			_caseButton.tooltip = "Match case";
-			_caseButton.style.marginLeft = 6.0f;
-			_caseButton.style.marginBottom = 0.0f;
 			_toolbar.Add(_caseButton);
 
 			_scroll = UiBuild.Scroll();
@@ -116,10 +111,30 @@ namespace DTech.OmniDebugger.UI
 			_query.UnregisterValueChangedCallback(OnQueryChanged);
 			_search.OnResultsChanged -= OnResultsChanged;
 			_debounce.Pause();
-			ClearCards();
+			ClearRows();
 			_search.Dispose();
 			_pulse.Dispose();
 			_root.RemoveFromHierarchy();
+		}
+
+		private static VisualElement BuildAbout(CommandDefinition definition)
+		{
+			VisualElement about = UiBuild.Element(OmniDebuggerUiClasses.Card);
+			about.AddToClassList(OmniDebuggerUiClasses.About);
+
+			if (!string.IsNullOrEmpty(definition.Description))
+			{
+				about.Add(UiBuild.Label(definition.Description, OmniDebuggerUiClasses.AboutText));
+			}
+
+			about.Add(UiBuild.Label(definition.Key, OmniDebuggerUiClasses.AboutMeta));
+
+			if (definition.Tags.Count > 0)
+			{
+				about.Add(UiBuild.Label(string.Join(", ", definition.Tags), OmniDebuggerUiClasses.AboutMeta));
+			}
+
+			return about;
 		}
 
 		private void Restore()
@@ -187,7 +202,7 @@ namespace DTech.OmniDebugger.UI
 				return;
 			}
 
-			ClearCards();
+			ClearRows();
 			UiBuild.SetVisible(_toolbar, true);
 
 			if (!_search.HasQuery)
@@ -204,14 +219,16 @@ namespace DTech.OmniDebugger.UI
 				return;
 			}
 
-			ResponsiveGrid grid = new ResponsiveGrid();
-			_scroll.Add(grid);
+			VisualElement list = UiBuild.Element(OmniDebuggerUiClasses.Card);
+			list.AddToClassList(OmniDebuggerUiClasses.RowList);
+			_scroll.Add(list);
 
 			for (int i = 0; i < results.Count; i++)
 			{
-				CommandCard card = new CommandCard(_services, _pulse, results[i], CommandCardMode.Summary, OpenDetails);
-				_cards.Add(card);
-				grid.AddCell(card);
+				CommandRow row = new CommandRow(_services, _pulse, results[i], CommandRowMode.Summary, OpenDetails);
+				row.EnableInClassList(OmniDebuggerUiClasses.First, i == 0);
+				_rows.Add(row);
+				list.Add(row);
 			}
 
 			Vector2 offset = _resultsOffset;
@@ -228,7 +245,7 @@ namespace DTech.OmniDebugger.UI
 
 		private void ShowDetails(CommandDefinition definition)
 		{
-			ClearCards();
+			ClearRows();
 			UiBuild.SetVisible(_toolbar, false);
 
 			VisualElement header = UiBuild.Element(OmniDebuggerUiClasses.PageHeader);
@@ -236,9 +253,16 @@ namespace DTech.OmniDebugger.UI
 			header.Add(UiBuild.Label(definition.Name, OmniDebuggerUiClasses.PageHeaderTitle));
 			_scroll.Add(header);
 
-			CommandCard card = new CommandCard(_services, _pulse, definition, CommandCardMode.Full);
-			_cards.Add(card);
-			_scroll.Add(card);
+			VisualElement list = UiBuild.Element(OmniDebuggerUiClasses.Card);
+			list.AddToClassList(OmniDebuggerUiClasses.RowList);
+			_scroll.Add(list);
+
+			CommandRow row = new CommandRow(_services, _pulse, definition, CommandRowMode.Full);
+			row.AddToClassList(OmniDebuggerUiClasses.First);
+			_rows.Add(row);
+			list.Add(row);
+
+			_scroll.Add(BuildAbout(definition));
 		}
 
 		private void CloseDetails()
@@ -247,14 +271,14 @@ namespace DTech.OmniDebugger.UI
 			Show();
 		}
 
-		private void ClearCards()
+		private void ClearRows()
 		{
-			for (int i = 0; i < _cards.Count; i++)
+			for (int i = 0; i < _rows.Count; i++)
 			{
-				_cards[i].Dispose();
+				_rows[i].Dispose();
 			}
 
-			_cards.Clear();
+			_rows.Clear();
 			_scroll.Clear();
 		}
 	}

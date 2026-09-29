@@ -31,6 +31,7 @@ namespace DTech.OmniDebugger.UI
 		private Vector2 _pointerStart;
 		private Vector2 _positionStart;
 		private int _pointerId = PointerId.invalidPointerId;
+		private float _scale = 1.0f;
 		private bool _dragging;
 		private bool _disposed;
 
@@ -41,6 +42,7 @@ namespace DTech.OmniDebugger.UI
 			_moved = moved;
 
 			AddToClassList(OmniDebuggerUiClasses.Window);
+			this.AddManipulator(new Halo());
 
 			if (registration.Size.x > 0.0f)
 			{
@@ -61,15 +63,10 @@ namespace DTech.OmniDebugger.UI
 
 			ScrollView scroll = UiBuild.Scroll();
 			scroll.AddToClassList(OmniDebuggerUiClasses.WindowContent);
-			scroll.contentContainer.style.paddingLeft = 0.0f;
-			scroll.contentContainer.style.paddingRight = 0.0f;
-			scroll.contentContainer.style.paddingTop = 0.0f;
-			scroll.contentContainer.style.paddingBottom = 0.0f;
 			Add(scroll);
 			_content = scroll.contentContainer;
 
 			_footer = UiBuild.Element(OmniDebuggerUiClasses.WindowFooter);
-			UiBuild.SetVisible(_footer, false);
 			Add(_footer);
 
 			_header.RegisterCallback<PointerDownEvent>(OnHeaderPointerDown);
@@ -94,17 +91,25 @@ namespace DTech.OmniDebugger.UI
 			}
 		}
 
+		public void ShowFooter() => AddToClassList(OmniDebuggerUiClasses.WindowWithFooter);
+
 		public void ApplyCollapsed()
 		{
 			EnableInClassList(OmniDebuggerUiClasses.WindowCollapsed, _registration.IsCollapsed);
 			UiBuild.SetGlyph(_collapse, _registration.IsCollapsed ? IconGlyph.Plus : IconGlyph.Minus);
 		}
 
+		public void SetScale(float scale)
+		{
+			_scale = scale > 0.0f ? scale : 1.0f;
+			style.scale = new Scale(new Vector3(_scale, _scale, 1.0f));
+		}
+
 		public void MoveTo(Vector2 position)
 		{
 			Rect bounds = _bounds();
-			float width = resolvedStyle.width;
-			float height = resolvedStyle.height;
+			float width = resolvedStyle.width * _scale;
+			float height = resolvedStyle.height * _scale;
 
 			if (float.IsNaN(width) || float.IsNaN(height))
 			{

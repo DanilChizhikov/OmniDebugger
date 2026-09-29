@@ -56,9 +56,10 @@ namespace DTech.OmniDebugger.UI.Editor
 			EditorGUILayout.Space();
 
 			EditorGUILayout.HelpBox(
-				"The theme and favourites are the only choices the panel saves. The editor window keeps them " +
-				"in EditorPrefs and the running game keeps its own in PlayerPrefs, so changing one never moves " +
-				"the other. Themes are OmniDebuggerTheme assets set on the Panel page.",
+				"The theme and favourites are the only choices the panel saves, plus the floating windows' scale " +
+				"in the running game. The editor window keeps them in EditorPrefs and the running game keeps its " +
+				"own in PlayerPrefs, so changing one never moves the other. Themes are OmniDebuggerTheme assets " +
+				"set on the Panel page.",
 				MessageType.Info);
 
 			EditorGUILayout.Space();

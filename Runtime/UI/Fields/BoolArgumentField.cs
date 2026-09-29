@@ -5,7 +5,7 @@ namespace DTech.OmniDebugger.UI
 	internal sealed class BoolArgumentField : ArgumentFieldBase<bool>
 	{
 		public BoolArgumentField(in ArgumentFieldRequest request)
-			: base(new Toggle(), request, commitOnChange: true)
+			: base(new SwitchField(), request, commitOnChange: true)
 		{
 			Field.SetValueWithoutNotify(Parse(request.InitialValue));
 		}

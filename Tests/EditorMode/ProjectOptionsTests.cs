@@ -36,6 +36,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			OmniDebuggerOptions copy = source.Clone();
 
 			Assert.That(copy, Is.Not.SameAs(source));
+			Assert.That(copy.CreateOnStartup, Is.True);
 			Assert.That(copy.CreatePanel, Is.False);
 			Assert.That(copy.DefaultTheme, Is.SameAs(source.DefaultTheme));
 			Assert.That(copy.Themes, Is.EqualTo(source.Themes));
@@ -46,6 +47,8 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			Assert.That(copy.Panel.SortingOrder, Is.EqualTo(42.0f));
 			Assert.That(copy.Panel.OpenOnStart, Is.True);
 			Assert.That(copy.Panel.PanelSettings, Is.SameAs(source.Panel.PanelSettings));
+			Assert.That(copy.Panel.LandscapeLayout, Is.EqualTo(OmniDebuggerLandscapeLayout.FullScreen));
+			Assert.That(copy.Panel.FloatingScale, Is.EqualTo(0.8f));
 
 			Assert.That(copy.Panel.Open.ButtonEnabled, Is.False);
 			Assert.That(copy.Panel.Open.ButtonClicks, Is.EqualTo(3));
@@ -109,7 +112,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			options.Themes.Add(null);
 			options.IconCatalogs.Add(null);
 
-			OmniDebugger debugger = new OmniDebugger(new RecordingLogSink(), options);
+			OmniDebuggerHost debugger = new OmniDebuggerHost(new RecordingLogSink(), options);
 
 			try
 			{
@@ -129,7 +132,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			OmniDebuggerOptions source = Sample();
 			ProjectOptions.EditorSource = () => source;
 
-			OmniDebugger debugger = new OmniDebugger(new RecordingLogSink(), null);
+			OmniDebuggerHost debugger = new OmniDebuggerHost(new RecordingLogSink(), null);
 
 			try
 			{
@@ -162,7 +165,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			OmniDebuggerOptions source = Sample();
 			ProjectOptions.EditorSource = () => source;
 
-			OmniDebugger debugger = new OmniDebugger(new RecordingLogSink(), Sample());
+			OmniDebuggerHost debugger = new OmniDebuggerHost(new RecordingLogSink(), Sample());
 
 			try
 			{
@@ -189,6 +192,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		{
 			OmniDebuggerOptions options = new OmniDebuggerOptions
 			{
+				CreateOnStartup = true,
 				CreatePanel = false,
 				DefaultTheme = Track(Theme("sunset")),
 			};
@@ -201,6 +205,8 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			options.Panel.SortingOrder = 42.0f;
 			options.Panel.OpenOnStart = true;
 			options.Panel.PanelSettings = Track(ScriptableObject.CreateInstance<PanelSettings>());
+			options.Panel.LandscapeLayout = OmniDebuggerLandscapeLayout.FullScreen;
+			options.Panel.FloatingScale = 0.8f;
 
 			options.Panel.Open.ButtonEnabled = false;
 			options.Panel.Open.ButtonClicks = 3;

@@ -1,92 +1,158 @@
 /*
- * The complete token set — Graphite + Teal, dark. A theme is layered on top of this sheet, so a
- * theme that redefines one variable inherits every other one from here and can never leave a value
+ * The complete token set — Glass + Electric Blue, dark. A theme is layered on top of this sheet, so
+ * a theme that redefines one variable inherits every other one from here and can never leave a value
  * undefined.
+ *
+ * Glass is layered, not blurred: UI Toolkit has no backdrop filter, so the panel is a translucent
+ * fill with a lighter top and left edge, tiles are a faint white wash over it, and fields sink into
+ * darker wells. --od-color-glass paints the panel over the game; --od-color-bg is the opaque base
+ * the editor window uses, where there is no game behind it.
  *
  * Every length is written for a portrait phone 360 units wide: the runtime panel either scales that
  * with the screen or reads it as desktop pixels (OmniDebuggerScaleMode).
  *
- * --od-value-refresh-ms is read from C# and must stay unitless; every other length carries its unit
- * because only USS reads it.
+ * The --od-*-size halo values and --od-value-refresh-ms are read from C# and must stay unitless;
+ * every other length carries its unit because only USS reads it. A capsule or a circle needs its
+ * radius to be exactly half its height: USS clamps a bigger radius per axis into an ellipse, which is
+ * why those radii come in pairs with their sizes.
  */
 .od-root {
-    --od-color-bg: rgb(18, 20, 23);
-    --od-color-header: rgb(24, 27, 32);
-    --od-color-tabbar: rgb(26, 30, 35);
-    --od-color-card: rgb(30, 34, 40);
-    --od-color-card-inset: rgb(23, 26, 31);
-    --od-color-control: rgb(42, 47, 55);
-    --od-color-control-hover: rgb(50, 56, 67);
-    --od-color-control-selected: rgb(20, 92, 87);
-    --od-color-accent: rgb(46, 196, 182);
-    --od-color-accent-soft: rgb(127, 224, 214);
-    --od-color-accent-text: rgb(11, 31, 29);
-    --od-color-text: rgb(232, 236, 239);
-    --od-color-text-muted: rgb(138, 148, 158);
-    --od-color-text-faint: rgb(92, 101, 110);
-    --od-color-divider: rgba(255, 255, 255, 0.08);
-    --od-color-input: rgb(21, 24, 28);
-    --od-color-input-border: rgba(255, 255, 255, 0.1);
-    --od-color-focus: rgb(46, 196, 182);
-    --od-color-selection: rgba(46, 196, 182, 0.28);
-    --od-color-success: rgb(91, 209, 139);
-    --od-color-danger: rgb(255, 107, 107);
-    --od-color-warning: rgb(245, 184, 61);
-    --od-color-destructive: rgb(142, 46, 54);
-    --od-color-log-stripe-log: rgb(62, 92, 102);
-    --od-color-log-stripe-warning: rgb(154, 122, 46);
-    --od-color-log-stripe-error: rgb(164, 66, 74);
-    --od-color-log-filter-log: rgb(34, 54, 60);
-    --od-color-log-filter-warning: rgb(61, 51, 28);
-    --od-color-log-filter-error: rgb(64, 34, 42);
-    --od-color-window-bg: rgba(18, 20, 23, 0.92);
-    --od-color-window-header: rgb(35, 40, 48);
-    --od-color-window-border: rgba(46, 196, 182, 0.4);
-    --od-color-scrim: rgba(0, 0, 0, 0.62);
-    --od-color-open-button-fill: rgb(18, 20, 23);
-    --od-color-open-button-border: rgb(232, 236, 239);
-    --od-color-open-button-indicator: rgb(46, 196, 182);
+    --od-color-bg: rgb(14, 16, 21);
+    --od-color-glass: rgba(14, 16, 21, 0.86);
+    --od-color-glass-edge: rgba(255, 255, 255, 0.1);
+    --od-color-glass-edge-dim: rgba(255, 255, 255, 0.04);
+    --od-color-rail: rgba(255, 255, 255, 0.025);
+    --od-color-card: rgba(255, 255, 255, 0.035);
+    --od-color-card-edge: rgba(255, 255, 255, 0.06);
+    --od-color-card-inset: rgba(0, 0, 0, 0.22);
+    --od-color-popup: rgba(20, 23, 29, 0.97);
+    --od-color-control: rgba(255, 255, 255, 0.06);
+    --od-color-control-hover: rgba(255, 255, 255, 0.1);
+    --od-color-control-selected: rgba(51, 142, 255, 0.16);
+    --od-color-accent: rgb(51, 142, 255);
+    --od-color-accent-soft: rgb(128, 180, 255);
+    --od-color-accent-text: rgb(255, 255, 255);
+    --od-color-accent-edge: rgba(51, 142, 255, 0.55);
+    --od-color-glow: rgba(51, 142, 255, 0.38);
+    --od-color-shadow: rgba(0, 0, 0, 0.45);
+    --od-color-text: rgb(228, 232, 238);
+    --od-color-text-muted: rgb(140, 149, 162);
+    --od-color-text-faint: rgb(92, 101, 114);
+    --od-color-divider: rgba(255, 255, 255, 0.06);
+    --od-color-input: rgba(0, 0, 0, 0.28);
+    --od-color-input-border: rgba(255, 255, 255, 0.08);
+    --od-color-focus: rgb(51, 142, 255);
+    --od-color-selection: rgba(51, 142, 255, 0.3);
+    --od-color-success: rgb(64, 214, 140);
+    --od-color-danger: rgb(255, 99, 110);
+    --od-color-warning: rgb(246, 186, 72);
+    --od-color-destructive: rgba(255, 99, 110, 0.16);
+    --od-color-switch-track: rgba(255, 255, 255, 0.14);
+    --od-color-switch-knob: rgb(214, 220, 228);
+    --od-color-slider-track: rgba(255, 255, 255, 0.12);
+    --od-color-log-stripe-log: rgba(140, 149, 162, 0.55);
+    --od-color-log-stripe-warning: rgb(246, 186, 72);
+    --od-color-log-stripe-error: rgb(255, 99, 110);
+    --od-color-log-filter-log: rgba(255, 255, 255, 0.1);
+    --od-color-log-filter-warning: rgba(246, 186, 72, 0.14);
+    --od-color-log-filter-error: rgba(255, 99, 110, 0.14);
+    --od-color-window-bg: rgba(14, 16, 21, 0.8);
+    --od-color-window-border: rgba(51, 142, 255, 0.45);
+    --od-color-scrim: rgba(4, 6, 10, 0.42);
+    --od-color-open-button-fill: rgba(14, 16, 21, 0.72);
+    --od-color-open-button-border: rgba(255, 255, 255, 0.16);
+    --od-color-open-button-indicator: rgb(51, 142, 255);
     --od-color-alert: rgb(255, 77, 94);
-    --od-color-scrollbar-thumb: rgba(255, 255, 255, 0.18);
+    --od-color-alert-glow: rgba(255, 77, 94, 0.4);
+    --od-color-scrollbar-thumb: rgba(255, 255, 255, 0.16);
 
     --od-space-1: 2px;
     --od-space-2: 4px;
     --od-space-3: 6px;
-    --od-space-4: 9px;
+    --od-space-4: 8px;
     --od-space-5: 12px;
-    --od-space-6: 18px;
+    --od-space-6: 16px;
     --od-space-7: 24px;
 
-    --od-radius-xs: 2px;
-    --od-radius-sm: 4px;
-    --od-radius-md: 5px;
-    --od-radius-lg: 6px;
+    --od-radius-xs: 3px;
+    --od-radius-sm: 6px;
+    --od-radius-md: 8px;
+    --od-radius-lg: 12px;
+    --od-radius-xl: 16px;
+    --od-radius-panel: 18px;
     --od-border-width: 1px;
 
     --od-font-size-xs: 10px;
     --od-font-size-sm: 11px;
     --od-font-size-md: 13px;
-    --od-font-size-lg: 15px;
-    --od-font-size-xl: 17px;
-    --od-font-size-title: 21px;
+    --od-font-size-lg: 14px;
+    --od-font-size-xl: 16px;
+    --od-font-size-title: 16px;
+    --od-letter-spacing-label: 0.8px;
 
-    --od-header-height: 52px;
-    --od-tabbar-height: 52px;
+    --od-panel-inset: 8px;
+    --od-panel-max-width: 940px;
+    --od-panel-max-height: 720px;
+    --od-bar-height: 52px;
+    --od-sidebar-width: 184px;
+    --od-strip-height: 68px;
     --od-tab-height: 40px;
-    --od-sidebar-width: 110px;
-    --od-control-height: 30px;
-    --od-icon-button-size: 30px;
+    --od-tab-tile-width: 60px;
+    --od-tab-tile-height: 52px;
+    --od-picker-max-width: 168px;
+    --od-control-height: 32px;
+    --od-inline-field-width: 112px;
+    --od-search-min-width: 160px;
+    --od-capsule-radius: 16px;
+    --od-chip-height: 26px;
+    --od-chip-radius: 13px;
+    --od-row-min-height: 44px;
+    --od-kv-row-height: 28px;
+    --od-icon-button-size: 32px;
     --od-icon-size: 18px;
-    --od-icon-size-sm: 14px;
-    --od-open-button-size: 44px;
-    --od-card-gap: 7px;
+    --od-icon-size-sm: 16px;
+    --od-icon-size-lg: 22px;
+    --od-switch-width: 40px;
+    --od-switch-height: 22px;
+    --od-switch-radius: 11px;
+    --od-knob-size: 16px;
+    --od-knob-radius: 8px;
+    --od-knob-inset: 3px;
+    --od-knob-on-left: 21px;
+    --od-slider-track-height: 4px;
+    --od-slider-track-radius: 2px;
+    --od-slider-track-offset: -2px;
+    --od-slider-thumb-size: 16px;
+    --od-slider-thumb-radius: 8px;
+    --od-slider-thumb-offset: -8px;
+    --od-slider-thumb-border: 2px;
+    --od-scrollbar-radius: 2px;
+    --od-range-box-width: 64px;
+    --od-open-button-size: 48px;
+    --od-open-button-radius: 12px;
+    --od-follow-button-size: 40px;
+    --od-follow-button-radius: 20px;
+    --od-card-gap: 12px;
     --od-log-stripe-width: 3px;
-    --od-window-width: 260px;
-    --od-window-max-height: 360px;
+    --od-log-button-size: 26px;
+    --od-window-width: 280px;
+    --od-window-max-height: 380px;
+    --od-window-header-height: 36px;
+    --od-window-button-size: 26px;
+    --od-lock-width: 300px;
+    --od-lock-key-height: 52px;
+    --od-lock-dot-size: 12px;
+    --od-lock-dot-radius: 6px;
 
-    --od-opacity-disabled: 0.45;
+    --od-opacity-disabled: 0.4;
     --od-opacity-pressed: 0.72;
-    --od-transition-duration: 80ms;
+    --od-opacity-window-idle: 0.6;
+    --od-transition-duration: 120ms;
+
+    --od-shadow-size: 28;
+    --od-shadow-size-sm: 16;
+    --od-glow-size: 10;
+    --od-glow-size-sm: 6;
 
     --od-value-refresh-ms: 250;
 }

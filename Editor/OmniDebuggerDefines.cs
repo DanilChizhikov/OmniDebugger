@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEditor;
 using UnityEditor.Build;
+using UnityEditor.Build.Reporting;
 
 namespace DTech.OmniDebugger.Editor
 {
@@ -100,6 +101,15 @@ namespace DTech.OmniDebugger.Editor
 			}
 
 			return _knownTargets;
+		}
+
+		public static NamedBuildTarget ResolveTarget(BuildReport report)
+		{
+			BuildTargetGroup group = BuildPipeline.GetBuildTargetGroup(report.summary.platform);
+
+			return group == BuildTargetGroup.Unknown
+				? ActiveTarget
+				: NamedBuildTarget.FromBuildTargetGroup(group);
 		}
 
 		private static string[] Read(NamedBuildTarget target)

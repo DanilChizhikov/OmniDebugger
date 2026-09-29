@@ -5,7 +5,7 @@ namespace DTech.OmniDebugger.UI
 {
 	/// <summary>
 	/// Which tabs the panel offers. Info, Commands, Search, Logs and Windows are built in; register
-	/// your own through <see cref="IOmniDebugger.Tabs"/> right after constructing the debugger, and
+	/// your own through <see cref="IOmniDebuggerHost.Tabs"/> right after constructing the debugger, and
 	/// every panel showing that debugger picks it up.
 	/// </summary>
 	public interface ITabRegistry

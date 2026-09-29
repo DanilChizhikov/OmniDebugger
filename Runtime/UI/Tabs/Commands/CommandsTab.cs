@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -14,12 +15,13 @@ namespace DTech.OmniDebugger.UI
 		private const string ExpandedStateKey = "expanded";
 		private const string EmptyMessage = "No commands yet. Add a source with debugger.Catalog.AddSource(obj).";
 
-		private static readonly CustomStyleProperty<float> _refreshProperty = new ("--od-value-refresh-ms");
+		private static readonly CustomStyleProperty<float> _refreshProperty = new ("--od-pulse-ms");
 
 		private readonly OmniDebuggerTabContext _context;
 		private readonly ViewServices _services;
 		private readonly PanelModel _model = new ();
-		private readonly List<CommandCard> _cards = new ();
+		private readonly List<GroupSection> _sections = new ();
+		private readonly List<CommandRow> _rows = new ();
 		private readonly List<CommandDefinition> _favorites = new ();
 		private readonly HashSet<string> _expanded;
 		private readonly VisualElement _root;
@@ -91,7 +93,7 @@ namespace DTech.OmniDebugger.UI
 			_disposed = true;
 			_services.Favorites.OnChanged -= OnFavoritesChanged;
 			_root.UnregisterCallback<CustomStyleResolvedEvent>(OnCustomStyleResolved);
-			ClearCards();
+			ClearPage();
 			_pulse.Dispose();
 			_root.RemoveFromHierarchy();
 		}
@@ -134,7 +136,7 @@ namespace DTech.OmniDebugger.UI
 
 		private void ShowGroups()
 		{
-			ClearCards();
+			ClearPage();
 
 			if (_model.Groups.Count == 0)
 			{
@@ -142,19 +144,19 @@ namespace DTech.OmniDebugger.UI
 				return;
 			}
 
-			ResponsiveGrid grid = new ResponsiveGrid(independentColumns: true);
+			ResponsiveGrid grid = new ResponsiveGrid(independentColumns: true, wide: true);
 			_scroll.Add(grid);
 
 			if (_favorites.Count > 0)
 			{
-				grid.AddCell(CreateGroupCard(FavoritesGroup, FavoritesTitle, _favorites, isFavorites: true));
+				grid.AddCell(CreateSection(FavoritesGroup, FavoritesTitle, _favorites, isFavorites: true));
 			}
 
 			IReadOnlyList<string> groups = _model.Groups;
 
 			for (int i = 0; i < groups.Count; i++)
 			{
-				grid.AddCell(CreateGroupCard(groups[i], groups[i], _model.GetCommands(groups[i]), isFavorites: false));
+				grid.AddCell(CreateSection(groups[i], groups[i], _model.GetCommands(groups[i]), isFavorites: false));
 			}
 
 			Vector2 offset = _groupsOffset;
@@ -163,7 +165,7 @@ namespace DTech.OmniDebugger.UI
 
 		private void ShowGroup(string group)
 		{
-			ClearCards();
+			ClearPage();
 
 			bool isFavorites = string.Equals(group, FavoritesGroup, StringComparison.Ordinal);
 			IReadOnlyList<CommandDefinition> commands = isFavorites ? _favorites : _model.GetCommands(group);
@@ -171,21 +173,40 @@ namespace DTech.OmniDebugger.UI
 			VisualElement header = UiBuild.Element(OmniDebuggerUiClasses.PageHeader);
 			header.Add(UiBuild.IconButton(IconGlyph.Back, ShowGroupsPage, "Back"));
 			header.Add(UiBuild.Label(isFavorites ? FavoritesTitle : group, OmniDebuggerUiClasses.PageHeaderTitle));
+			header.Add(UiBuild.Label(commands.Count.ToString(CultureInfo.InvariantCulture), OmniDebuggerUiClasses.PageHeaderCount));
 			_scroll.Add(header);
 
-			ResponsiveGrid grid = new ResponsiveGrid();
-			_scroll.Add(grid);
+			VisualElement list = UiBuild.Element(OmniDebuggerUiClasses.Card);
+			list.AddToClassList(OmniDebuggerUiClasses.RowList);
+			_scroll.Add(list);
 
 			for (int i = 0; i < commands.Count; i++)
 			{
-				CommandCard card = new CommandCard(_services, _pulse, commands[i], CommandCardMode.Full);
-				_cards.Add(card);
-				grid.AddCell(card);
+				CommandRow row = CreateRow(commands[i]);
+				row.EnableInClassList(OmniDebuggerUiClasses.First, i == 0);
+				_rows.Add(row);
+				list.Add(row);
 			}
 		}
 
-		private GroupCard CreateGroupCard(string group, string title, IReadOnlyList<CommandDefinition> commands, bool isFavorites) =>
-			new (group, title, commands, _expanded.Contains(group), isFavorites, OpenGroup, OnExpandedChanged);
+		private GroupSection CreateSection(string group, string title, IReadOnlyList<CommandDefinition> commands, bool isFavorites)
+		{
+			GroupSection section = new GroupSection(
+				group,
+				title,
+				commands,
+				_expanded.Contains(group),
+				isFavorites,
+				CreateRow,
+				OpenGroup,
+				OnExpandedChanged);
+
+			_sections.Add(section);
+			return section;
+		}
+
+		private CommandRow CreateRow(CommandDefinition definition) =>
+			new CommandRow(_services, _pulse, definition, CommandRowMode.Full);
 
 		private void OpenGroup(string group)
 		{
@@ -238,14 +259,20 @@ namespace DTech.OmniDebugger.UI
 				? _favorites.Count > 0
 				: _model.HasGroup(group) && !string.Equals(group, PanelModel.AllGroup, StringComparison.Ordinal);
 
-		private void ClearCards()
+		private void ClearPage()
 		{
-			for (int i = 0; i < _cards.Count; i++)
+			for (int i = 0; i < _sections.Count; i++)
 			{
-				_cards[i].Dispose();
+				_sections[i].Dispose();
 			}
 
-			_cards.Clear();
+			for (int i = 0; i < _rows.Count; i++)
+			{
+				_rows[i].Dispose();
+			}
+
+			_sections.Clear();
+			_rows.Clear();
 			_scroll.Clear();
 		}
 

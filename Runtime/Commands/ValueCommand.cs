@@ -13,8 +13,15 @@ namespace DTech.OmniDebugger
 		private readonly Func<object> _getter;
 		private readonly Action<object> _setter;
 
+		/// <inheritdoc/>
 		public CommandDefinition Definition { get; }
 
+		/// <summary>
+		/// A value read by <paramref name="getter"/> and written by <paramref name="setter"/>. Give the
+		/// definition exactly one <see cref="ArgumentDefinition"/> describing the value: its type picks the
+		/// panel's control, and without it the panel has nothing to edit the value with.
+		/// </summary>
+		/// <exception cref="ArgumentException">The definition is not a <see cref="CommandKind.Value"/>.</exception>
 		public ValueCommand(CommandDefinition definition, Func<object> getter, Action<object> setter)
 		{
 			if (definition == null)
@@ -35,6 +42,7 @@ namespace DTech.OmniDebugger
 			_setter = setter ?? throw new ArgumentNullException(nameof(setter));
 		}
 
+		/// <inheritdoc/>
 		public void Execute(object[] arguments)
 		{
 			if (arguments == null || arguments.Length != 1)
@@ -48,6 +56,7 @@ namespace DTech.OmniDebugger
 			_setter.Invoke(arguments[0]);
 		}
 
+		/// <inheritdoc/>
 		public object GetValue() => _getter.Invoke();
 	}
 }

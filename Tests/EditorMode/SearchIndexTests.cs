@@ -7,13 +7,13 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 	[TestFixture]
 	internal sealed class SearchIndexTests
 	{
-		private OmniDebugger _debugger;
+		private OmniDebuggerHost _debugger;
 		private SearchIndex<CommandDefinition> _index;
 
 		[SetUp]
 		public void SetUp()
 		{
-			_debugger = new OmniDebugger(new RecordingLogSink());
+			_debugger = new OmniDebuggerHost(new RecordingLogSink());
 			_debugger.Catalog.AddSource(new SampleCommands());
 
 			_index = new SearchIndex<CommandDefinition>();

@@ -245,7 +245,7 @@ namespace DTech.OmniDebugger
 		{
 			if (_disposed)
 			{
-				throw new ObjectDisposedException("OmniDebugger");
+				throw new ObjectDisposedException("OmniDebuggerHost");
 			}
 		}
 
