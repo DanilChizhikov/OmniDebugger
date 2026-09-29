@@ -1,6 +1,7 @@
 # OmniDebugger
 [![Unity Version](https://img.shields.io/badge/unity-6000.0+-000.svg)](https://unity.com/releases/editor/archive)
 ![Unity Tests](https://github.com/DanilChizhikov/OmniDebugger/actions/workflows/tests.yml/badge.svg?branch=master)
+[![Donate](https://img.shields.io/badge/donate-DonationAlerts-f59c07.svg)](https://www.donationalerts.com/r/danilchizhikov)
 
 ## Overview
 OmniDebugger is a runtime cheat and debug panel for Unity. It is built on UI Toolkit, so it draws on top of any
@@ -14,12 +15,12 @@ Annotate a method or a property, hand the object over, and it becomes a debug co
 public void AddCoins(int amount = 100) => _wallet.Coins += amount;
 ```
 
-Then show it, on device or in a dockable editor window — the same panel either way:
+Then hand it to a debugger. In play mode the debugger puts the panel on screen itself, and
+`Window → DTech → OmniDebugger` shows the same panel in a dockable editor window:
 
 ```csharp
 _debugger = new OmniDebuggerHost();
 _debugger.Catalog.AddSource(this);
-OmniDebuggerPanel.Create(_debugger);
 ```
 
 ## Table of Contents
@@ -46,6 +47,7 @@ OmniDebuggerPanel.Create(_debugger);
     - [Your Own Tab](#your-own-tab)
     - [Your Own Argument Field](#your-own-argument-field)
 - [Code Stripping](#code-stripping)
+- [Support](#support)
 - [License](#license)
 
 ## Getting Started
@@ -287,8 +289,9 @@ than by misbehaving quietly.
 The panel is one view (`OmniDebuggerView`) mounted in two places: over the running game, and in an editor
 window. Both show the same tabs and themes; they differ only in where they draw and where they save choices.
 
-The theme and favourites are the only choices the panel saves. Pins, the open tab and group, and where the open
-button was dragged to survive the panel being rebuilt, but not a restart.
+The theme and favourites are the only choices the panel saves, plus the scale of the floating windows over the
+game. Pins, the open tab and group, where the open button was dragged to and where a floating panel was moved to
+survive the panel being rebuilt, but not a restart.
 
 ### At Runtime
 
@@ -320,9 +323,10 @@ How it looks and opens is set in **Project Settings → DTech → OmniDebugger �
 | Section | Options |
 |---|---|
 | Startup | `CreateOnStartup`, `CreatePanel`, `OpenOnStart` |
-| Scaling and Layering | `ScaleMode`, `Scale`, `SortingOrder`, `PanelSettings` (left empty, the shipped asset is cloned, never edited) |
+| Layout, Scaling and Layering | `LandscapeLayout`, `FloatingScale`, `ScaleMode`, `Scale`, `SortingOrder`, `PanelSettings` (left empty, the shipped asset is cloned, never edited) |
 | Open Button | `ButtonEnabled` (*Open Button Enabled*), `ButtonClicks`, `MultiClickWindow`, `ButtonAnchor`, `ButtonOpacity` |
 | Shortcuts | `Shortcuts` |
+| Lock | `Lock` — see [Locking It](#locking-it) |
 | Themes | `DefaultTheme`, extra `Themes` |
 | Icons | `IconCatalogs` |
 
@@ -357,7 +361,7 @@ platforms and `PhysicalSize` elsewhere. `OmniDebuggerPanel.SetScale` changes it 
 
 **Layout.** Held upright, the panel is a glass sheet edge to edge, with the tabs in a strip along the top. Turned
 sideways, the tabs move into a sidebar and the panel becomes a floating window over the game, no bigger than
-165 × 126 units at the default floating scale — or runs edge to edge with *Landscape Layout* set to *Full Screen* (Panel settings → *Layout,
+296 × 227 units at the default floating scale — or runs edge to edge with *Landscape Layout* set to *Full Screen* (Panel settings → *Layout,
 Scaling and Layering*, `LandscapeLayout`). The game stays live around a floating panel: a tap beside it reaches the
 game and never closes the panel — × or a shortcut does. Drag the window by its top bar to move it; it stays on
 screen and keeps its place for the session. *Floating Scale* (`FloatingScale`, 1 by default — a compact window with
@@ -415,7 +419,7 @@ With a mode picked but no secret set, the panel opens without asking and the set
 | **Commands** | A section per group, favourites first: unfold one to use its commands right there, or tap its header to open the group on a page of its own. Each command is a row — icon, name and its control: a switch for a `bool`, a slider for a ranged number, a field, a dropdown, a ▶ that runs it (arguments beside it or under it), or a live read-only value. *⋯* holds the favourite star, the pin, the description, the id and the tags |
 | **Search** | Finds commands by name, group or tag, optionally case-sensitive; tap a result for its row and details |
 | **Logs** | Unity's console, captured since the debugger was built: type toggles with counts, text search over messages and stack traces, `[Tag]` prefixes to filter by (all or any), copy one or everything, clear. It follows new logs while scrolled to the bottom and loads older ones at the top |
-| **Windows** | Every floating window, with a switch to show or hide it |
+| **Windows** | Every floating window, with a switch to show or hide it, *Hide all*, and one *Window scale* slider (×0.5 to ×2) shared by every window |
 
 Favourites are saved; pins last for the session only. The captured log is also readable in code through
 `debugger.Logs` (`ILogFeed`).
@@ -429,7 +433,8 @@ filter reads each distinct message once rather than once per repeat.
 Windows float over the game while the panel is closed — a live readout, or a few commands to hit while playing —
 and stay next to a floating panel while it is open. Each time the panel opens they start above it; after that,
 whichever was touched last, the panel or a window, is on top. Drag one by its header, collapse it, close it; it
-turns opaque while you use it. An edge-to-edge panel hides them until it closes.
+turns opaque while you use it. An edge-to-edge panel hides them until it closes. The Windows tab sizes them all
+at once, ×0.5 to ×2 in steps of 0.1, and the game remembers that scale across restarts.
 
 ```csharp
 debugger.Windows.RegisterCustom("stats", "Stats", content => content.Add(new Label("…")), open: true);
@@ -502,8 +507,6 @@ What the switcher offers depends on what is set:
 | Nothing | built-in Dark and Light | one button toggling the two |
 | *Default Theme* only | that theme alone | hidden |
 | *Themes* (or `Register`), with or without *Default Theme* | built-in Dark and Light, the listed ones and the default | dropdown, starting from *Default Theme* |
-
-The package's `Example/Themes/ExampleSunsetTheme` is a ready-made theme to try either way.
 
 Every colour, spacing, radius, font size and metric the panel draws with is a `--od-*` variable; the full list is
 in `Runtime/UI/Resources/OmniDebugger/OmniDebuggerTokensDark.uss`. Want a light base? List the package's
@@ -581,6 +584,12 @@ The search reads the scripts as the editor compiled them, so two cases still nee
 
 Mark those with `[UnityEngine.Scripting.Preserve]`, or preserve them through whichever `link.xml` your project
 already maintains.
+
+## Support
+OmniDebugger is free and MIT-licensed. If it saves you time and you would like to help it grow, you can support its
+development on [DonationAlerts](https://www.donationalerts.com/r/danilchizhikov) — the same link sits at the bottom
+of **Project Settings → DTech → OmniDebugger**. It is entirely optional: bug reports, ideas and pull requests help
+just as much.
 
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

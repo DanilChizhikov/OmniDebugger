@@ -8,6 +8,9 @@ namespace DTech.OmniDebugger.Editor
 	internal static class OmniDebuggerSettingsProvider
 	{
 		private const string SettingsPath = "Project/DTech/OmniDebugger";
+		private const string DonationUrl = "https://www.donationalerts.com/r/danilchizhikov";
+
+		private static readonly GUIContent _donateContent = new GUIContent("Donate on DonationAlerts", DonationUrl);
 
 		[SettingsProvider]
 		public static SettingsProvider Create()
@@ -24,6 +27,9 @@ namespace DTech.OmniDebugger.Editor
 					"cheat",
 					"command",
 					"define",
+					"donate",
+					"donation",
+					"support",
 					OmniDebuggerDefines.Symbol,
 				},
 			};
@@ -52,6 +58,9 @@ namespace DTech.OmniDebugger.Editor
 				"How the panel looks and opens is set on the Panel page below this one. It shows up while " +
 				$"{OmniDebuggerDefines.Symbol} is on for the active build target.",
 				MessageType.None);
+
+			EditorGUILayout.Space();
+			DrawSupport();
 		}
 
 		private static void DrawActiveTarget()
@@ -99,6 +108,20 @@ namespace DTech.OmniDebugger.Editor
 						OmniDebuggerDefines.SetEnabled(target, toggled);
 					}
 				}
+			}
+		}
+
+		private static void DrawSupport()
+		{
+			EditorGUILayout.LabelField("Support", EditorStyles.boldLabel);
+			EditorGUILayout.LabelField(
+				"OmniDebugger is free and MIT-licensed. If it saves you time and you would like to help it grow, " +
+				"a donation is welcome — entirely optional.",
+				EditorStyles.wordWrappedLabel);
+
+			if (EditorGUILayout.LinkButton(_donateContent))
+			{
+				Application.OpenURL(DonationUrl);
 			}
 		}
 
