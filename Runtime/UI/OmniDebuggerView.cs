@@ -50,6 +50,7 @@ namespace DTech.OmniDebugger.UI
 		/// <summary>The theme in use. Never null once the view is built.</summary>
 		public OmniDebuggerTheme Theme => _themes.Theme;
 
+		private ViewOrientation _orientation;
 		private bool _landscape;
 		private bool _orientationResolved;
 		private bool _disposed;
@@ -233,6 +234,23 @@ namespace DTech.OmniDebugger.UI
 			OnClosed = null;
 		}
 
+		internal void SetOrientation(ViewOrientation orientation)
+		{
+			MainThreadGuard.Verify(nameof(SetOrientation));
+			ThrowIfDisposed();
+
+			_orientation = orientation;
+
+			if (orientation != ViewOrientation.Auto)
+			{
+				ApplyOrientation(orientation == ViewOrientation.Landscape);
+				return;
+			}
+
+			_orientationResolved = false;
+			ResolveOrientation(_panel.layout.width, _panel.layout.height);
+		}
+
 		private OmniDebuggerTheme ResolveTheme()
 		{
 			if (_themeRegistry.TryGet(_state.ThemeId, out OmniDebuggerTheme fromState))
@@ -311,12 +329,12 @@ namespace DTech.OmniDebugger.UI
 			_tabHost.SetVertical(landscape);
 		}
 
-		private void OnGeometryChanged(GeometryChangedEvent evt)
-		{
-			float width = evt.newRect.width;
-			float height = evt.newRect.height;
+		private void OnGeometryChanged(GeometryChangedEvent evt) =>
+			ResolveOrientation(evt.newRect.width, evt.newRect.height);
 
-			if (width <= 0.0f || height <= 0.0f)
+		private void ResolveOrientation(float width, float height)
+		{
+			if (_orientation != ViewOrientation.Auto || !(width > 0.0f) || !(height > 0.0f))
 			{
 				return;
 			}

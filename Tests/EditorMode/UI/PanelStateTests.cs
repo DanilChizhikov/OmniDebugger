@@ -124,6 +124,16 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		}
 
 		[Test]
+		public void Scaling_FitsThePhoneReferenceToAnyAreaLikeScreenSizeDoes()
+		{
+			Assert.That(PanelScaling.ResolveFitScale(360.0f, 640.0f), Is.EqualTo(1.0f).Within(0.01f));
+			Assert.That(PanelScaling.ResolveFitScale(720.0f, 1280.0f), Is.EqualTo(2.0f).Within(0.01f));
+			Assert.That(PanelScaling.ResolveFitScale(1920.0f, 1080.0f), Is.EqualTo(2.387f).Within(0.01f),
+				"landscape leans to the height");
+			Assert.That(PanelScaling.ResolveFitScale(0.0f, 640.0f), Is.EqualTo(1.0f), "an empty area leaves the scale alone");
+		}
+
+		[Test]
 		public void Options_DefaultToAPanelAndAVisibleButton()
 		{
 			OmniDebuggerOptions options = new OmniDebuggerOptions();

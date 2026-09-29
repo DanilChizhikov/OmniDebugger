@@ -11,6 +11,15 @@ namespace DTech.OmniDebugger.UI.Editor
 	{
 		private const string SettingsPath = "Project/DTech/OmniDebugger/UI";
 
+		private static readonly GUIContent _layoutLabel = new GUIContent(
+			"Layout",
+			"Auto follows the window: tabs on top while it is taller than wide, in a sidebar otherwise. " +
+			"Portrait and Landscape keep one layout whatever the window's shape.");
+
+		private static readonly GUIContent _zoomLabel = new GUIContent(
+			"Zoom",
+			"1 is the size the panel has on a phone as big as the window. Lower is smaller and fits more.");
+
 		private static ThemeCatalog _themes;
 
 		private static ThemeCatalog Themes => _themes ??= CreateThemes();
@@ -31,6 +40,12 @@ namespace DTech.OmniDebugger.UI.Editor
 					"theme",
 					"ui",
 					"uss",
+					"editor window",
+					"layout",
+					"portrait",
+					"landscape",
+					"zoom",
+					"scale",
 				},
 			};
 		}
@@ -47,16 +62,40 @@ namespace DTech.OmniDebugger.UI.Editor
 				MessageType.Info);
 
 			EditorGUILayout.Space();
-			DrawThemePicker();
+			EditorGUILayout.LabelField("Editor Window", EditorStyles.boldLabel);
+
+			using (new EditorGUI.IndentLevelScope())
+			{
+				DrawThemePicker();
+				DrawWindowLayout();
+			}
 
 			EditorGUILayout.Space();
 			DrawDiscovered();
 		}
 
+		private static void DrawWindowLayout()
+		{
+			EditorWindowPrefs.Orientation = (ViewOrientation)EditorGUILayout.EnumPopup(_layoutLabel, EditorWindowPrefs.Orientation);
+			EditorWindowPrefs.Zoom = EditorGUILayout.Slider(
+				_zoomLabel,
+				EditorWindowPrefs.Zoom,
+				EditorWindowPrefs.MinZoom,
+				EditorWindowPrefs.MaxZoom);
+
+			if (GUILayout.Button("Reset Layout and Zoom", GUILayout.Width(180.0f)))
+			{
+				EditorWindowPrefs.Reset();
+			}
+
+			EditorGUILayout.HelpBox(
+				"Layout and zoom apply to the OmniDebugger window at once. Like the theme, they are kept per " +
+				"user in EditorPrefs and never reach version control or the running game.",
+				MessageType.None);
+		}
+
 		private static void DrawThemePicker()
 		{
-			EditorGUILayout.LabelField("Editor Window Theme", EditorStyles.boldLabel);
-
 			IReadOnlyList<OmniDebuggerTheme> themes = Themes.All;
 			string[] labels = new string[themes.Count];
 			int selected = 0;
@@ -72,20 +111,17 @@ namespace DTech.OmniDebugger.UI.Editor
 				}
 			}
 
-			using (new EditorGUI.IndentLevelScope())
+			if (themes.Count == 0)
 			{
-				if (themes.Count == 0)
-				{
-					EditorGUILayout.LabelField("Theme", "No themes were found.");
-					return;
-				}
+				EditorGUILayout.LabelField("Theme", "No themes were found.");
+				return;
+			}
 
-				int picked = EditorGUILayout.Popup("Theme", selected, labels);
+			int picked = EditorGUILayout.Popup("Theme", selected, labels);
 
-				if (picked != selected)
-				{
-					EditorPrefsViewPrefs.Default.SetThemeId(themes[picked].Id);
-				}
+			if (picked != selected)
+			{
+				EditorPrefsViewPrefs.Default.SetThemeId(themes[picked].Id);
 			}
 		}
 
