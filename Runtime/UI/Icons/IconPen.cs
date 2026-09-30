@@ -34,6 +34,13 @@ namespace DTech.OmniDebugger.UI
 
 		public void Dot(float x, float y, float radius) => Round(x, y, radius, fill: true);
 
+		public void Arc(float x, float y, float radius, float fromDegrees, float toDegrees)
+		{
+			_painter.BeginPath();
+			_painter.Arc(Map(x, y), radius * _scale, Angle.Degrees(fromDegrees), Angle.Degrees(toDegrees));
+			_painter.Stroke();
+		}
+
 		public void Crescent(
 			float outerX,
 			float outerY,
