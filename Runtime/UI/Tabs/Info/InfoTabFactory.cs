@@ -1,6 +1,6 @@
 namespace DTech.OmniDebugger.UI
 {
-	internal sealed class InfoTabFactory : IOmniDebuggerTabFactory, IBuiltInTabIcon
+	internal sealed class InfoTabFactory : IOmniDebuggerTabFactory
 	{
 		public const string TabId = "info";
 
@@ -8,12 +8,10 @@ namespace DTech.OmniDebugger.UI
 
 		public string DisplayName => "Info";
 
-		public int Order => 0;
+		public int Order => 20;
 
-		public CommandIcon Icon => default;
+		public string Icon => "info";
 
-		public IconGlyph Glyph => IconGlyph.Info;
-
-		public IOmniDebuggerTab CreateTab(in OmniDebuggerTabContext context) => new InfoTab();
+		public IOmniDebuggerTab CreateTab(in OmniDebuggerTabContext context) => new InfoTab(context.Debugger.Info, context.Services);
 	}
 }
