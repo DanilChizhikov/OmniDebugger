@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using DTech.OmniDebugger.UI;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools.Utils;
 
 namespace DTech.OmniDebugger.Tests.EditorMode
 {
@@ -103,7 +104,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			Assert.That(along, Is.EqualTo(0.6f).Within(0.001f));
 
 			Vector2 back = OpenButtonGesture.ToPosition(ScreenEdge.Bottom, along, bounds);
-			Assert.That(back, Is.EqualTo(new Vector2(60.0f, 200.0f)), "on the edge, where it was along it");
+			Assert.That(back, Is.EqualTo(new Vector2(60.0f, 200.0f)).Using(Vector2EqualityComparer.Instance), "on the edge, where it was along it");
 		}
 
 		[Test]
