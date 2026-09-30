@@ -57,6 +57,16 @@ namespace DTech.OmniDebugger.UI
 			set => _floatingScale = value;
 		}
 
+		/// <summary>
+		/// The edge of the screen the hotbar — the commands pinned from the Commands tab — runs along.
+		/// <see cref="OmniDebuggerHotbarEdge.Bottom"/> by default.
+		/// </summary>
+		public OmniDebuggerHotbarEdge HotbarEdge
+		{
+			get => _hotbarEdge;
+			set => _hotbarEdge = value;
+		}
+
 		/// <summary>Opens the panel as soon as it is built.</summary>
 		public bool OpenOnStart
 		{
@@ -106,6 +116,9 @@ namespace DTech.OmniDebugger.UI
 		[Tooltip("Scale of the floating window on top of Scale. 1 is the compact default window; below 1 makes it smaller, above 1 bigger; it never grows past the screen. Full Screen and portrait ignore it.")]
 		[SerializeField, Range(0.5f, 2.0f)] private float _floatingScale = 1.0f;
 
+		[Tooltip("The edge of the screen the hotbar of pinned commands runs along.")]
+		[SerializeField] private OmniDebuggerHotbarEdge _hotbarEdge = OmniDebuggerHotbarEdge.Bottom;
+
 		[Tooltip("Opens the panel as soon as it is built.")]
 		[SerializeField] private bool _openOnStart;
 
@@ -125,6 +138,7 @@ namespace DTech.OmniDebugger.UI
 				_sortingOrder = _sortingOrder,
 				_landscapeLayout = _landscapeLayout,
 				_floatingScale = _floatingScale,
+				_hotbarEdge = _hotbarEdge,
 				_openOnStart = _openOnStart,
 				_panelSettings = _panelSettings,
 				_open = Open.Clone(),

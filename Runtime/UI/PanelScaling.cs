@@ -72,18 +72,6 @@ namespace DTech.OmniDebugger.UI
 			return Mathf.InverseLerp(PortraitAspect, LandscapeAspect, width / height) * LandscapeMatch;
 		}
 
-		public static float ResolveFitScale(float width, float height)
-		{
-			if (!(width > 0.0f) || !(height > 0.0f))
-			{
-				return 1.0f;
-			}
-
-			float widthLog = Mathf.Log(width / _referenceResolution.x);
-			float heightLog = Mathf.Log(height / _referenceResolution.y);
-			return Mathf.Exp(Mathf.Lerp(widthLog, heightLog, ResolveMatch(width, height)));
-		}
-
 		private static Vector2Int ToResolution(Vector2 size) =>
 			new (Mathf.Max(1, Mathf.RoundToInt(size.x)), Mathf.Max(1, Mathf.RoundToInt(size.y)));
 	}

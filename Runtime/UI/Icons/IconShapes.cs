@@ -140,6 +140,82 @@ namespace DTech.OmniDebugger.UI
 				case IconGlyph.ChevronDown:
 					pen.Polyline(6.0f, 9.0f, 12.0f, 15.0f, 18.0f, 9.0f);
 					break;
+				case IconGlyph.Play:
+					pen.FilledPolygon(8.0f, 5.0f, 19.0f, 12.0f, 8.0f, 19.0f);
+					break;
+				case IconGlyph.Refresh:
+					pen.Arc(12.0f, 12.0f, 7.0f, 40.0f, 320.0f);
+					pen.Polyline(18.0f, 3.5f, 17.4f, 7.5f, 13.5f, 7.0f);
+					break;
+				case IconGlyph.Gear:
+					DrawGear(pen);
+					break;
+				case IconGlyph.Bug:
+					pen.Circle(12.0f, 14.0f, 5.0f);
+					pen.Circle(12.0f, 6.5f, 2.3f);
+					pen.Line(12.0f, 9.0f, 12.0f, 19.0f);
+					pen.Line(7.0f, 11.5f, 3.5f, 9.5f);
+					pen.Line(7.0f, 14.5f, 3.5f, 14.5f);
+					pen.Line(7.5f, 17.5f, 4.0f, 20.0f);
+					pen.Line(17.0f, 11.5f, 20.5f, 9.5f);
+					pen.Line(17.0f, 14.5f, 20.5f, 14.5f);
+					pen.Line(16.5f, 17.5f, 20.0f, 20.0f);
+					break;
+				case IconGlyph.Bolt:
+					pen.FilledPolygon(13.5f, 2.0f, 5.0f, 13.5f, 11.5f, 13.5f, 10.5f, 22.0f, 19.0f, 10.5f, 12.5f, 10.5f);
+					break;
+				case IconGlyph.Eye:
+					pen.Polygon(2.0f, 12.0f, 6.0f, 7.5f, 12.0f, 5.5f, 18.0f, 7.5f, 22.0f, 12.0f, 18.0f, 16.5f, 12.0f, 18.5f, 6.0f, 16.5f);
+					pen.Circle(12.0f, 12.0f, 3.0f);
+					break;
+				case IconGlyph.Clock:
+					pen.Circle(12.0f, 12.0f, 9.0f);
+					pen.Polyline(12.0f, 7.0f, 12.0f, 12.0f, 15.5f, 14.0f);
+					break;
+				case IconGlyph.Heart:
+					pen.Polygon(12.0f, 20.0f, 4.0f, 12.5f, 3.5f, 8.0f, 6.0f, 5.0f, 9.5f, 5.0f, 12.0f, 8.0f, 14.5f, 5.0f, 18.0f, 5.0f, 20.5f, 8.0f, 20.0f, 12.5f);
+					break;
+				case IconGlyph.Flag:
+					pen.Line(6.0f, 3.0f, 6.0f, 21.0f);
+					pen.Polygon(6.0f, 4.0f, 18.0f, 4.0f, 15.0f, 8.5f, 18.0f, 13.0f, 6.0f, 13.0f);
+					break;
+				case IconGlyph.Coin:
+					pen.Circle(12.0f, 12.0f, 9.0f);
+					pen.Circle(12.0f, 12.0f, 5.5f);
+					break;
+				case IconGlyph.User:
+					pen.Circle(12.0f, 8.0f, 4.0f);
+					pen.Polyline(4.5f, 20.0f, 5.5f, 16.5f, 9.0f, 14.5f, 15.0f, 14.5f, 18.5f, 16.5f, 19.5f, 20.0f);
+					break;
+				case IconGlyph.Keyboard:
+					pen.Polygon(3.0f, 6.0f, 21.0f, 6.0f, 21.0f, 18.0f, 3.0f, 18.0f);
+					pen.Dot(7.0f, 10.0f, 1.0f);
+					pen.Dot(11.0f, 10.0f, 1.0f);
+					pen.Dot(15.0f, 10.0f, 1.0f);
+					pen.Dot(19.0f, 10.0f, 1.0f);
+					pen.Line(8.0f, 14.5f, 16.0f, 14.5f);
+					break;
+				case IconGlyph.Chart:
+					pen.Polyline(3.0f, 3.0f, 3.0f, 21.0f, 21.0f, 21.0f);
+					pen.Polyline(6.0f, 16.0f, 10.0f, 11.0f, 14.0f, 14.0f, 20.0f, 6.0f);
+					break;
+				case IconGlyph.Filter:
+					pen.Polygon(3.0f, 5.0f, 21.0f, 5.0f, 14.0f, 13.0f, 14.0f, 19.0f, 10.0f, 21.0f, 10.0f, 13.0f);
+					break;
+				case IconGlyph.PopOut:
+					pen.Polyline(11.0f, 4.5f, 4.5f, 4.5f, 4.5f, 19.5f, 19.5f, 19.5f, 19.5f, 13.0f);
+					pen.Line(11.0f, 13.0f, 20.0f, 4.0f);
+					pen.Polyline(14.0f, 4.0f, 20.0f, 4.0f, 20.0f, 10.0f);
+					break;
+				case IconGlyph.Dock:
+					pen.Polyline(4.0f, 13.0f, 4.0f, 20.0f, 20.0f, 20.0f, 20.0f, 13.0f);
+					pen.Line(12.0f, 3.5f, 12.0f, 14.5f);
+					pen.Polyline(7.5f, 10.0f, 12.0f, 14.5f, 16.5f, 10.0f);
+					break;
+				case IconGlyph.Resize:
+					pen.Line(20.0f, 8.0f, 8.0f, 20.0f);
+					pen.Line(20.0f, 14.0f, 14.0f, 20.0f);
+					break;
 			}
 		}
 
@@ -162,6 +238,20 @@ namespace DTech.OmniDebugger.UI
 			else
 			{
 				pen.Polygon(points);
+			}
+		}
+
+		private static void DrawGear(in IconPen pen)
+		{
+			pen.Circle(12.0f, 12.0f, 3.0f);
+			pen.Circle(12.0f, 12.0f, 6.5f);
+
+			for (int i = 0; i < 8; i++)
+			{
+				float angle = i * 45.0f * Mathf.Deg2Rad;
+				float cos = Mathf.Cos(angle);
+				float sin = Mathf.Sin(angle);
+				pen.Line(12.0f + cos * 6.5f, 12.0f + sin * 6.5f, 12.0f + cos * 9.5f, 12.0f + sin * 9.5f);
 			}
 		}
 

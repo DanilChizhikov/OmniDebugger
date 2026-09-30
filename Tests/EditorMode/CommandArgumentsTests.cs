@@ -152,7 +152,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		private static CommandDefinition Definition(params ArgumentDefinition[] arguments) =>
 			new CommandDefinition(
 				name: "Bind",
-				groupName: "Tests",
+				groupPath: "Tests",
 				kind: CommandKind.Action,
 				arguments: arguments);
 	}

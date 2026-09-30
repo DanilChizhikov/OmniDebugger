@@ -1,8 +1,5 @@
 using System;
-using System.Globalization;
-using UnityEngine;
-using UnityEngine.Profiling;
-using UnityEngine.SceneManagement;
+using System.Collections.Generic;
 using UnityEngine.UIElements;
 
 namespace DTech.OmniDebugger.UI
@@ -10,71 +7,81 @@ namespace DTech.OmniDebugger.UI
 	internal sealed class InfoTab : IOmniDebuggerTab
 	{
 		private const long RedrawMs = 500;
-		private const float BytesPerMegabyte = 1024.0f * 1024.0f;
-		private const string Unknown = "—";
+		private const long GraphRedrawMs = 100;
+		private const float TwoColumnsFrom = 460.0f;
+		private const float OneColumnBelow = 420.0f;
+		private const string FloatTooltip = "Float over the game";
+		private const string DockTooltip = "Stop floating";
 
+		private static readonly CustomStyleProperty<float> _refreshProperty = new ("--od-pulse-ms");
+
+		private readonly IInfoRegistry _registry;
+		private readonly ViewServices _services;
 		private readonly VisualElement _root;
+		private readonly ScrollView _scroll;
+		private readonly VisualElement _flow;
+		private readonly ValuePulse _pulse;
+		private readonly List<InfoSectionView> _sections = new ();
+		private readonly List<FloatToggle> _toggles = new ();
 		private readonly IVisualElementScheduledItem _sampler;
 		private readonly IVisualElementScheduledItem _redraw;
+		private readonly IVisualElementScheduledItem _redrawGraphs;
 
 		public VisualElement Root => _root;
 
-		private Label _scene;
-		private Label _resolution;
-		private Label _orientation;
-		private Label _safeArea;
-		private Label _fps;
-		private Label _frameTime;
-		private Label _memory;
-		private Label _uptime;
-		private Label _network;
-		private Label _battery;
-
-		private float _frameSum;
-		private int _frameCount;
+		private bool _twoColumns;
 		private bool _disposed;
 
-		public InfoTab()
+		public InfoTab(IInfoRegistry registry, ViewServices services)
 		{
+			_registry = registry ?? throw new ArgumentNullException(nameof(registry));
+			_services = services;
+
 			_root = UiBuild.Element(OmniDebuggerUiClasses.TabPage);
+			_scroll = UiBuild.Scroll();
+			_root.Add(_scroll);
 
-			ScrollView scroll = UiBuild.Scroll();
-			_root.Add(scroll);
+			_flow = UiBuild.Element(OmniDebuggerUiClasses.InfoFlow);
+			_flow.RegisterCallback<GeometryChangedEvent>(OnFlowGeometryChanged);
+			_scroll.Add(_flow);
 
-			ResponsiveGrid grid = new ResponsiveGrid();
-			scroll.Add(grid);
-
-			grid.AddCell(BuildSection());
-			grid.AddCell(ApplicationSection());
-			grid.AddCell(DisplaySection());
-			grid.AddCell(DeviceSection());
-			grid.AddCell(RuntimeSection());
+			_pulse = new ValuePulse(_root);
+			_root.RegisterCallback<CustomStyleResolvedEvent>(OnCustomStyleResolved);
 
 			_sampler = _root.schedule.Execute(Sample).Every(0);
 			_redraw = _root.schedule.Execute(Redraw).Every(RedrawMs);
+			_redrawGraphs = _root.schedule.Execute(RedrawGraphs).Every(GraphRedrawMs);
 			_sampler.Pause();
 			_redraw.Pause();
+			_redrawGraphs.Pause();
+
+			_registry.OnChanged += Build;
+			_registry.OnFloatingChanged += ShowFloating;
+			Build();
 		}
 
 		public void OnOpen()
 		{
-			_frameSum = 0.0f;
-			_frameCount = 0;
 			_sampler.Resume();
 			_redraw.Resume();
+			_redrawGraphs.Resume();
+			_pulse.Resume();
+			Redraw();
 		}
 
 		public void OnClose()
 		{
 			_sampler.Pause();
 			_redraw.Pause();
+			_redrawGraphs.Pause();
+			_pulse.Pause();
 		}
 
 		public void Refresh()
 		{
 			if (!_disposed)
 			{
-				Redraw();
+				Build();
 			}
 		}
 
@@ -86,154 +93,152 @@ namespace DTech.OmniDebugger.UI
 			}
 
 			_disposed = true;
+			_registry.OnChanged -= Build;
+			_registry.OnFloatingChanged -= ShowFloating;
 			_sampler.Pause();
 			_redraw.Pause();
+			_redrawGraphs.Pause();
+			ClearSections();
+			_pulse.Dispose();
 			_root.RemoveFromHierarchy();
 		}
 
-		private static VisualElement BuildSection()
+		private void Build()
 		{
-			VisualElement section = Section("Build");
-			Row(section, "Version", Application.version);
-			Row(section, "Build number", ReadBuildNumber());
-			Row(section, "Build type", Debug.isDebugBuild ? "Development" : "Release");
-			Row(section, "Unity", Application.unityVersion);
-			Row(section, "Identifier", Application.identifier);
-			return section;
-		}
-
-		private static VisualElement ApplicationSection()
-		{
-			VisualElement section = Section("Application");
-			Row(section, "Product", Application.productName);
-			Row(section, "Company", Application.companyName);
-			Row(section, "Platform", Application.platform.ToString());
-			Row(section, "Language", Application.systemLanguage.ToString());
-			Row(section, "Target FPS", Application.targetFrameRate.ToString(CultureInfo.InvariantCulture));
-			Row(section, "VSync", QualitySettings.vSyncCount.ToString(CultureInfo.InvariantCulture));
-			return section;
-		}
-
-		private static VisualElement DeviceSection()
-		{
-			VisualElement section = Section("Device");
-			Row(section, "Model", SystemInfo.deviceModel);
-			Row(section, "OS", SystemInfo.operatingSystem);
-			Row(section, "CPU", SystemInfo.processorType);
-			Row(section, "Cores", SystemInfo.processorCount.ToString(CultureInfo.InvariantCulture));
-			Row(section, "RAM", $"{SystemInfo.systemMemorySize} MB");
-			Row(section, "GPU", SystemInfo.graphicsDeviceName);
-			Row(section, "Graphics API", SystemInfo.graphicsDeviceType.ToString());
-			Row(section, "VRAM", $"{SystemInfo.graphicsMemorySize} MB");
-			Row(section, "Max texture", SystemInfo.maxTextureSize.ToString(CultureInfo.InvariantCulture));
-			return section;
-		}
-
-		private static string DescribeBattery()
-		{
-			float level = SystemInfo.batteryLevel;
-
-			if (level < 0.0f)
+			if (_disposed)
 			{
-				return Unknown;
+				return;
 			}
 
-			return $"{Mathf.RoundToInt(level * 100.0f)}% ({SystemInfo.batteryStatus})";
+			ClearSections();
+
+			IReadOnlyList<IInfoProvider> providers = _registry.All;
+			for (int i = 0; i < providers.Count; i++)
+			{
+				BuildSection(providers[i]);
+			}
+
+			ShowFloating();
 		}
 
-		private static string ReadBuildNumber()
+		private void BuildSection(IInfoProvider provider)
 		{
-#if UNITY_ANDROID && !UNITY_EDITOR
-			try
-			{
-				using (AndroidJavaClass player = new AndroidJavaClass("com.unity3d.player.UnityPlayer"))
-				using (AndroidJavaObject activity = player.GetStatic<AndroidJavaObject>("currentActivity"))
-				using (AndroidJavaObject manager = activity.Call<AndroidJavaObject>("getPackageManager"))
-				using (AndroidJavaObject info = manager.Call<AndroidJavaObject>("getPackageInfo", Application.identifier, 0))
-				{
-					return info.Get<int>("versionCode").ToString(CultureInfo.InvariantCulture);
-				}
-			}
-			catch (Exception)
-			{
-				return Unknown;
-			}
-#else
-			return Application.isEditor ? "Editor" : Unknown;
-#endif
-		}
+			InfoSectionModel model = InfoSectionModel.Describe(provider);
 
-		private static VisualElement Section(string title)
-		{
 			VisualElement section = UiBuild.Element(OmniDebuggerUiClasses.Section);
-			section.Add(UiBuild.Label(title.ToUpperInvariant(), OmniDebuggerUiClasses.SectionTitle));
-			return section;
+			VisualElement head = UiBuild.Element(OmniDebuggerUiClasses.SectionHead);
+			head.Add(UiBuild.Label(model.Title.ToUpperInvariant(), OmniDebuggerUiClasses.SectionTitle));
+			section.Add(head);
+
+			if (_services != null && _services.HostsOverlays)
+			{
+				Button toggle = UiBuild.IconButton(IconGlyph.PopOut, () => ToggleFloating(provider), FloatTooltip);
+				toggle.AddToClassList(OmniDebuggerUiClasses.SectionFloat);
+				head.Add(toggle);
+				_toggles.Add(new FloatToggle(provider, toggle));
+			}
+
+			VisualElement cell = UiBuild.Element(OmniDebuggerUiClasses.InfoFlowCell);
+			cell.AddToClassList(_sections.Count % 2 == 0 ? OmniDebuggerUiClasses.InfoFlowCellLeft : OmniDebuggerUiClasses.InfoFlowCellRight);
+			cell.Add(section);
+			_flow.Add(cell);
+
+			_sections.Add(new InfoSectionView(model, section, _services, _pulse));
 		}
 
-		private static Label Row(VisualElement section, string key, string value)
+		private void ToggleFloating(IInfoProvider provider)
 		{
-			VisualElement row = UiBuild.Element(OmniDebuggerUiClasses.KeyValueRow);
-			row.EnableInClassList(OmniDebuggerUiClasses.First, section.childCount == 1);
-			row.Add(UiBuild.Label(key, OmniDebuggerUiClasses.KeyValueKey));
-
-			Label label = UiBuild.Label(string.IsNullOrEmpty(value) ? Unknown : value, OmniDebuggerUiClasses.KeyValueValue);
-			row.Add(label);
-			section.Add(row);
-			return label;
+			if (!_registry.Float(provider))
+			{
+				_registry.Dock(provider);
+			}
 		}
 
-		private VisualElement DisplaySection()
+		private void ShowFloating()
 		{
-			VisualElement section = Section("Display");
-			_resolution = Row(section, "Resolution", Unknown);
-			Row(section, "DPI", Screen.dpi > 0.0f ? Screen.dpi.ToString("0", CultureInfo.InvariantCulture) : Unknown);
-			_orientation = Row(section, "Orientation", Unknown);
-			_safeArea = Row(section, "Safe area", Unknown);
-			Row(section, "Touch", InputBackends.Current.IsTouchSupported ? "Supported" : "Not supported");
-			return section;
+			for (int i = 0; i < _toggles.Count; i++)
+			{
+				FloatToggle toggle = _toggles[i];
+				bool floating = _registry.IsFloating(toggle.Provider);
+
+				toggle.Button.EnableInClassList(OmniDebuggerUiClasses.SectionFloatOn, floating);
+				toggle.Button.tooltip = floating ? DockTooltip : FloatTooltip;
+				UiBuild.SetGlyph(toggle.Button, floating ? IconGlyph.Dock : IconGlyph.PopOut);
+			}
 		}
 
-		private VisualElement RuntimeSection()
+		private void ClearSections()
 		{
-			VisualElement section = Section("Runtime");
-			_scene = Row(section, "Scene", Unknown);
-			_fps = Row(section, "FPS", Unknown);
-			_frameTime = Row(section, "Frame time", Unknown);
-			_memory = Row(section, "Allocated memory", Unknown);
-			_uptime = Row(section, "Uptime", Unknown);
-			_network = Row(section, "Network", Unknown);
-			_battery = Row(section, "Battery", Unknown);
-			return section;
+			for (int i = 0; i < _sections.Count; i++)
+			{
+				_sections[i].Dispose();
+			}
+
+			_sections.Clear();
+			_toggles.Clear();
+			_flow.Clear();
 		}
 
 		private void Sample()
 		{
-			_frameSum += Time.unscaledDeltaTime;
-			_frameCount++;
+			for (int i = 0; i < _sections.Count; i++)
+			{
+				_sections[i].Sample();
+			}
 		}
 
 		private void Redraw()
 		{
-			_scene.text = SceneManager.GetActiveScene().name;
-			_resolution.text = $"{Screen.width} x {Screen.height}";
-			_orientation.text = Screen.orientation.ToString();
-
-			Rect safe = Screen.safeArea;
-			_safeArea.text = $"{safe.x:0}, {safe.y:0}, {safe.width:0} x {safe.height:0}";
-
-			if (_frameCount > 0 && _frameSum > 0.0f)
+			for (int i = 0; i < _sections.Count; i++)
 			{
-				float average = _frameSum / _frameCount;
-				_fps.text = (1.0f / average).ToString("0.0", CultureInfo.InvariantCulture);
-				_frameTime.text = $"{(average * 1000.0f).ToString("0.0", CultureInfo.InvariantCulture)} ms";
-				_frameSum = 0.0f;
-				_frameCount = 0;
+				_sections[i].Redraw();
+			}
+		}
+
+		private void RedrawGraphs()
+		{
+			for (int i = 0; i < _sections.Count; i++)
+			{
+				_sections[i].RedrawGraphs();
+			}
+		}
+
+		private void OnFlowGeometryChanged(GeometryChangedEvent evt)
+		{
+			float width = evt.newRect.width;
+
+			if (width <= 0.0f)
+			{
+				return;
 			}
 
-			_memory.text = $"{(Profiler.GetTotalAllocatedMemoryLong() / BytesPerMegabyte).ToString("0.0", CultureInfo.InvariantCulture)} MB";
-			_uptime.text = TimeSpan.FromSeconds(Time.realtimeSinceStartup).ToString(@"hh\:mm\:ss", CultureInfo.InvariantCulture);
-			_network.text = Application.internetReachability.ToString();
-			_battery.text = DescribeBattery();
+			bool twoColumns = _twoColumns ? width >= OneColumnBelow : width >= TwoColumnsFrom;
+
+			if (twoColumns != _twoColumns)
+			{
+				_twoColumns = twoColumns;
+				_flow.EnableInClassList(OmniDebuggerUiClasses.InfoFlowTwo, twoColumns);
+			}
+		}
+
+		private void OnCustomStyleResolved(CustomStyleResolvedEvent evt)
+		{
+			if (evt.customStyle.TryGetValue(_refreshProperty, out float milliseconds) && milliseconds > 0.0f)
+			{
+				_pulse.SetInterval((long)milliseconds);
+			}
+		}
+
+		private readonly struct FloatToggle
+		{
+			public readonly IInfoProvider Provider;
+			public readonly Button Button;
+
+			public FloatToggle(IInfoProvider provider, Button button)
+			{
+				Provider = provider;
+				Button = button;
+			}
 		}
 	}
 }

@@ -15,13 +15,13 @@ namespace DTech.OmniDebugger.Editor
 		private const string PanelField = "_panel";
 		private const string DefaultThemeField = "_defaultTheme";
 		private const string ThemesField = "_themes";
-		private const string IconCatalogsField = "_iconCatalogs";
 
 		private const string ScaleModeField = "_scaleMode";
 		private const string ScaleField = "_scale";
 		private const string SortingOrderField = "_sortingOrder";
 		private const string LandscapeLayoutField = "_landscapeLayout";
 		private const string FloatingScaleField = "_floatingScale";
+		private const string HotbarEdgeField = "_hotbarEdge";
 		private const string OpenOnStartField = "_openOnStart";
 		private const string PanelSettingsField = "_panelSettings";
 		private const string OpenField = "_open";
@@ -151,6 +151,7 @@ namespace DTech.OmniDebugger.Editor
 					DrawField(panel, FloatingScaleField);
 				}
 
+				DrawField(panel, HotbarEdgeField);
 				DrawField(panel, ScaleModeField);
 				DrawField(panel, ScaleField);
 				DrawField(panel, SortingOrderField);
@@ -199,13 +200,6 @@ namespace DTech.OmniDebugger.Editor
 					"A default theme alone replaces both and hides the switcher. Listed themes are offered next " +
 					"to the built-in ones in a dropdown, starting from the default theme.",
 					MessageType.Info);
-			}
-
-			DrawHeader("Icons");
-
-			using (new EditorGUI.IndentLevelScope())
-			{
-				DrawField(options, IconCatalogsField);
 			}
 
 			if (_serialized.ApplyModifiedPropertiesWithoutUndo())

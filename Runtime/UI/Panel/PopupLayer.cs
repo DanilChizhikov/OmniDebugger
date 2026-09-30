@@ -8,6 +8,7 @@ namespace DTech.OmniDebugger.UI
 	{
 		private const float AnchorGap = 4.0f;
 		private const float MinAnchoredWidth = 192.0f;
+		private const float EdgeMargin = 6.0f;
 
 		public bool IsShowing => _popup != null;
 
@@ -54,12 +55,28 @@ namespace DTech.OmniDebugger.UI
 			Show(popup, anchor: null, onHidden: null);
 		}
 
+		public void ShowCentered(VisualElement content, string modifier, Action onHidden)
+		{
+			VisualElement popup = UiBuild.Element(OmniDebuggerUiClasses.Popup);
+			popup.style.position = Position.Relative;
+			popup.AddManipulator(new Halo());
+
+			if (!string.IsNullOrEmpty(modifier))
+			{
+				popup.AddToClassList(modifier);
+			}
+
+			popup.Add(content);
+			Show(popup, anchor: null, onHidden);
+		}
+
 		public void ShowAnchored(VisualElement anchor, VisualElement content, Action onHidden)
 		{
 			VisualElement popup = UiBuild.Element(OmniDebuggerUiClasses.Popup);
 			popup.AddToClassList(OmniDebuggerUiClasses.PopupAnchored);
 			popup.AddManipulator(new Halo());
 			popup.style.position = Position.Absolute;
+			popup.style.transformOrigin = new TransformOrigin(0, 0);
 			popup.style.visibility = Visibility.Hidden;
 			popup.Add(content);
 			popup.RegisterCallback<GeometryChangedEvent>(OnAnchoredGeometryChanged);
@@ -87,6 +104,12 @@ namespace DTech.OmniDebugger.UI
 			onHidden?.Invoke();
 		}
 
+		private static float WorldScale(VisualElement element)
+		{
+			float scale = element.worldBound.width / element.layout.width;
+			return float.IsNaN(scale) || float.IsInfinity(scale) || scale <= 0.0f ? 1.0f : scale;
+		}
+
 		private void Show(VisualElement popup, VisualElement anchor, Action onHidden)
 		{
 			Hide();
@@ -110,20 +133,24 @@ namespace DTech.OmniDebugger.UI
 
 			Rect anchor = this.WorldToLocal(_anchor.worldBound);
 			Rect area = layout;
-			float height = _popup.resolvedStyle.height;
-			float width = Mathf.Max(anchor.width, MinAnchoredWidth);
+			float scale = WorldScale(_anchor) / WorldScale(this);
+			float width = _popup.layout.width * scale;
+			float height = _popup.layout.height * scale;
 
-			float spaceBelow = area.height - anchor.yMax - AnchorGap;
-			float spaceAbove = anchor.yMin - AnchorGap;
+			float spaceBelow = area.height - anchor.yMax - AnchorGap - EdgeMargin;
+			float spaceAbove = anchor.yMin - AnchorGap - EdgeMargin;
 			bool below = height <= spaceBelow || spaceBelow >= spaceAbove;
 
 			float top = below ? anchor.yMax + AnchorGap : anchor.yMin - AnchorGap - Mathf.Min(height, spaceAbove);
-			float left = Mathf.Clamp(anchor.xMin, 0.0f, Mathf.Max(0.0f, area.width - width));
+			float right = area.width - EdgeMargin;
+			float left = anchor.xMin + width <= right ? anchor.xMin : anchor.xMax - width;
 
-			_popup.style.width = width;
-			_popup.style.maxHeight = Mathf.Max(0.0f, below ? spaceBelow : spaceAbove);
-			_popup.style.left = left;
-			_popup.style.top = Mathf.Max(0.0f, top);
+			_popup.style.scale = new Scale(new Vector3(scale, scale, 1.0f));
+			_popup.style.minWidth = Mathf.Max(anchor.width / scale, MinAnchoredWidth);
+			_popup.style.maxWidth = Mathf.Max(0.0f, (area.width - 2.0f * EdgeMargin) / scale);
+			_popup.style.maxHeight = Mathf.Max(0.0f, (below ? spaceBelow : spaceAbove) / scale);
+			_popup.style.left = Mathf.Clamp(left, EdgeMargin, Mathf.Max(EdgeMargin, right - width));
+			_popup.style.top = Mathf.Max(EdgeMargin, top);
 			_popup.style.visibility = Visibility.Visible;
 		}
 

@@ -4,25 +4,19 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 	{
 		public const string Group = "Ranged";
 
-		public const string SpeedKey = Group + "/Speed";
-		public const string NameKey = Group + "/Name";
-		public const string TeleportKey = Group + "/Teleport";
-		public const string BrokenKey = Group + "/Broken";
+		public const string SpeedPath = Group + "/Speed";
+		public const string NamePath = Group + "/Name";
+		public const string TeleportPath = Group + "/Teleport";
 
-		[DebugCommand(Group, "Speed")]
+		[DebugCommand(Group, Name = "Speed")]
 		[DebugRange(0.5, 3.0, Step = 0.25)]
 		public float Speed { get; set; } = 1.0f;
 
-		[DebugCommand(Group, "Name")]
+		[DebugCommand(Group, Name = "Name")]
 		public string Name { get; set; }
 
-		[DebugCommand(Group, "Teleport")]
+		[DebugCommand(Group, Name = "Teleport")]
 		public void Teleport([DebugRange(-100, 100)] int x, int y)
-		{
-		}
-
-		[DebugCommand(Group, "Broken")]
-		public void Broken([DebugRange(5, 1)] int value)
 		{
 		}
 	}

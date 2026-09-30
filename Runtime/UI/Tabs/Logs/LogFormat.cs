@@ -13,6 +13,9 @@ namespace DTech.OmniDebugger.UI
 		public static string Timestamp(in LogRecord record) =>
 			record.TimestampUtc.ToLocalTime().ToString(TimeFormat, CultureInfo.InvariantCulture);
 
+		public static string Repeats(int count) =>
+			count > 9999 ? "×9999+" : "×" + count.ToString(CultureInfo.InvariantCulture);
+
 		public static string TypeLabel(LogType type)
 		{
 			switch (type)
@@ -32,7 +35,7 @@ namespace DTech.OmniDebugger.UI
 
 		public static string TagLine(in LogRecord record)
 		{
-			bool truncated = record.IsMessageTruncated || record.IsStackTraceTruncated;
+			bool truncated = (record.Flags & LogFlags.Truncated) != 0;
 
 			if (record.Tags.Count == 0 && !truncated)
 			{
@@ -93,12 +96,17 @@ namespace DTech.OmniDebugger.UI
 			builder.Append('[').Append(Timestamp(record)).Append("] ");
 			builder.Append('[').Append(record.Type).Append("] ");
 
-			if (record.IsMessageTruncated || record.IsStackTraceTruncated)
+			if ((record.Flags & LogFlags.Truncated) != 0)
 			{
 				builder.Append(Truncated).Append(' ');
 			}
 
 			builder.Append(record.Message);
+
+			if (record.RepeatCount > 1)
+			{
+				builder.Append(" (").Append(Repeats(record.RepeatCount)).Append(')');
+			}
 
 			if (!string.IsNullOrEmpty(record.StackTrace))
 			{

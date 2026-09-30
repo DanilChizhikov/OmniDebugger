@@ -8,18 +8,19 @@ namespace DTech.OmniDebugger
 	/// </summary>
 	public interface ILogFeed
 	{
-		/// <summary>Grows whenever a record is added or the feed is cleared.</summary>
+		/// <summary>Grows whenever a record is added or repeated, or the feed is cleared.</summary>
 		long Version { get; }
 
 		/// <summary>
-		/// Errors, asserts and exceptions received since the debugger was built. Never goes down, not
-		/// even on <see cref="Clear"/>, so a reader can tell a new error from an old one.
+		/// Errors, asserts and exceptions received since the debugger was built, repeats included. Never goes
+		/// down, not even on <see cref="Clear"/>, so a reader can tell a new error from an old one.
 		/// </summary>
 		long ErrorCount { get; }
 
 		/// <summary>
 		/// Records currently kept. The oldest are dropped once the record capacity or the text budget is
-		/// reached. A message repeated word for word is stored once, so a repeat costs a record but no text.
+		/// reached. A message repeated back to back is one record (see <see cref="LogRecord.RepeatCount"/>), and
+		/// one repeated anywhere else costs a record but no text: its text is stored once.
 		/// </summary>
 		int Count { get; }
 
@@ -32,7 +33,7 @@ namespace DTech.OmniDebugger
 		/// <summary>How many kept records are plain logs, warnings and errors.</summary>
 		void CountByType(out int logs, out int warnings, out int errors);
 
-		/// <summary>Appends every tag used by a kept record, sorted.</summary>
+		/// <summary>Appends every tag used by a kept record, sorted, ignoring case.</summary>
 		void GetKnownTags(List<string> results);
 
 		/// <summary>Drops every record.</summary>

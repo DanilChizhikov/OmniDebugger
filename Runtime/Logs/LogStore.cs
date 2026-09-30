@@ -11,11 +11,14 @@ namespace DTech.OmniDebugger
 		public const int DefaultTextBudget = 4 * 1024 * 1024;
 		public const int MaxMessageLength = 1500;
 		public const int MaxStackTraceLength = 4000;
+		public const int MaxTagLength = 32;
+
+		private static readonly string[] _noTags = Array.Empty<string>();
 
 		private readonly object _gate = new ();
 		private readonly LogSlot[] _slots;
 		private readonly LogBodyPool _bodies = new ();
-		private readonly Dictionary<string, int> _tagCounts = new (StringComparer.Ordinal);
+		private readonly Dictionary<string, int> _tagCounts = new (StringComparer.OrdinalIgnoreCase);
 		private readonly int _textBudget;
 
 		public long Version => Interlocked.Read(ref _version);
@@ -42,6 +45,7 @@ namespace DTech.OmniDebugger
 		private long _nextId = 1;
 		private long _version;
 		private long _errorCount;
+		private bool _capturing;
 
 		internal int BodyCount
 		{
@@ -70,6 +74,28 @@ namespace DTech.OmniDebugger
 			_textBudget = textBudget;
 		}
 
+		public void StartCapture()
+		{
+			if (_capturing)
+			{
+				return;
+			}
+
+			_capturing = true;
+			Application.logMessageReceivedThreaded += OnLogMessageReceived;
+		}
+
+		public void StopCapture()
+		{
+			if (!_capturing)
+			{
+				return;
+			}
+
+			_capturing = false;
+			Application.logMessageReceivedThreaded -= OnLogMessageReceived;
+		}
+
 		public void Add(string message, string stackTrace, LogType type, DateTime timestampUtc)
 		{
 			LogBodyKey key = new LogBodyKey(message, stackTrace, type, MaxMessageLength, MaxStackTraceLength);
@@ -77,6 +103,11 @@ namespace DTech.OmniDebugger
 			lock (_gate)
 			{
 				LogBody body = _bodies.Rent(key);
+
+				if (TryRepeatNewest(body, timestampUtc))
+				{
+					return;
+				}
 
 				if (_count == _slots.Length)
 				{
@@ -165,6 +196,139 @@ namespace DTech.OmniDebugger
 				_errors = 0;
 				Interlocked.Increment(ref _version);
 			}
+		}
+
+		internal static IReadOnlyList<string> ParseTags(string message, LogType type)
+		{
+			if (string.IsNullOrEmpty(message))
+			{
+				return _noTags;
+			}
+
+			List<string> tags = null;
+			int index = SkipSpaces(message, 0);
+
+			while (index < message.Length && message[index] == '[')
+			{
+				int close = message.IndexOf(']', index + 1);
+				if (close < 0)
+				{
+					break;
+				}
+
+				int length = close - index - 1;
+				string tag = length > 0 && length <= MaxTagLength
+					? message.Substring(index + 1, length).Trim()
+					: null;
+
+				if (string.IsNullOrEmpty(tag) || tag.IndexOf('[') >= 0)
+				{
+					break;
+				}
+
+				tags ??= new List<string>();
+				if (!Contains(tags, tag))
+				{
+					tags.Add(tag);
+				}
+
+				index = SkipSpaces(message, close + 1);
+			}
+
+			if (tags != null)
+			{
+				return tags;
+			}
+
+			return type != LogType.Exception && TryReadLoggerTag(message, out string loggerTag)
+				? new[] { loggerTag }
+				: _noTags;
+		}
+
+		private static int SkipSpaces(string text, int index)
+		{
+			while (index < text.Length && char.IsWhiteSpace(text[index]))
+			{
+				index++;
+			}
+
+			return index;
+		}
+
+		private static bool Contains(List<string> tags, string tag)
+		{
+			for (int i = 0; i < tags.Count; i++)
+			{
+				if (string.Equals(tags[i], tag, StringComparison.OrdinalIgnoreCase))
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+
+		private static bool TryReadLoggerTag(string message, out string tag)
+		{
+			tag = null;
+
+			int start = SkipSpaces(message, 0);
+			int index = start;
+
+			if (index >= message.Length || !(char.IsLetter(message[index]) || message[index] == '_'))
+			{
+				return false;
+			}
+
+			while (index < message.Length && index - start < MaxTagLength)
+			{
+				char character = message[index];
+
+				if (!(char.IsLetterOrDigit(character) || character == '_' || character == '.' || character == '-'))
+				{
+					break;
+				}
+
+				index++;
+			}
+
+			if (index + 1 >= message.Length || message[index] != ':' || message[index + 1] != ' ')
+			{
+				return false;
+			}
+
+			tag = message.Substring(start, index - start);
+			return true;
+		}
+
+		private void OnLogMessageReceived(string message, string stackTrace, LogType type) =>
+			Add(message, stackTrace, type, DateTime.UtcNow);
+
+		private bool TryRepeatNewest(LogBody body, DateTime timestampUtc)
+		{
+			if (_count == 0)
+			{
+				return false;
+			}
+
+			int newest = (_head + _count - 1) % _slots.Length;
+			if (!ReferenceEquals(_slots[newest].Body, body))
+			{
+				return false;
+			}
+
+			_bodies.Return(body);
+
+			_slots[newest].RepeatCount++;
+			_slots[newest].LastTimestampUtc = timestampUtc;
+
+			if (body.IsError)
+			{
+				Interlocked.Increment(ref _errorCount);
+			}
+
+			Interlocked.Increment(ref _version);
+			return true;
 		}
 
 		private bool QueryForward(in LogFilter filter, long afterId, int limit, List<LogRecord> results)

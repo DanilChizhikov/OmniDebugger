@@ -56,8 +56,7 @@
     --od-color-log-filter-log: rgba(255, 255, 255, 0.1);
     --od-color-log-filter-warning: rgba(246, 186, 72, 0.14);
     --od-color-log-filter-error: rgba(255, 99, 110, 0.14);
-    --od-color-window-bg: rgba(14, 16, 21, 0.8);
-    --od-color-window-border: rgba(51, 142, 255, 0.45);
+    --od-color-floating-bg: rgba(14, 16, 21, 0.8);
     --od-color-scrim: rgba(4, 6, 10, 0.42);
     --od-color-open-button-fill: rgba(14, 16, 21, 0.72);
     --od-color-open-button-border: rgba(255, 255, 255, 0.16);
@@ -100,6 +99,7 @@
     --od-tab-tile-width: 60px;
     --od-tab-tile-height: 52px;
     --od-picker-max-width: 168px;
+    --od-menu-max-width: 320px;
     --od-control-height: 32px;
     --od-inline-field-width: 112px;
     --od-search-min-width: 160px;
@@ -135,10 +135,12 @@
     --od-card-gap: 12px;
     --od-log-stripe-width: 3px;
     --od-log-button-size: 26px;
-    --od-window-width: 280px;
-    --od-window-max-height: 380px;
-    --od-window-header-height: 36px;
-    --od-window-button-size: 26px;
+    --od-floating-width: 280px;
+    --od-floating-max-height: 380px;
+    --od-floating-bar-height: 44px;
+    --od-floating-button-size: 36px;
+    --od-floating-grip-size: 32px;
+    --od-section-float-size: 26px;
     --od-lock-width: 300px;
     --od-lock-key-height: 52px;
     --od-lock-dot-size: 12px;
@@ -146,7 +148,6 @@
 
     --od-opacity-disabled: 0.4;
     --od-opacity-pressed: 0.72;
-    --od-opacity-window-idle: 0.6;
     --od-transition-duration: 120ms;
 
     --od-shadow-size: 28;
