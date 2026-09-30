@@ -13,10 +13,8 @@ namespace DTech.OmniDebugger.UI
 		private const string MissingValue = "—";
 		private const string RunTooltip = "Run";
 		private const string MoreTooltip = "More";
-		private const string FavoriteLabel = "Add to favourites";
-		private const string UnfavoriteLabel = "Remove from favourites";
-		private const string PinLabel = "Pin to a floating window";
-		private const string UnpinLabel = "Unpin";
+		private const string PinTooltip = "Pin to the hotbar";
+		private const string UnpinTooltip = "Unpin from the hotbar";
 		private const string DescriptionLabel = "Description";
 
 		private readonly ViewServices _services;
@@ -25,12 +23,15 @@ namespace DTech.OmniDebugger.UI
 		private readonly CommandRowMode _mode;
 		private readonly Action<CommandDefinition> _clicked;
 		private readonly VisualElement _main;
+		private readonly bool _showGroup;
 
 		public CommandDefinition Definition => _definition;
 
 		private ArgumentFieldRow _arguments;
 		private SwitchField _switch;
 		private Button _moreButton;
+		private Button _pinButton;
+		private IHotbar _hotbar;
 		private Label _value;
 		private Label _status;
 		private object _lastRead;
@@ -44,13 +45,15 @@ namespace DTech.OmniDebugger.UI
 			ValuePulse pulse,
 			CommandDefinition definition,
 			CommandRowMode mode,
-			Action<CommandDefinition> clicked = null)
+			Action<CommandDefinition> clicked = null,
+			bool showGroup = false)
 		{
 			_services = services ?? throw new ArgumentNullException(nameof(services));
 			_definition = definition ?? throw new ArgumentNullException(nameof(definition));
 			_pulse = pulse;
 			_mode = mode;
 			_clicked = clicked;
+			_showGroup = showGroup || mode == CommandRowMode.Summary;
 
 			AddToClassList(OmniDebuggerUiClasses.Row);
 			EnableInClassList(OmniDebuggerUiClasses.RowSummary, mode == CommandRowMode.Summary);
@@ -74,10 +77,39 @@ namespace DTech.OmniDebugger.UI
 
 			if (mode == CommandRowMode.Full)
 			{
+				_pinButton = UiBuild.IconButton(IconGlyph.PinOutline, TogglePin, PinTooltip);
+				_pinButton.AddToClassList(OmniDebuggerUiClasses.RowPin);
+				_main.Add(_pinButton);
+				_hotbar = _services.Debugger.Hotbar;
+				ShowPin();
+				_hotbar.OnChanged += ShowPin;
+
 				_moreButton = UiBuild.IconButton(IconGlyph.More, OpenMenu, MoreTooltip);
 				_moreButton.AddToClassList(OmniDebuggerUiClasses.RowMore);
 				_main.Add(_moreButton);
 			}
+		}
+
+		public bool Activate()
+		{
+			if (_disposed)
+			{
+				return false;
+			}
+
+			if (_switch != null)
+			{
+				_switch.value = !_switch.value;
+				return true;
+			}
+
+			if (_definition.Kind != CommandKind.Action)
+			{
+				return false;
+			}
+
+			Execute();
+			return true;
 		}
 
 		public void RefreshValue()
@@ -89,7 +121,7 @@ namespace DTech.OmniDebugger.UI
 
 			if (_value != null)
 			{
-				_value.text = _services.Debugger.Commands.TryGetValue(_definition.Key, out object value)
+				_value.text = TryRead(out object value)
 					? Format(value)
 					: MissingValue;
 
@@ -112,6 +144,11 @@ namespace DTech.OmniDebugger.UI
 			_disposed = true;
 			_pulse?.Unregister(this);
 
+			if (_hotbar != null)
+			{
+				_hotbar.OnChanged -= ShowPin;
+			}
+
 			if (_arguments != null)
 			{
 				_arguments.OnCommitted -= OnArgumentsCommitted;
@@ -122,7 +159,7 @@ namespace DTech.OmniDebugger.UI
 			RemoveFromHierarchy();
 		}
 
-		private static string Format(object value)
+		internal static string Format(object value)
 		{
 			if (value == null)
 			{
@@ -136,7 +173,7 @@ namespace DTech.OmniDebugger.UI
 
 		private void BuildTitles()
 		{
-			if (_mode != CommandRowMode.Compact && !_definition.Icon.IsEmpty)
+			if (_mode != CommandRowMode.Compact && _definition.IconKey != null)
 			{
 				_main.Add(BuildIcon());
 			}
@@ -144,9 +181,9 @@ namespace DTech.OmniDebugger.UI
 			VisualElement titles = UiBuild.Element(OmniDebuggerUiClasses.RowTitles);
 			titles.Add(UiBuild.Label(_definition.Name, OmniDebuggerUiClasses.RowName));
 
-			if (_mode == CommandRowMode.Summary)
+			if (_showGroup)
 			{
-				titles.Add(UiBuild.Label(_definition.GroupName, OmniDebuggerUiClasses.RowCaption));
+				titles.Add(UiBuild.Label(_definition.GroupPath, OmniDebuggerUiClasses.RowCaption));
 			}
 
 			_main.Add(titles);
@@ -155,16 +192,7 @@ namespace DTech.OmniDebugger.UI
 		private VisualElement BuildIcon()
 		{
 			VisualElement icon = UiBuild.Element(OmniDebuggerUiClasses.RowIcon);
-
-			if (_services.Debugger.Icons.TryGet(_definition.Icon, out Background background))
-			{
-				icon.style.backgroundImage = background;
-			}
-			else
-			{
-				icon.Add(new OmniIcon(IconGlyph.Warning));
-			}
-
+			icon.Add(IconView.Create(_definition.IconKey, _services.Debugger.Icons, IconGlyph.Warning, OmniDebuggerUiClasses.RowIconImage));
 			return icon;
 		}
 
@@ -206,7 +234,7 @@ namespace DTech.OmniDebugger.UI
 
 		private void BuildArguments(VisualElement control, bool showLabels)
 		{
-			_arguments = new ArgumentFieldRow(_services.Arguments, _services.Debugger.Fields, showLabels);
+			_arguments = new ArgumentFieldRow(_services.Commands, _services.Debugger.Fields, showLabels);
 			_arguments.Bind(_definition);
 
 			if (_definition.Arguments.Count == 0)
@@ -230,14 +258,7 @@ namespace DTech.OmniDebugger.UI
 
 		private void BindValue()
 		{
-			_readable = _services.Debugger.Catalog.TryGetCommand(_definition.Key, out IDebugCommand command) &&
-				command is IReadableCommand;
-
-			if (!_readable)
-			{
-				return;
-			}
-
+			_readable = true;
 			ReadValueIntoField(force: true);
 
 			if (_hasRead)
@@ -275,6 +296,8 @@ namespace DTech.OmniDebugger.UI
 				return;
 			}
 
+			_arguments.Remember();
+
 			InvocationRequest request = new InvocationRequest(_services.Origin, values);
 
 			if (!_services.Debugger.Commands.TryExecute(_definition, request))
@@ -307,7 +330,7 @@ namespace DTech.OmniDebugger.UI
 
 		private void ReadValueIntoField(bool force)
 		{
-			if (!_services.Debugger.Commands.TryGetValue(_definition.Key, out object value))
+			if (!TryRead(out object value))
 			{
 				_pulse?.Unregister(this);
 				return;
@@ -377,21 +400,6 @@ namespace DTech.OmniDebugger.UI
 			menu.Add(UiBuild.Label(_definition.Name, OmniDebuggerUiClasses.MenuTitle));
 			menu.Add(UiBuild.Label(DescribeMeta(), OmniDebuggerUiClasses.MenuCaption));
 
-			bool favorite = _services.Favorites.Contains(_definition.Key);
-			menu.Add(UiBuild.MenuItem(
-				favorite ? IconGlyph.Star : IconGlyph.StarOutline,
-				favorite ? UnfavoriteLabel : FavoriteLabel,
-				ToggleFavorite));
-
-			if (_services.Pins != null)
-			{
-				bool pinned = _services.Pins.Contains(_definition.Key);
-				menu.Add(UiBuild.MenuItem(
-					pinned ? IconGlyph.Pin : IconGlyph.PinOutline,
-					pinned ? UnpinLabel : PinLabel,
-					TogglePin));
-			}
-
 			if (!string.IsNullOrEmpty(_definition.Description))
 			{
 				menu.Add(UiBuild.MenuItem(IconGlyph.Info, DescriptionLabel, ShowDescription));
@@ -400,20 +408,25 @@ namespace DTech.OmniDebugger.UI
 			popups.ShowAnchored(_moreButton, menu, onHidden: null);
 		}
 
-		private void ToggleFavorite()
+		private void TogglePin() => _hotbar.Toggle(_definition.Path);
+
+		private void ShowPin()
 		{
-			_services.Popups?.Hide();
-			_services.Favorites.Toggle(_definition.Key);
+			bool pinned = _hotbar.Contains(_definition.Path);
+			UiBuild.SetGlyph(_pinButton, pinned ? IconGlyph.Pin : IconGlyph.PinOutline);
+			_pinButton.tooltip = pinned ? UnpinTooltip : PinTooltip;
+			_pinButton.EnableInClassList(OmniDebuggerUiClasses.RowPinActive, pinned);
 		}
 
-		private void TogglePin()
+		private bool TryRead(out object value)
 		{
-			_services.Popups?.Hide();
-
-			if (_services.Pins.Toggle(_definition.Key))
+			if (!_services.Debugger.Commands.TryGet(_definition.Path, out _))
 			{
-				_services.Debugger.Windows.Open(PinnedWindow.Id);
+				value = null;
+				return false;
 			}
+
+			return _services.Debugger.Commands.TryGetValue(_definition.Path, out value);
 		}
 
 		private void ShowDescription()
@@ -425,7 +438,7 @@ namespace DTech.OmniDebugger.UI
 		private string DescribeMeta()
 		{
 			StringBuilder builder = new StringBuilder();
-			builder.Append(_definition.Key);
+			builder.Append(_definition.Path);
 
 			if (_definition.Tags.Count > 0)
 			{

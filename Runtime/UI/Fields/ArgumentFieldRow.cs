@@ -11,7 +11,7 @@ namespace DTech.OmniDebugger.UI
 		private readonly VisualElement _root;
 		private readonly List<IArgumentField> _fields = new ();
 		private readonly List<ArgumentSlot> _slots = new ();
-		private readonly ArgumentMemory _memory;
+		private readonly CommandStateStore _states;
 		private readonly IArgumentFieldRegistry _registry;
 
 		public VisualElement Root => _root;
@@ -19,11 +19,12 @@ namespace DTech.OmniDebugger.UI
 		private bool ShowLabels { get; }
 
 		private CommandDefinition _definition;
+		private CommandState _state;
 		private bool _disposed;
 
-		public ArgumentFieldRow(ArgumentMemory memory, IArgumentFieldRegistry registry, bool showLabels)
+		public ArgumentFieldRow(CommandStateStore states, IArgumentFieldRegistry registry, bool showLabels)
 		{
-			_memory = memory;
+			_states = states;
 			_registry = registry;
 			ShowLabels = showLabels;
 
@@ -42,17 +43,15 @@ namespace DTech.OmniDebugger.UI
 				return;
 			}
 
+			_state = _states?.Get(definition.Path);
+
 			IReadOnlyList<ArgumentDefinition> arguments = definition.Arguments;
 
 			for (int i = 0; i < arguments.Count; i++)
 			{
 				ArgumentDefinition argument = arguments[i];
 				object remembered = null;
-
-				if (_memory != null)
-				{
-					_memory.TryGet(definition.Key, argument.Name, out remembered);
-				}
+				_state?.TryGetArgument(argument, out remembered);
 
 				ArgumentFieldRequest request = ArgumentFieldRequest.For(argument, remembered, ShowLabels);
 				IArgumentField field = _registry.Create(request);
@@ -125,6 +124,23 @@ namespace DTech.OmniDebugger.UI
 			_root.RemoveFromHierarchy();
 		}
 
+		public void Remember()
+		{
+			if (_state == null || _definition == null)
+			{
+				return;
+			}
+
+			IReadOnlyList<ArgumentDefinition> arguments = _definition.Arguments;
+
+			for (int i = 0; i < _fields.Count && i < arguments.Count; i++)
+			{
+				string argumentName = arguments[i].Name;
+				object fieldValue = _fields[i].TryGetValue(out object value) ? value : null;
+				_state.SetArgument(argumentName, fieldValue);
+			}
+		}
+
 		private void Release()
 		{
 			for (int i = 0; i < _fields.Count; i++)
@@ -136,29 +152,13 @@ namespace DTech.OmniDebugger.UI
 			_fields.Clear();
 			_slots.Clear();
 			_definition = null;
+			_state = null;
 		}
 
 		private void OnFieldCommitted()
 		{
 			Remember();
 			OnCommitted?.Invoke();
-		}
-
-		private void Remember()
-		{
-			if (_memory == null || _definition == null)
-			{
-				return;
-			}
-
-			IReadOnlyList<ArgumentDefinition> arguments = _definition.Arguments;
-
-			for (int i = 0; i < _fields.Count && i < arguments.Count; i++)
-			{
-				string argumentName = arguments[i].Name;
-				object fieldValue = _fields[i].TryGetValue(out object value) ? value : null;
-				_memory.Set(_definition.Key, argumentName, fieldValue);
-			}
 		}
 	}
 }

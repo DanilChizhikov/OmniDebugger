@@ -14,10 +14,10 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		public void SetUp()
 		{
 			_debugger = new OmniDebuggerHost(new RecordingLogSink());
-			_debugger.Catalog.AddSource(new SampleCommands());
+			_debugger.Commands.Register(new SampleCommands());
 
 			_index = new SearchIndex<CommandDefinition>();
-			_index.Rebuild(_debugger.Catalog.Commands);
+			_index.Rebuild(_debugger.Commands.All);
 		}
 
 		[TearDown]
@@ -30,7 +30,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		[Test]
 		public void Query_FindsACommandByItsName()
 		{
-			Assert.That(Search("coins"), Is.EqualTo(new[] { SampleCommands.AddCoinsKey }));
+			Assert.That(Search("coins"), Is.EqualTo(new[] { SampleCommands.AddCoinsPath }));
 		}
 
 		[Test]
@@ -60,31 +60,31 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		[Test]
 		public void Query_FindsACommandByADeclaredTag()
 		{
-			Assert.That(Search("wallet"), Is.EqualTo(new[] { SampleCommands.AddCoinsKey }));
+			Assert.That(Search("wallet"), Is.EqualTo(new[] { SampleCommands.AddCoinsPath }));
 		}
 
 		[Test]
 		public void Query_FindsACommandByOneWordOfItsName()
 		{
-			Assert.That(Search("version"), Contains.Item(SampleCommands.BuildVersionKey));
+			Assert.That(Search("version"), Contains.Item(SampleCommands.BuildVersionPath));
 		}
 
 		[Test]
 		public void Query_MatchesAMultiWordNameTypedWithoutTheSpace()
 		{
-			Assert.That(Search("addcoins"), Is.EqualTo(new[] { SampleCommands.AddCoinsKey }));
+			Assert.That(Search("addcoins"), Is.EqualTo(new[] { SampleCommands.AddCoinsPath }));
 		}
 
 		[Test]
 		public void Query_MatchesTheInitialsOfAMultiWordName()
 		{
-			Assert.That(Search("ac"), Contains.Item(SampleCommands.AddCoinsKey));
+			Assert.That(Search("ac"), Contains.Item(SampleCommands.AddCoinsPath));
 		}
 
 		[Test]
 		public void Query_NarrowsRatherThanWidensWithEveryExtraWord()
 		{
-			Assert.That(Search("economy coins"), Is.EqualTo(new[] { SampleCommands.AddCoinsKey }));
+			Assert.That(Search("economy coins"), Is.EqualTo(new[] { SampleCommands.AddCoinsPath }));
 		}
 
 		[Test]
@@ -96,13 +96,13 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		[Test]
 		public void Query_StillFindsACommandWhenTheTermIsMistyped()
 		{
-			Assert.That(Search("coibs"), Contains.Item(SampleCommands.AddCoinsKey));
+			Assert.That(Search("coibs"), Contains.Item(SampleCommands.AddCoinsPath));
 		}
 
 		[Test]
 		public void Query_StillFindsACommandWhenTheTermIsCutShort()
 		{
-			Assert.That(Search("versio"), Contains.Item(SampleCommands.BuildVersionKey));
+			Assert.That(Search("versio"), Contains.Item(SampleCommands.BuildVersionPath));
 		}
 
 		[Test]
@@ -116,11 +116,11 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		{
 			List<string> found = Search("set");
 
-			Assert.That(found, Contains.Item(SampleCommands.SetSpeedKey));
-			Assert.That(found, Contains.Item(SampleCommands.PrivateSetterKey));
+			Assert.That(found, Contains.Item(SampleCommands.SetSpeedPath));
+			Assert.That(found, Contains.Item(SampleCommands.PrivateSetterPath));
 			Assert.That(
-				found.IndexOf(SampleCommands.PrivateSetterKey),
-				Is.GreaterThan(found.IndexOf(SampleCommands.SetSpeedKey)),
+				found.IndexOf(SampleCommands.PrivateSetterPath),
+				Is.GreaterThan(found.IndexOf(SampleCommands.SetSpeedPath)),
 				"'Set Speed' owns the word, 'Private Setter' only starts with it");
 		}
 
@@ -137,18 +137,18 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			Assert.That(session.IsComplete, Is.False, "prefix, infix and fuzzy are still outstanding");
 			Assert.That(
 				KeysOf(session),
-				Is.EquivalentTo(new[] { SampleCommands.SetSpeedKey, SampleCommands.SetSeverityKey }));
+				Is.EquivalentTo(new[] { SampleCommands.SetSpeedPath, SampleCommands.SetSeverityPath }));
 		}
 
 		[Test]
 		public void Query_ReplacesTheResultsOfThePreviousQuery()
 		{
-			Assert.That(Search("god"), Contains.Item(SampleCommands.GodModeKey));
+			Assert.That(Search("god"), Contains.Item(SampleCommands.GodModePath));
 
 			List<string> found = Search("coins");
 
-			Assert.That(found, Contains.Item(SampleCommands.AddCoinsKey));
-			Assert.That(found, Has.None.EqualTo(SampleCommands.GodModeKey));
+			Assert.That(found, Contains.Item(SampleCommands.AddCoinsPath));
+			Assert.That(found, Has.None.EqualTo(SampleCommands.GodModePath));
 		}
 
 		[Test]
@@ -169,7 +169,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			QuerySettings sensitive = new QuerySettings(SearchOptions.CaseSensitive);
 
 			Assert.That(Search("COINS", sensitive), Is.Empty);
-			Assert.That(Search("Coins", sensitive), Contains.Item(SampleCommands.AddCoinsKey));
+			Assert.That(Search("Coins", sensitive), Contains.Item(SampleCommands.AddCoinsPath));
 		}
 
 		[Test]
@@ -178,7 +178,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			QuerySettings strict = new QuerySettings(SearchOptions.NoFuzzy);
 
 			Assert.That(Search("coibs", strict), Is.Empty);
-			Assert.That(Search("coins", strict), Contains.Item(SampleCommands.AddCoinsKey));
+			Assert.That(Search("coins", strict), Contains.Item(SampleCommands.AddCoinsPath));
 		}
 
 		[Test]
@@ -234,10 +234,10 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		{
 			for (int i = 0; i < 5; i++)
 			{
-				_index.Rebuild(_debugger.Catalog.Commands);
+				_index.Rebuild(_debugger.Commands.All);
 			}
 
-			Assert.That(Search("coins"), Is.EqualTo(new[] { SampleCommands.AddCoinsKey }));
+			Assert.That(Search("coins"), Is.EqualTo(new[] { SampleCommands.AddCoinsPath }));
 		}
 
 		[Test]
@@ -322,7 +322,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 
 			for (int i = 0; i < session.Hits.Count; i++)
 			{
-				keys.Add(_index[session.Hits[i].Id].Key);
+				keys.Add(_index[session.Hits[i].Id].Path);
 			}
 
 			return keys;
