@@ -1,5 +1,93 @@
 # Changelog
 
+## [2.0.0] - 2026-09-30
+
+A redesign of registration and of the panel. Breaking: see *Migration* below.
+
+### Added
+- A Roslyn source generator (`Runtime/Analyzers/DTech.OmniDebugger.SourceGenerator.dll`) that turns `[DebugCommand]`
+  members into registration code at compile time. No reflection at runtime, nothing for the IL2CPP linker to strip,
+  and a member that cannot be a command is a compile error (`OMNI001`–`OMNI013`) instead of a runtime warning.
+  Internal members and base-class commands are supported.
+- `ICommandRegistry` (`debugger.Commands`): `Register(obj)` / `Unregister(obj)` returning a disposable handle,
+  `Add(IEnumerable<DebugCommand>)`, `TryExecute(path, params object[])`, `TryGet`, `TryGetValue`, `All`, `OnChanged`.
+- `CommandBuilder` (`debugger.Commands.Build()`): `Group`, `Button` (up to three typed arguments described by
+  `ArgumentBuilder`), `Toggle`, `Slider`, `Dropdown`, `Field`, `Value`, with `Icon`, `Tags`, `Description` and `Order`.
+- Hierarchical command paths, `"Economy/Coins/Add"`, with `CommandPath` to build and read them. `IGroupOrder` orders
+  groups at any depth.
+- `DebugCommand`: the one command type — a `CommandDefinition` plus its delegates.
+- The hotbar (`IHotbar`, `debugger.Hotbar`): pinned commands in a strip along the bottom or top of the screen
+  (`OmniDebuggerPanelOptions.HotbarEdge`), saved on the device, foldable.
+- Info providers (`IInfoProvider`, `IInfoSection`, `debugger.Info`): the Info tab is a section per provider, with
+  text, live values, charts, command rows (`IInfoSection.Command`) and custom elements, one or two to a line. Built
+  in: Performance (FPS chart), Memory (allocation chart), Graphics, Quality, Screen, Build and Device.
+- Floating sections: any Info section floats over the game while the panel is closed or floating — from the button
+  on its header, or `debugger.Info.Float` / `Dock` / `IsFloating` / `OnFloatingChanged`. A card starts at half the
+  size of its section in the tab, and a grip in its corner scales it from half to three times that; which sections
+  float and the scale of each are saved on the device.
+- The command palette: Ctrl+K / Cmd+K, or the magnifier in the panel's header.
+- `LogQuery.Parse` and a filter bar in the Logs tab: `tag:Net -tag:Ads type:error text "a phrase"`, with the terms as
+  removable chips and the known tags as suggestions. `LogQuery.ExcludedTags`; text matches every word.
+- `LogRecord.RepeatCount` and `LastTimestampUtc`: a message repeated back to back is one record, shown with ×N.
+- Tags from `Debug.unityLogger.Log(tag, message)`, which Unity writes as `"tag: message"`.
+- Typed arguments are remembered per command and saved on the device, in the panel and in the editor window.
+- Built-in vector glyphs by name for icons (`OmniGlyphs`: `coin`, `bolt`, `bug`, `gear`, `play` and more).
+- An error badge with a count on the open button.
+- The editor window's own UI: a tree of commands with an inspector of native editor controls, and an Info view.
+
+### Changed
+- `IOmniDebuggerHost.Commands` is now the `ICommandRegistry`; `Catalog` is gone.
+- `IGroupOrder.SetOrder` / `GetOrder` take a group path (`groupPath`, was `groupName`), at any depth.
+- `[DebugCommand(groupPath)]` takes the group path only; `Name`, `Order` and `Description` are named arguments.
+- The Commands tab is one list with a search box and group chips instead of collapsible sections and group pages.
+- Tabs: Commands, Logs, Info, in that order. Search moved into the Commands tab and the palette.
+- Floating windows are floating Info sections now: a pane over the game is an `IInfoProvider` — command rows through
+  `IInfoSection.Command`, anything else through `Custom` — floated with `debugger.Info.Float`.
+- `OmniDebuggerViewSettings.HostWindows` / `hostWindows` is `HostOverlays` / `hostOverlays`.
+- Project settings reach a player as one of its preloaded assets, added for the length of the build, instead of a
+  temporary asset in a `Resources` folder.
+- The open button drags at once, no hold, and snaps to the nearest edge of the screen.
+- `LogQuery.Tags` matches any of the tags, ignoring case.
+- `LogRecord.Flags` (`LogFlags`) replaces `IsMessageTruncated` and `IsStackTraceTruncated`.
+- `IIconRegistry` has one `Provider` (`IOmniDebuggerIconProvider.TryGetIcon(string key, …)`), `ResourcesIconProvider`
+  by default. `CommandDefinition.IconKey`, `DebugIconAttribute(string key)` and `IOmniDebuggerTabFactory.Icon` are
+  strings.
+- The editor window keeps its state in a `ScriptableSingleton` in the editor's preferences folder.
+
+### Removed
+- `ICommandCatalog`, `ICommandInvoker`, `ICommandSource`, `IDebugCommand`, `IExecutableCommand`, `IReadableCommand`,
+  `ActionCommand`, `ValueCommand`, `ReadonlyValueCommand`, `CommandKey` and the reflection scanner.
+- The generated `link.xml` (`CommandLinkerStep`, `CommandPreservation`): nothing needs preserving any more.
+- Favourites and the *Pinned* window — both are the hotbar now.
+- `IOmniDebuggerHost.Windows`, `IWindowRegistry`, `IOmniDebuggerWindow`, the Windows tab and window menu, collapsing,
+  the fade of an idle window and the one scale shared by every window.
+- `LogTagMode` and the tag page of the Logs tab.
+- `DebugIconSource`, `CommandIcon`, `IconEntry`, `OmniDebuggerIconCatalog`, `OmniDebuggerOptions.IconCatalogs`.
+- The editor window's zoom, layout and theme settings (`Project Settings → DTech → OmniDebugger → UI`).
+
+### Migration
+
+| 1.x | 2.0 |
+|---|---|
+| `debugger.Catalog.AddSource(obj)` | `debugger.Commands.Register(obj)` (keep the handle, or call `Unregister(obj)`) |
+| `debugger.Catalog.RemoveSource(obj)` | `handle.Dispose()` or `debugger.Commands.Unregister(obj)` |
+| `debugger.Catalog.AddCommand(new ActionCommand(definition, action))` | `debugger.Commands.Build().Group(group).Button(name, action).Register()` |
+| `ValueCommand` / `ReadonlyValueCommand` | `.Field(…)` / `.Toggle(…)` / `.Slider(…)` / `.Value(…)` on the builder |
+| `ICommandSource` | `debugger.Commands.Add(IEnumerable<DebugCommand>)` |
+| `[DebugCommand("Group", "Name", 10)]` | `[DebugCommand("Group", Name = "Name", Order = 10)]` |
+| `"Group/Name"`, `CommandKey.Create` | `"Group/Sub/Name"`, `CommandPath.Combine` |
+| `debugger.Commands.TryExecute(key, request)` | unchanged, or `TryExecute(path, 500)` |
+| `debugger.Catalog.TryGetDefinition(key, …)` | `debugger.Commands.TryGet(path, …)` |
+| `definition.Key` / `GroupName` / `Icon` | `definition.Path` / `GroupPath` / `IconKey` |
+| `DebugIcon(DebugIconSource.Resources, "Icons/Coin")` | `DebugIcon("Icons/Coin")`, or a glyph name such as `DebugIcon("coin")` |
+| Icon catalogs, `debugger.Icons.Register(provider)` | `debugger.Icons.Provider = provider` |
+| `new LogQuery(tags: …, tagMode: LogTagMode.Any)` | `new LogQuery(tags: …)`, or `LogQuery.Parse("tag:A tag:B")` |
+| `record.IsMessageTruncated` | `(record.Flags & LogFlags.MessageTruncated) != 0` |
+| A private, static or value-returning `[DebugCommand]` member (skipped with a warning) | A compile error to fix |
+| `debugger.Windows.RegisterCommands(id, title, paths, open: true)` | an `IInfoProvider` with `section.Command(path)` rows, `debugger.Info.Register(p)` and `debugger.Info.Float(p)` |
+| `debugger.Windows.RegisterCustom(id, title, build, open: true)` | an `IInfoProvider` with `section.Custom(…)`, registered and floated the same way |
+| `window.Open()` / `Close()` / `debugger.Windows.Unregister(id)` | `debugger.Info.Float(p)` / `Dock(p)` / `Unregister(p)` |
+
 ## [1.0.0] - 2026-09-26
 
 Initial release.
