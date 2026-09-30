@@ -40,7 +40,6 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			Assert.That(copy.CreatePanel, Is.False);
 			Assert.That(copy.DefaultTheme, Is.SameAs(source.DefaultTheme));
 			Assert.That(copy.Themes, Is.EqualTo(source.Themes));
-			Assert.That(copy.IconCatalogs, Is.EqualTo(source.IconCatalogs));
 
 			Assert.That(copy.Panel.ScaleMode, Is.EqualTo(OmniDebuggerScaleMode.PhysicalSize));
 			Assert.That(copy.Panel.Scale, Is.EqualTo(1.5f));
@@ -70,11 +69,9 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			Assert.That(copy.Panel.Open.Shortcuts[0], Is.Not.SameAs(source.Panel.Open.Shortcuts[0]));
 
 			copy.Themes.Clear();
-			copy.IconCatalogs.Clear();
 			copy.Panel.Open.Shortcuts.Clear();
 
 			Assert.That(source.Themes, Has.Count.EqualTo(1));
-			Assert.That(source.IconCatalogs, Has.Count.EqualTo(1));
 			Assert.That(source.Panel.Open.Shortcuts, Has.Count.EqualTo(1));
 		}
 
@@ -102,7 +99,6 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			Assert.That(options.CreatePanel, Is.True);
 			Assert.That(options.Panel.Open.ButtonClicks, Is.EqualTo(1));
 			Assert.That(options.Themes, Is.Empty);
-			Assert.That(options.IconCatalogs, Is.Empty);
 		}
 
 		[Test]
@@ -110,7 +106,6 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		{
 			OmniDebuggerOptions options = Sample();
 			options.Themes.Add(null);
-			options.IconCatalogs.Add(null);
 
 			OmniDebuggerHost debugger = new OmniDebuggerHost(new RecordingLogSink(), options);
 
@@ -198,7 +193,6 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			};
 
 			options.Themes.Add(Track(Theme("ocean")));
-			options.IconCatalogs.Add(Track(ScriptableObject.CreateInstance<OmniDebuggerIconCatalog>()));
 
 			options.Panel.ScaleMode = OmniDebuggerScaleMode.PhysicalSize;
 			options.Panel.Scale = 1.5f;

@@ -37,8 +37,8 @@ namespace DTech.OmniDebugger
 		public bool Matches(LogBody body) =>
 			body.Hash == Hash &&
 			body.Type == Type &&
-			body.IsMessageTruncated == IsMessageTruncated &&
-			body.IsStackTraceTruncated == IsStackTraceTruncated &&
+			((body.Flags & LogFlags.MessageTruncated) != 0) == IsMessageTruncated &&
+			((body.Flags & LogFlags.StackTraceTruncated) != 0) == IsStackTraceTruncated &&
 			Message.AsSpan(0, MessageLength).SequenceEqual(body.Message.AsSpan()) &&
 			StackTrace.AsSpan(0, StackTraceLength).SequenceEqual(body.StackTrace.AsSpan());
 

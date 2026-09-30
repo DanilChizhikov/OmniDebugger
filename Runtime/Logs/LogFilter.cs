@@ -6,16 +6,28 @@ namespace DTech.OmniDebugger
 {
 	internal readonly struct LogFilter
 	{
-		private readonly string _text;
+		private readonly List<string> _terms;
 		private readonly IReadOnlyCollection<string> _tags;
-		private readonly LogTagMode _tagMode;
+		private readonly IReadOnlyCollection<string> _excludedTags;
 		private readonly LogTypeMask _types;
 
 		public LogFilter(in LogQuery query)
 		{
-			_text = string.IsNullOrWhiteSpace(query.Text) ? null : query.Text.Trim();
+			_terms = null;
+
+			if (!string.IsNullOrWhiteSpace(query.Text))
+			{
+				_terms = new List<string>(2);
+				LogQuerySyntax.SplitTerms(query.Text, _terms);
+
+				if (_terms.Count == 0)
+				{
+					_terms = null;
+				}
+			}
+
 			_tags = query.Tags != null && query.Tags.Count > 0 ? query.Tags : null;
-			_tagMode = query.TagMode;
+			_excludedTags = query.ExcludedTags != null && query.ExcludedTags.Count > 0 ? query.ExcludedTags : null;
 			_types = query.Types;
 		}
 
@@ -41,47 +53,49 @@ namespace DTech.OmniDebugger
 				return false;
 			}
 
-			if (_tags != null && !MatchesTags(body.Tags))
+			if (_tags != null && !CarriesAny(body.Tags, _tags))
 			{
 				return false;
 			}
 
-			return _text == null ||
-				body.Message.IndexOf(_text, StringComparison.OrdinalIgnoreCase) >= 0 ||
-				body.StackTrace.IndexOf(_text, StringComparison.OrdinalIgnoreCase) >= 0;
-		}
-
-		private static bool Contains(IReadOnlyList<string> tags, string wanted)
-		{
-			for (int i = 0; i < tags.Count; i++)
+			if (_excludedTags != null && CarriesAny(body.Tags, _excludedTags))
 			{
-				if (string.Equals(tags[i], wanted, StringComparison.Ordinal))
-				{
-					return true;
-				}
+				return false;
 			}
 
-			return false;
-		}
-
-		private bool MatchesTags(IReadOnlyList<string> recordTags)
-		{
-			foreach (string wanted in _tags)
+			if (_terms == null)
 			{
-				bool found = Contains(recordTags, wanted);
+				return true;
+			}
 
-				if (_tagMode == LogTagMode.Any && found)
-				{
-					return true;
-				}
+			for (int i = 0; i < _terms.Count; i++)
+			{
+				string term = _terms[i];
 
-				if (_tagMode == LogTagMode.All && !found)
+				if (body.Message.IndexOf(term, StringComparison.OrdinalIgnoreCase) < 0 &&
+					body.StackTrace.IndexOf(term, StringComparison.OrdinalIgnoreCase) < 0)
 				{
 					return false;
 				}
 			}
 
-			return _tagMode == LogTagMode.All;
+			return true;
+		}
+
+		private static bool CarriesAny(IReadOnlyList<string> recordTags, IReadOnlyCollection<string> wanted)
+		{
+			for (int i = 0; i < recordTags.Count; i++)
+			{
+				foreach (string tag in wanted)
+				{
+					if (string.Equals(recordTags[i], tag, StringComparison.OrdinalIgnoreCase))
+					{
+						return true;
+					}
+				}
+			}
+
+			return false;
 		}
 	}
 }

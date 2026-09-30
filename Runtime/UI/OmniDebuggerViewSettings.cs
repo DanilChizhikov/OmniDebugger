@@ -19,13 +19,13 @@ namespace DTech.OmniDebugger.UI
 		/// </summary>
 		public VisualElement Root { get; }
 
-		/// <summary>The debugger whose catalog is shown. The view never disposes it.</summary>
+		/// <summary>The debugger whose commands are shown. The view never disposes it.</summary>
 		public IOmniDebuggerHost Debugger { get; }
 
 		/// <summary>
 		/// State that outlives the elements. Null starts from scratch; pass the same instance again
-		/// to keep the selected tab, group, theme, favourites, pins and typed arguments across a
-		/// rebuild. Only the theme and favourites are also saved by the built-in mounts.
+		/// to keep the selected tab, group, search, theme and typed arguments across a rebuild. With
+		/// preferences to save to, the theme, the typed arguments and the hotbar survive a restart too.
 		/// </summary>
 		public OmniDebuggerViewState State { get; }
 
@@ -52,10 +52,10 @@ namespace DTech.OmniDebugger.UI
 		public bool StartOpen { get; }
 
 		/// <summary>
-		/// Shows floating windows while the panel is closed or floating, and lets commands be pinned into one.
-		/// Runtime only: an editor window has no game view to float them over.
+		/// Shows the hotbar and the floating Info sections while the panel is closed or floating, and lets the
+		/// Info tab float its sections. Runtime only: an editor window has no game view to float them over.
 		/// </summary>
-		public bool HostWindows { get; }
+		public bool HostOverlays { get; }
 
 		internal IViewPrefs Prefs { get; }
 
@@ -67,8 +67,8 @@ namespace DTech.OmniDebugger.UI
 			bool useScreenSafeArea = false,
 			bool showCloseButton = false,
 			bool startOpen = false,
-			bool hostWindows = false)
-			: this(root, debugger, state, null, origin, useScreenSafeArea, showCloseButton, startOpen, hostWindows)
+			bool hostOverlays = false)
+			: this(root, debugger, state, null, origin, useScreenSafeArea, showCloseButton, startOpen, hostOverlays)
 		{
 		}
 
@@ -81,7 +81,7 @@ namespace DTech.OmniDebugger.UI
 			bool useScreenSafeArea = false,
 			bool showCloseButton = false,
 			bool startOpen = false,
-			bool hostWindows = false)
+			bool hostOverlays = false)
 		{
 			Root = root;
 			Debugger = debugger;
@@ -91,7 +91,7 @@ namespace DTech.OmniDebugger.UI
 			UseScreenSafeArea = useScreenSafeArea;
 			ShowCloseButton = showCloseButton;
 			StartOpen = startOpen;
-			HostWindows = hostWindows;
+			HostOverlays = hostOverlays;
 		}
 	}
 }

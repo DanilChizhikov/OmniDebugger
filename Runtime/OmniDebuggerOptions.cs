@@ -66,16 +66,6 @@ namespace DTech.OmniDebugger
 		}
 
 		/// <summary>
-		/// Icon catalogs added to <see cref="IOmniDebuggerHost.Icons"/> when the debugger is built, for
-		/// assets kept outside <c>Resources/OmniDebugger</c>. Never null; null entries are skipped.
-		/// </summary>
-		public List<OmniDebuggerIconCatalog> IconCatalogs
-		{
-			get => _iconCatalogs ??= new List<OmniDebuggerIconCatalog>();
-			set => _iconCatalogs = value;
-		}
-
-		/// <summary>
 		/// A copy of the project's options from <c>Project Settings → DTech → OmniDebugger → Panel</c>, so
 		/// changing it touches nothing else. Play mode in the editor reads the settings live; a player reads
 		/// the snapshot taken when it was built. Falls back to the built-in defaults when neither exists.
@@ -97,9 +87,6 @@ namespace DTech.OmniDebugger
 		[Tooltip("Themes offered next to the built-in dark and light ones, picked from a dropdown.")]
 		[SerializeField] private List<OmniDebuggerTheme> _themes = new ();
 
-		[Tooltip("Icon catalogs used in addition to those found in Resources/OmniDebugger folders.")]
-		[SerializeField] private List<OmniDebuggerIconCatalog> _iconCatalogs = new ();
-
 		internal OmniDebuggerOptions Clone()
 		{
 			return new OmniDebuggerOptions
@@ -109,7 +96,6 @@ namespace DTech.OmniDebugger
 				_panel = Panel.Clone(),
 				_defaultTheme = _defaultTheme,
 				_themes = new List<OmniDebuggerTheme>(Themes),
-				_iconCatalogs = new List<OmniDebuggerIconCatalog>(IconCatalogs),
 			};
 		}
 	}

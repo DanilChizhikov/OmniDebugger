@@ -49,7 +49,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		}
 
 		[Test]
-		public void GetCommands_TheAllGroupReturnsEveryCommandInGroupOrder()
+		public void All_ListsEveryCommandInGroupOrder()
 		{
 			PanelModel model = new PanelModel();
 			FakeGroupOrder order = new FakeGroupOrder();
@@ -64,8 +64,35 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 				},
 				order);
 
-			Assert.That(Names(model.GetCommands(PanelModel.AllGroup)), Is.EqualTo(new[] { "A", "B" }));
-			Assert.That(model.GetCommands(null), Is.SameAs(model.All), "no group means every command");
+			Assert.That(Names(model.All), Is.EqualTo(new[] { "A", "B" }));
+			Assert.That(model.GetSubtree(null), Is.SameAs(model.All), "no group means every command");
+		}
+
+		[Test]
+		public void Rebuild_BuildsATreeFromThePaths()
+		{
+			PanelModel model = new PanelModel();
+			FakeGroupOrder order = new FakeGroupOrder();
+			order.Set("Economy/Shop", 1);
+
+			model.Rebuild(
+				new[]
+				{
+					Command("Economy/Coins", "Add"),
+					Command("Economy", "Reset"),
+					Command("Economy/Shop", "Open"),
+					Command("World", "Pause"),
+				},
+				order);
+
+			Assert.That(model.GetChildren(string.Empty), Is.EqualTo(new[] { "Economy", "World" }));
+			Assert.That(model.GetChildren("Economy"), Is.EqualTo(new[] { "Economy/Shop", "Economy/Coins" }),
+				"subgroups follow their own order too");
+			Assert.That(Names(model.GetCommands("Economy")), Is.EqualTo(new[] { "Reset" }));
+			Assert.That(Names(model.GetSubtree("Economy")), Is.EqualTo(new[] { "Reset", "Open", "Add" }),
+				"a group's own commands come before its subgroups'");
+			Assert.That(model.Groups, Is.EqualTo(new[] { "Economy", "Economy/Shop", "Economy/Coins", "World" }));
+			Assert.That(model.HasGroup("Economy"), Is.True, "a group holding only subgroups still exists");
 		}
 
 		[Test]
@@ -77,16 +104,6 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			Assert.That(model.HasGroup("Cheats"), Is.True);
 			Assert.That(model.HasGroup("Removed"), Is.False);
 			Assert.That(model.GetCommands("Removed"), Is.Empty);
-		}
-
-		[Test]
-		public void HasGroup_AlwaysAcceptsTheAllPseudoGroup()
-		{
-			PanelModel model = new PanelModel();
-			model.Rebuild(new CommandDefinition[0], new FakeGroupOrder());
-
-			Assert.That(model.HasGroup(PanelModel.AllGroup), Is.True,
-				"the selection must survive an empty catalog");
 		}
 
 		[Test]

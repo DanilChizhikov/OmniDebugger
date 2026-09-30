@@ -20,6 +20,12 @@ namespace DTech.OmniDebugger.UI
 		private const string DocumentName = "OmniDebugger Document";
 		private const string PanelObjectName = "OmniDebugger Panel";
 
+		private static readonly OmniDebuggerShortcut[] _paletteShortcuts =
+		{
+			new (KeyCode.LeftControl, KeyCode.K),
+			new (KeyCode.LeftCommand, KeyCode.K),
+		};
+
 		private readonly OmniDebuggerViewState _state = new ();
 		private readonly LockAttempts _lockAttempts = new ();
 
@@ -223,7 +229,7 @@ namespace DTech.OmniDebugger.UI
 			OmniDebuggerPanelOptions previous = Options;
 			_options = next;
 
-			if (_gesture is HoldToDragButtonGesture button)
+			if (_gesture is OpenButtonGesture button)
 			{
 				button.SetOptions(next.Open);
 			}
@@ -313,6 +319,10 @@ namespace DTech.OmniDebugger.UI
 			{
 				Toggle();
 			}
+			else if (_shortcuts.Poll(_paletteShortcuts))
+			{
+				OpenPalette();
+			}
 		}
 
 		private void BuildView()
@@ -341,7 +351,7 @@ namespace DTech.OmniDebugger.UI
 				useScreenSafeArea: true,
 				showCloseButton: true,
 				startOpen: openOnStart && !locked,
-				hostWindows: true);
+				hostOverlays: true);
 
 			_everBuilt = true;
 
@@ -374,11 +384,23 @@ namespace DTech.OmniDebugger.UI
 		{
 			_view.SetLandscapeLayout(Options.LandscapeLayout);
 			_view.SetFloatingScale(Options.FloatingScale);
+			_view.SetHotbarEdge(Options.HotbarEdge);
 			_view.SetShortcutHint(DescribeShortcut(Options.Open.Shortcuts));
 		}
 
+		private void OpenPalette()
+		{
+			if (!IsOpen && IsLockRequired)
+			{
+				Open();
+				return;
+			}
+
+			_view.ShowPalette();
+		}
+
 		private IOmniDebuggerGesture CreateDefaultGesture() =>
-			new HoldToDragButtonGesture(Options.Open, _debugger?.Logs, PlayerPrefsViewPrefs.Default);
+			new OpenButtonGesture(Options.Open, _debugger?.Logs, PlayerPrefsViewPrefs.Default);
 
 		private void AttachGesture()
 		{

@@ -18,7 +18,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			_log = new RecordingLogSink();
 			_debugger = new OmniDebuggerHost(_log);
 			_source = new SampleCommands();
-			_debugger.Catalog.AddSource(_source);
+			_debugger.Commands.Register(_source);
 			_log.Clear();
 		}
 
@@ -29,7 +29,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		public void TryExecute_AppliesTheDefaultOfAnOmittedOptionalArgument()
 		{
 			bool executed = _debugger.Commands.TryExecute(
-				SampleCommands.AddCoinsKey,
+				SampleCommands.AddCoinsPath,
 				InvocationRequest.From(Origin));
 
 			Assert.That(executed, Is.True);
@@ -39,7 +39,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		[Test]
 		public void TryExecute_PassesAnAlreadyTypedArgumentThrough()
 		{
-			_debugger.Commands.TryExecute(SampleCommands.AddCoinsKey, InvocationRequest.From(Origin, 250));
+			_debugger.Commands.TryExecute(SampleCommands.AddCoinsPath, InvocationRequest.From(Origin, 250));
 
 			Assert.That(_source.Coins, Is.EqualTo(250));
 		}
@@ -48,7 +48,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		public void TryExecute_CoercesTextToTheDeclaredArgumentType()
 		{
 			bool executed = _debugger.Commands.TryExecute(
-				SampleCommands.AddCoinsKey,
+				SampleCommands.AddCoinsPath,
 				InvocationRequest.From(Origin, "250"));
 
 			Assert.That(executed, Is.True);
@@ -70,7 +70,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		public void TryExecute_WritesAValueCommand()
 		{
 			bool executed = _debugger.Commands.TryExecute(
-				SampleCommands.GodModeKey,
+				SampleCommands.GodModePath,
 				InvocationRequest.From(Origin, true));
 
 			Assert.That(executed, Is.True);
@@ -80,7 +80,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		[Test]
 		public void TryExecute_ReportsAThrowingCommandWithTheRealException()
 		{
-			bool executed = _debugger.Commands.TryExecute(SampleCommands.BoomKey, InvocationRequest.From(Origin));
+			bool executed = _debugger.Commands.TryExecute(SampleCommands.BoomPath, InvocationRequest.From(Origin));
 
 			Assert.That(executed, Is.False);
 			Assert.That(_source.BoomCalled, Is.True, "the command did run");
@@ -88,7 +88,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			Assert.That(
 				_log.Exceptions[0],
 				Is.TypeOf<InvalidOperationException>(),
-				"reflection's TargetInvocationException must be unwrapped");
+				"the command's own exception reaches the log");
 
 			Assert.That(_log.Exceptions[0].Message, Is.EqualTo(SampleCommands.BoomMessage));
 		}
@@ -96,9 +96,9 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		[Test]
 		public void TryExecute_LogsTheInvocationBeforeRunningIt()
 		{
-			_debugger.Commands.TryExecute(SampleCommands.BoomKey, InvocationRequest.From(Origin));
+			_debugger.Commands.TryExecute(SampleCommands.BoomPath, InvocationRequest.From(Origin));
 
-			Assert.That(_log.Infos, Has.Some.Contains(SampleCommands.BoomKey));
+			Assert.That(_log.Infos, Has.Some.Contains(SampleCommands.BoomPath));
 			Assert.That(_log.Infos, Has.Some.Contains(Origin));
 		}
 
@@ -106,7 +106,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		public void TryExecute_RefusesAReadonlyValueCommand()
 		{
 			bool executed = _debugger.Commands.TryExecute(
-				SampleCommands.BuildVersionKey,
+				SampleCommands.BuildVersionPath,
 				InvocationRequest.From(Origin));
 
 			Assert.That(executed, Is.False);
@@ -126,7 +126,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		public void TryExecute_RejectsTooManyArgumentsWithoutCallingTheCommand()
 		{
 			bool executed = _debugger.Commands.TryExecute(
-				SampleCommands.AddCoinsKey,
+				SampleCommands.AddCoinsPath,
 				InvocationRequest.From(Origin, 1, 2));
 
 			Assert.That(executed, Is.False);
@@ -150,7 +150,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		public void TryExecute_RejectsUnreadableText()
 		{
 			bool executed = _debugger.Commands.TryExecute(
-				SampleCommands.AddCoinsKey,
+				SampleCommands.AddCoinsPath,
 				InvocationRequest.From(Origin, "not a number"));
 
 			Assert.That(executed, Is.False);
@@ -162,7 +162,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		public void TryExecute_AcceptsADefinitionInPlaceOfAKey()
 		{
 			Assert.That(
-				_debugger.Catalog.TryGetDefinition(SampleCommands.AddCoinsKey, out CommandDefinition definition),
+				_debugger.Commands.TryGet(SampleCommands.AddCoinsPath, out CommandDefinition definition),
 				Is.True);
 
 			bool executed = _debugger.Commands.TryExecute(definition, InvocationRequest.From(Origin, 5));
@@ -174,7 +174,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		[Test]
 		public void TryGetValue_ReadsAReadonlyValueCommand()
 		{
-			bool read = _debugger.Commands.TryGetValue(SampleCommands.BuildVersionKey, out object value);
+			bool read = _debugger.Commands.TryGetValue(SampleCommands.BuildVersionPath, out object value);
 
 			Assert.That(read, Is.True);
 			Assert.That(value, Is.EqualTo("1.0.0"));
@@ -185,7 +185,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		{
 			_source.GodMode = true;
 
-			bool read = _debugger.Commands.TryGetValue(SampleCommands.GodModeKey, out object value);
+			bool read = _debugger.Commands.TryGetValue(SampleCommands.GodModePath, out object value);
 
 			Assert.That(read, Is.True);
 			Assert.That(value, Is.EqualTo(true));
@@ -194,7 +194,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		[Test]
 		public void TryGetValue_RefusesAnActionCommand()
 		{
-			bool read = _debugger.Commands.TryGetValue(SampleCommands.BoomKey, out object value);
+			bool read = _debugger.Commands.TryGetValue(SampleCommands.BoomPath, out object value);
 
 			Assert.That(read, Is.False);
 			Assert.That(value, Is.Null);

@@ -1,7 +1,9 @@
 #if OMNI_DEBUGGER
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
+using UnityEngine;
 
 namespace DTech.OmniDebugger.Editor
 {
@@ -10,9 +12,7 @@ namespace DTech.OmniDebugger.Editor
 		private const string ParentFolder = "Assets";
 		private const string GeneratedFolderName = "OmniDebuggerGenerated";
 		private const string GeneratedFolder = ParentFolder + "/" + GeneratedFolderName;
-		private const string ResourcesFolderName = "Resources";
-		private const string ResourcesFolder = GeneratedFolder + "/" + ResourcesFolderName;
-		private const string AssetPath = ResourcesFolder + "/" + ProjectOptionsAsset.ResourcesPath + ".asset";
+		private const string AssetPath = GeneratedFolder + "/" + ProjectOptionsAsset.AssetName + ".asset";
 
 		public int callbackOrder => 0;
 
@@ -31,9 +31,14 @@ namespace DTech.OmniDebugger.Editor
 			}
 
 			AssetDatabase.CreateFolder(ParentFolder, GeneratedFolderName);
-			AssetDatabase.CreateFolder(GeneratedFolder, ResourcesFolderName);
-			AssetDatabase.CreateAsset(ProjectOptionsAsset.Create(OmniDebuggerProjectSettings.instance.Options), AssetPath);
+
+			ProjectOptionsAsset asset = ProjectOptionsAsset.Create(OmniDebuggerProjectSettings.instance.Options);
+			AssetDatabase.CreateAsset(asset, AssetPath);
 			AssetDatabase.SaveAssets();
+
+			List<Object> preloaded = new List<Object>(PlayerSettings.GetPreloadedAssets());
+			preloaded.Add(asset);
+			PlayerSettings.SetPreloadedAssets(preloaded.ToArray());
 		}
 
 		public void OnPostprocessBuild(BuildReport report) => DeleteGenerated();
@@ -43,9 +48,32 @@ namespace DTech.OmniDebugger.Editor
 
 		private static void DeleteGenerated()
 		{
+			RemoveFromPreloaded();
+
 			if (AssetDatabase.IsValidFolder(GeneratedFolder))
 			{
 				AssetDatabase.DeleteAsset(GeneratedFolder);
+			}
+		}
+
+		private static void RemoveFromPreloaded()
+		{
+			Object[] preloaded = PlayerSettings.GetPreloadedAssets();
+			List<Object> kept = new List<Object>(preloaded.Length);
+
+			for (int i = 0; i < preloaded.Length; i++)
+			{
+				Object asset = preloaded[i];
+
+				if (asset != null && !(asset is ProjectOptionsAsset))
+				{
+					kept.Add(asset);
+				}
+			}
+
+			if (kept.Count != preloaded.Length)
+			{
+				PlayerSettings.SetPreloadedAssets(kept.ToArray());
 			}
 		}
 	}

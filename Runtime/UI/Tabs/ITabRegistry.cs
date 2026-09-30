@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace DTech.OmniDebugger.UI
 {
 	/// <summary>
-	/// Which tabs the panel offers. Info, Commands, Search, Logs and Windows are built in; register
+	/// Which tabs the panel offers. Commands, Logs and Info are built in; register
 	/// your own through <see cref="IOmniDebuggerHost.Tabs"/> right after constructing the debugger, and
 	/// every panel showing that debugger picks it up.
 	/// </summary>

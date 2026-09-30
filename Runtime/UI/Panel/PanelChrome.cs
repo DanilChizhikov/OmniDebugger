@@ -8,10 +8,12 @@ namespace DTech.OmniDebugger.UI
 	{
 		public event Action<OmniDebuggerTheme> OnThemeSelected;
 		public event Action OnCloseRequested;
+		public event Action OnPaletteRequested;
 
 		private const string Title = "OmniDebugger";
 		private const string VersionPrefix = "v";
 		private const string ThemeTooltip = "Switch theme";
+		private const string PaletteTooltip = "Find a command (Ctrl/Cmd+K)";
 
 		private readonly VisualElement _brand;
 		private readonly VisualElement _actions;
@@ -45,6 +47,8 @@ namespace DTech.OmniDebugger.UI
 			_brand.Add(UiBuild.Element(OmniDebuggerUiClasses.Spacer));
 
 			_actions = UiBuild.Element(OmniDebuggerUiClasses.Actions);
+
+			_actions.Add(UiBuild.IconButton(IconGlyph.Search, RequestPalette, PaletteTooltip));
 
 			_themeButton = UiBuild.IconButton(IconGlyph.Sun, CycleTheme, ThemeTooltip);
 			_actions.Add(_themeButton);
@@ -146,6 +150,7 @@ namespace DTech.OmniDebugger.UI
 		{
 			OnThemeSelected = null;
 			OnCloseRequested = null;
+			OnPaletteRequested = null;
 			_themes.Clear();
 			_brand.RemoveFromHierarchy();
 			_pageBar.RemoveFromHierarchy();
@@ -200,5 +205,8 @@ namespace DTech.OmniDebugger.UI
 		}
 
 		private void RequestClose() => OnCloseRequested?.Invoke();
+
+		private void RequestPalette() => OnPaletteRequested?.Invoke();
+
 	}
 }

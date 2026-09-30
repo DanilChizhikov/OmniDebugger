@@ -9,7 +9,7 @@ namespace DTech.OmniDebugger.UI
 		/// <summary>
 		/// A floating window over the game, which stays visible and takes taps around it. It starts
 		/// centred, moves when dragged by its top bar and is sized by
-		/// <see cref="OmniDebuggerPanelOptions.FloatingScale"/>. Floating windows stay on screen next to it.
+		/// <see cref="OmniDebuggerPanelOptions.FloatingScale"/>. Floating Info sections stay on screen next to it.
 		/// </summary>
 		Floating = 0,
 

@@ -11,14 +11,17 @@ namespace DTech.OmniDebugger
 		private readonly LogTypeMask _types;
 		private readonly int _limit;
 
-		/// <summary>Case-insensitive text looked up in the message and the stack trace. Blank matches all.</summary>
+		/// <summary>
+		/// Text looked up in the message and the stack trace, ignoring case. Every word has to appear, in any
+		/// order; a phrase in double quotes has to appear as written. Blank matches all.
+		/// </summary>
 		public string Text { get; }
 
-		/// <summary>Tags a record must carry. Null or empty matches all.</summary>
+		/// <summary>A record has to carry at least one of these tags, ignoring case. Null or empty matches all.</summary>
 		public IReadOnlyCollection<string> Tags { get; }
 
-		/// <summary>Whether a record needs every tag in <see cref="Tags"/> or any one of them.</summary>
-		public LogTagMode TagMode { get; }
+		/// <summary>A record carrying any of these tags is left out, ignoring case.</summary>
+		public IReadOnlyCollection<string> ExcludedTags { get; }
 
 		/// <summary>Which kinds of record match. <see cref="LogTypeMask.None"/> reads as all.</summary>
 		public LogTypeMask Types => _types == LogTypeMask.None ? LogTypeMask.All : _types;
@@ -35,28 +38,41 @@ namespace DTech.OmniDebugger
 		public LogQuery(
 			string text = null,
 			IReadOnlyCollection<string> tags = null,
-			LogTagMode tagMode = LogTagMode.All,
 			LogTypeMask types = LogTypeMask.All,
 			long afterId = 0,
 			long beforeId = 0,
-			int limit = DefaultLimit)
+			int limit = DefaultLimit,
+			IReadOnlyCollection<string> excludedTags = null)
 		{
 			Text = text;
 			Tags = tags;
-			TagMode = tagMode;
+			ExcludedTags = excludedTags;
 			_types = types;
 			AfterId = afterId;
 			BeforeId = beforeId;
 			_limit = limit;
 		}
 
+		/// <summary>
+		/// Reads the filter syntax the Logs tab's filter bar takes: <c>tag:Net</c> carries the tag (several match any
+		/// of them), <c>-tag:Ads</c> does not, <c>type:error</c> keeps a kind (<c>log</c>, <c>warning</c> or
+		/// <c>error</c>; asserts and exceptions count as errors) and <c>-type:log</c> leaves one out; anything else is
+		/// text, as <see cref="Text"/> reads it. Values can be quoted: <c>tag:"Game Loop"</c>. Unknown
+		/// <c>type:</c> values are read as text.
+		/// </summary>
+		public static LogQuery Parse(string filter, int limit = DefaultLimit)
+		{
+			ParsedLogQuery parsed = LogQuerySyntax.Parse(filter);
+			return new LogQuery(parsed.Text, parsed.Tags, parsed.Types, limit: limit, excludedTags: parsed.ExcludedTags);
+		}
+
 		/// <summary>The same filter, paging forward from <paramref name="id"/>.</summary>
-		public LogQuery After(long id) => new (Text, Tags, TagMode, _types, id, 0, _limit);
+		public LogQuery After(long id) => new (Text, Tags, _types, id, 0, _limit, ExcludedTags);
 
 		/// <summary>The same filter, paging back from <paramref name="id"/>.</summary>
-		public LogQuery Before(long id) => new (Text, Tags, TagMode, _types, 0, id, _limit);
+		public LogQuery Before(long id) => new (Text, Tags, _types, 0, id, _limit, ExcludedTags);
 
 		/// <summary>The same filter with another page size.</summary>
-		public LogQuery WithLimit(int limit) => new (Text, Tags, TagMode, _types, AfterId, BeforeId, limit);
+		public LogQuery WithLimit(int limit) => new (Text, Tags, _types, AfterId, BeforeId, limit, ExcludedTags);
 	}
 }

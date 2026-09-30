@@ -6,28 +6,24 @@ namespace DTech.OmniDebugger.UI
 
 		public string Origin { get; }
 
-		public ArgumentMemory Arguments { get; }
-
-		public CommandKeySet Favorites { get; }
-
-		public CommandKeySet Pins { get; }
+		public CommandStateStore Commands { get; }
 
 		public PopupLayer Popups { get; }
+
+		public bool HostsOverlays { get; }
 
 		public ViewServices(
 			IOmniDebuggerHost debugger,
 			string origin,
-			ArgumentMemory arguments,
-			CommandKeySet favorites,
-			CommandKeySet pins,
-			PopupLayer popups)
+			CommandStateStore commands,
+			PopupLayer popups,
+			bool hostsOverlays = false)
 		{
 			Debugger = debugger;
 			Origin = origin;
-			Arguments = arguments;
-			Favorites = favorites;
-			Pins = pins;
+			Commands = commands;
 			Popups = popups;
+			HostsOverlays = hostsOverlays;
 		}
 	}
 }

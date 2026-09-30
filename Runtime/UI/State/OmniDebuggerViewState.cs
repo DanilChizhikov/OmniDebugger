@@ -28,11 +28,7 @@ namespace DTech.OmniDebugger.UI
 		/// <summary>Whether the panel was open. Restored on a rebuild, never persisted to disk.</summary>
 		public bool IsOpen { get; set; }
 
-		internal ArgumentMemory Arguments { get; } = new ();
-
-		internal CommandKeySet Favorites { get; } = new ();
-
-		internal CommandKeySet Pins { get; } = new ();
+		internal CommandStateStore Commands { get; } = new ();
 
 		internal Vector2 FloatingOffset { get; set; }
 
@@ -62,9 +58,7 @@ namespace DTech.OmniDebugger.UI
 			Landscape = false;
 			IsOpen = false;
 			FloatingOffset = Vector2.zero;
-			Arguments.Clear();
-			Favorites.Clear();
-			Pins.Clear();
+			Commands.Clear();
 			_tabs.Clear();
 		}
 	}

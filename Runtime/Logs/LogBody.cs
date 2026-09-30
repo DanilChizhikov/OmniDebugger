@@ -13,9 +13,7 @@ namespace DTech.OmniDebugger
 
 		public IReadOnlyList<string> Tags { get; }
 
-		public bool IsMessageTruncated { get; }
-
-		public bool IsStackTraceTruncated { get; }
+		public LogFlags Flags { get; }
 
 		public int Hash { get; }
 
@@ -36,9 +34,9 @@ namespace DTech.OmniDebugger
 			Type = key.Type;
 			Message = key.IsMessageTruncated ? key.Message.Substring(0, key.MessageLength) : key.Message;
 			StackTrace = key.IsStackTraceTruncated ? key.StackTrace.Substring(0, key.StackTraceLength) : key.StackTrace;
-			Tags = LogTagParser.Parse(Message);
-			IsMessageTruncated = key.IsMessageTruncated;
-			IsStackTraceTruncated = key.IsStackTraceTruncated;
+			Tags = LogStore.ParseTags(Message, key.Type);
+			Flags = (key.IsMessageTruncated ? LogFlags.MessageTruncated : LogFlags.None) |
+				(key.IsStackTraceTruncated ? LogFlags.StackTraceTruncated : LogFlags.None);
 			Hash = key.Hash;
 			References = 1;
 			Next = next;

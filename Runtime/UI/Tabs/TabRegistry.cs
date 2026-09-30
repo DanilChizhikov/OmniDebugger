@@ -28,11 +28,9 @@ namespace DTech.OmniDebugger.UI
 		{
 			_log = log ?? throw new ArgumentNullException(nameof(log));
 
-			_registered.Add(new InfoTabFactory());
 			_registered.Add(new CommandsTabFactory());
-			_registered.Add(new SearchTabFactory());
 			_registered.Add(new LogsTabFactory());
-			_registered.Add(new WindowsTabFactory());
+			_registered.Add(new InfoTabFactory());
 		}
 
 		public bool Register(IOmniDebuggerTabFactory factory)

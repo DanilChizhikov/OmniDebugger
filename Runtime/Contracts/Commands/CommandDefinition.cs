@@ -18,14 +18,14 @@ namespace DTech.OmniDebugger
 
 		private readonly string[] _searchTags;
 
-		/// <summary>Stable identifier, <c>"GroupName/Name"</c>. See <see cref="CommandKey"/>.</summary>
-		public string Key { get; }
+		/// <summary>Stable identifier, <c>"Group/Subgroup/Name"</c>. See <see cref="CommandPath"/>.</summary>
+		public string Path { get; }
 
 		/// <summary>Display name, unique within the group.</summary>
 		public string Name { get; }
 
-		/// <summary>Group this command is listed under.</summary>
-		public string GroupName { get; }
+		/// <summary>Path of the group this command is listed under, <c>"Group/Subgroup"</c>.</summary>
+		public string GroupPath { get; }
 
 		/// <summary>How the command behaves when called.</summary>
 		public CommandKind Kind { get; }
@@ -46,39 +46,33 @@ namespace DTech.OmniDebugger
 		/// <summary>Tags declared with <see cref="DebugTagsAttribute"/>, without the name and group. Never null.</summary>
 		public IReadOnlyList<string> Tags { get; }
 
-		/// <summary>The icon declared with <see cref="DebugIconAttribute"/>; empty when there is none.</summary>
-		public CommandIcon Icon { get; }
+		/// <summary>
+		/// The icon declared with <see cref="DebugIconAttribute"/>: the name of a built-in glyph, or a key the
+		/// icon provider resolves. Null when there is none.
+		/// </summary>
+		public string IconKey { get; }
 
+		/// <summary>Describes the command <paramref name="name"/> in the group <paramref name="groupPath"/>.</summary>
 		public CommandDefinition(
 			string name,
-			string groupName,
+			string groupPath,
 			CommandKind kind,
 			int sortOrder = DefaultSortOrder,
 			IReadOnlyList<ArgumentDefinition> arguments = null,
 			IEnumerable<string> tags = null,
 			string description = null,
-			CommandIcon icon = default)
+			string iconKey = null)
 		{
-			if (string.IsNullOrWhiteSpace(name))
-			{
-				throw new ArgumentException("Command name cannot be null or whitespace.", nameof(name));
-			}
-
-			if (string.IsNullOrWhiteSpace(groupName))
-			{
-				throw new ArgumentException("Group name cannot be null or whitespace.", nameof(groupName));
-			}
-
-			Name = name;
-			GroupName = groupName;
+			Path = CommandPath.Combine(groupPath, name);
+			Name = CommandPath.GetName(Path);
+			GroupPath = CommandPath.GetParent(Path);
 			Kind = kind;
 			SortOrder = sortOrder;
 			Description = string.IsNullOrWhiteSpace(description) ? null : description;
 			Arguments = arguments ?? _noArguments;
-			Icon = icon;
-			Key = CommandKey.Create(groupName, name);
+			IconKey = string.IsNullOrWhiteSpace(iconKey) ? null : iconKey.Trim();
 			Tags = CollectDeclaredTags(tags);
-			_searchTags = CollectDefaultTerms(name, groupName, tags);
+			_searchTags = CollectDefaultTerms(Name, GroupPath, tags);
 		}
 		
 		/// <inheritdoc/>
@@ -90,7 +84,7 @@ namespace DTech.OmniDebugger
 			}
 		}
 
-		public override string ToString() => $"{Key} ({Kind})";
+		public override string ToString() => $"{Path} ({Kind})";
 
 		private static string[] CollectDeclaredTags(IEnumerable<string> tags)
 		{
@@ -119,9 +113,18 @@ namespace DTech.OmniDebugger
 			return result == null ? _noTags : result.ToArray();
 		}
 
-		private static string[] CollectDefaultTerms(string name, string groupName, IEnumerable<string> tags)
+		private static string[] CollectDefaultTerms(string name, string groupPath, IEnumerable<string> tags)
 		{
-			List<string> result = new List<string>(4) { name, groupName };
+			List<string> result = new List<string>(4) { name };
+
+			string[] groups = CommandPath.Split(groupPath);
+			for (int i = 0; i < groups.Length; i++)
+			{
+				if (!result.Contains(groups[i]))
+				{
+					result.Add(groups[i]);
+				}
+			}
 
 			if (tags != null)
 			{

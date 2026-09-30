@@ -147,6 +147,12 @@ namespace DTech.OmniDebugger.UI
 			tab.Refresh();
 		}
 
+		public bool TryGetTab(string id, out IOmniDebuggerTab tab)
+		{
+			tab = id != null && _entries.TryGetValue(id, out Entry entry) ? entry.Tab : null;
+			return tab != null;
+		}
+
 		public bool TryGetSelectedFactory(out IOmniDebuggerTabFactory factory)
 		{
 			if (_disposed || _selectedId == null)

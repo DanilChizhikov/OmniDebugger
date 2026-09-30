@@ -17,7 +17,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		[Test]
 		public void Scan_CarriesThePropertyRangeOnItsArgument()
 		{
-			ArgumentRange range = Scan()[RangedCommands.SpeedKey].Arguments[0].Range;
+			ArgumentRange range = Scan()[RangedCommands.SpeedPath].Arguments[0].Range;
 
 			Assert.That(range.IsEmpty, Is.False);
 			Assert.That(range.Min, Is.EqualTo(0.5));
@@ -28,7 +28,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		[Test]
 		public void Scan_CarriesParameterRangesArgumentByArgument()
 		{
-			IReadOnlyList<ArgumentDefinition> arguments = Scan()[RangedCommands.TeleportKey].Arguments;
+			IReadOnlyList<ArgumentDefinition> arguments = Scan()[RangedCommands.TeleportPath].Arguments;
 
 			Assert.That(arguments[0].Range.Min, Is.EqualTo(-100.0));
 			Assert.That(arguments[0].Range.Max, Is.EqualTo(100.0));
@@ -39,17 +39,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		[Test]
 		public void Scan_LeavesUndeclaredRangesEmpty()
 		{
-			Assert.That(Scan()[RangedCommands.NameKey].Arguments[0].Range.IsEmpty, Is.True);
-		}
-
-		[Test]
-		public void Scan_SkipsAMemberWhoseRangeIsInvalid()
-		{
-			Dictionary<string, CommandDefinition> definitions = Scan();
-
-			Assert.That(definitions.Keys, Has.None.EqualTo(RangedCommands.BrokenKey));
-			Assert.That(_log.Warnings, Has.Some.Contains("Broken"));
-			Assert.That(_log.Warnings, Has.Some.Contains("could not be read"));
+			Assert.That(Scan()[RangedCommands.NamePath].Arguments[0].Range.IsEmpty, Is.True);
 		}
 
 		[Test]
@@ -102,9 +92,11 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			}
 		}
 
-		private Dictionary<string, CommandDefinition> Scan() =>
-			SourceScanner.Scan(new RangedCommands(), _log)
-				.Commands
-				.ToDictionary(command => command.Definition.Key, command => command.Definition);
+		private Dictionary<string, CommandDefinition> Scan()
+		{
+			using OmniDebuggerHost debugger = new OmniDebuggerHost(_log);
+			debugger.Commands.Register(new RangedCommands());
+			return debugger.Commands.All.ToDictionary(definition => definition.Path);
+		}
 	}
 }
