@@ -247,7 +247,7 @@ cheats.Dispose();   // takes the whole batch away again
 | `Group(path)` | Puts the commands that follow in that group |
 | `Button(name, action)` | An action; `Button<T>`, `Button<T1, T2>` and `Button<T1, T2, T3>` take arguments, each described by an `ArgumentBuilder` (`Name`, `Default`, `Optional`, `Range`, `Step`) |
 | `Toggle(name, get, set)` | A switch bound to a `bool` |
-| `Slider(name, get, set, min, max, step)` | A slider bound to a `float` or an `int` |
+| `Slider(name, get, set, min, max)` | A slider bound to a `float` or an `int`; the `float` one also takes a `step` |
 | `Dropdown<TEnum>(name, get, set)` | A dropdown bound to an enum |
 | `Field<T>(name, get, set)` | A value edited with whatever control fits `T` |
 | `Value<T>(name, get)` | A read-only value, shown live |
@@ -479,9 +479,9 @@ under `Panel.Open` and the lock under `Panel.Lock`.
 The settings live in `ProjectSettings/OmniDebuggerSettings.asset`: versioned with the project, nothing added to
 `Assets`. Play mode reads them live: a debugger built without options in code, and its panel, pick up every edit
 made on the page while the game runs. A build gets a snapshot — right before it
-starts, the settings are written to a generated `Resources` asset, which is deleted again once the build is done.
-That only happens while `OMNI_DEBUGGER` is on for the target, so a release build carries neither the settings nor
-the themes and panel settings they point at.
+starts, the settings are written to a generated asset and added to the player's preloaded assets, and both are
+undone once the build is done. That only happens while `OMNI_DEBUGGER` is on for the target, so a release build
+carries neither the settings nor the themes and panel settings they point at.
 
 `new OmniDebuggerHost()` reads these settings, and so does `OmniDebuggerOptions.Default`, which hands out a copy — change
 a few values in code and pass it on:

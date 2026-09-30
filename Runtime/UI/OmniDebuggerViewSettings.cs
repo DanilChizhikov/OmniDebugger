@@ -8,7 +8,7 @@ namespace DTech.OmniDebugger.UI
 	/// </summary>
 	public readonly struct OmniDebuggerViewSettings
 	{
-		/// <summary>Origin reported to <see cref="ICommandInvoker"/> when none was given.</summary>
+		/// <summary>Origin put into <see cref="InvocationRequest.Origin"/> when none was given.</summary>
 		public const string DefaultOrigin = "Panel";
 
 		private readonly string _origin;
