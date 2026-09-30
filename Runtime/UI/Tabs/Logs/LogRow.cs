@@ -10,6 +10,7 @@ namespace DTech.OmniDebugger.UI
 		private readonly Label _type;
 		private readonly Label _tags;
 		private readonly Label _message;
+		private readonly Label _repeats;
 		private readonly Action<LogRecord> _copy;
 
 		private LogRecord _record;
@@ -31,6 +32,8 @@ namespace DTech.OmniDebugger.UI
 			meta.Add(_time);
 			meta.Add(_type);
 			meta.Add(_tags);
+			_repeats = UiBuild.Label(string.Empty, OmniDebuggerUiClasses.LogRepeats);
+			meta.Add(_repeats);
 			_message = UiBuild.Label(string.Empty, OmniDebuggerUiClasses.LogMessage);
 			body.Add(meta);
 			body.Add(_message);
@@ -49,6 +52,9 @@ namespace DTech.OmniDebugger.UI
 			string tags = LogFormat.TagLine(record);
 			_tags.text = tags;
 			UiBuild.SetVisible(_tags, tags.Length > 0);
+
+			_repeats.text = record.RepeatCount > 1 ? LogFormat.Repeats(record.RepeatCount) : string.Empty;
+			UiBuild.SetVisible(_repeats, record.RepeatCount > 1);
 
 			LogTypeMask kind = LogFilter.MaskOf(record.Type);
 			_card.EnableInClassList(OmniDebuggerUiClasses.LogWarning, kind == LogTypeMask.Warning);

@@ -23,17 +23,20 @@ namespace DTech.OmniDebugger.UI
 		private const float NarrowToolbarWidth = 570.0f;
 		private const string FilterStateKey = "filter";
 		private const string NoLogsMessage = "No logs match.";
+		private const string SearchPlaceholder = "Filter — tag:Net -tag:Ads type:error text";
+		private const string ExcludePrefix = "−";
 
 		private readonly ILogFeed _feed;
 		private readonly LogsFilterState _filter;
 		private readonly List<LogRecord> _items = new ();
 		private readonly List<LogRecord> _page = new ();
+		private readonly List<string> _knownTags = new ();
+		private readonly List<string> _scratchTags = new ();
 		private readonly VisualElement _root;
 		private readonly VisualElement _listPage;
 		private readonly VisualElement _toolbar;
-		private readonly LogTagsPage _tagsPage;
+		private readonly ChipBar _chips;
 		private readonly TextField _search;
-		private readonly Button _tagsButton;
 		private readonly Button _logFilter;
 		private readonly Button _warningFilter;
 		private readonly Button _errorFilter;
@@ -72,8 +75,8 @@ namespace DTech.OmniDebugger.UI
 			_toolbar.RegisterCallback<GeometryChangedEvent>(OnToolbarGeometryChanged);
 			_listPage.Add(_toolbar);
 
-			_search = UiBuild.SearchBox(_toolbar, "Search logs…");
-			_search.SetValueWithoutNotify(_filter.Text);
+			_search = UiBuild.SearchBox(_toolbar, SearchPlaceholder);
+			_search.SetValueWithoutNotify(_filter.Query);
 			_search.RegisterValueChangedCallback(OnSearchChanged);
 
 			VisualElement controls = UiBuild.Element(OmniDebuggerUiClasses.LogsControls);
@@ -83,10 +86,12 @@ namespace DTech.OmniDebugger.UI
 			_warningFilter = CreateFilter(controls, IconGlyph.Warning, OmniDebuggerUiClasses.LogsFilterWarning, LogTypeMask.Warning);
 			_errorFilter = CreateFilter(controls, IconGlyph.Error, OmniDebuggerUiClasses.LogsFilterError, LogTypeMask.Error);
 
-			_tagsButton = UiBuild.TextButton("Tags", ShowTags, OmniDebuggerUiClasses.LogsTags);
-			controls.Add(_tagsButton);
 			controls.Add(UiBuild.IconButton(IconGlyph.Copy, CopyAll, "Copy all"));
 			controls.Add(UiBuild.IconButton(IconGlyph.Trash, ClearFeed, "Clear"));
+
+			_chips = new ChipBar();
+			_chips.AddToClassList(OmniDebuggerUiClasses.LogsChips);
+			_listPage.Add(_chips);
 
 			_list = new ListView(_items, EstimatedRowHeight, MakeRow, BindRow)
 			{
@@ -117,8 +122,6 @@ namespace DTech.OmniDebugger.UI
 			_toast.pickingMode = PickingMode.Ignore;
 			_root.Add(_toast);
 
-			_tagsPage = new LogTagsPage(_filter, ShowList, OnFilterChanged);
-
 			_poll = _root.schedule.Execute(Poll).Every(PollMs);
 			_poll.Pause();
 			_searchDebounce = _root.schedule.Execute(ApplySearch);
@@ -129,6 +132,7 @@ namespace DTech.OmniDebugger.UI
 			_settle.Pause();
 
 			RefreshFilterButtons();
+			RefreshChips();
 		}
 
 		public void OnOpen()
@@ -183,6 +187,24 @@ namespace DTech.OmniDebugger.UI
 			}
 		}
 
+		private static bool SameTags(List<string> left, List<string> right)
+		{
+			if (left.Count != right.Count)
+			{
+				return false;
+			}
+
+			for (int i = 0; i < left.Count; i++)
+			{
+				if (!string.Equals(left[i], right[i], StringComparison.Ordinal))
+				{
+					return false;
+				}
+			}
+
+			return true;
+		}
+
 		private Button CreateFilter(VisualElement row, IconGlyph glyph, string className, LogTypeMask type)
 		{
 			Button button = new Button(() => ToggleType(type));
@@ -232,6 +254,7 @@ namespace DTech.OmniDebugger.UI
 			{
 				_seenVersion = version;
 				RefreshCounts();
+				RefreshSuggestions();
 
 				if (_items.Count == 0 || _feed.Count == 0)
 				{
@@ -267,7 +290,15 @@ namespace DTech.OmniDebugger.UI
 
 			_pending = false;
 			_page.Clear();
-			bool more = _feed.Query(_filter.ToQuery(PageSize).After(_items[_items.Count - 1].Id), _page);
+
+			LogRecord last = _items[_items.Count - 1];
+			if (last.Id <= 1)
+			{
+				Reload();
+				return true;
+			}
+
+			bool more = _feed.Query(_filter.ToQuery(PageSize + 1).After(last.Id - 1), _page);
 
 			if (more)
 			{
@@ -275,8 +306,21 @@ namespace DTech.OmniDebugger.UI
 				return false;
 			}
 
+			bool repeated = false;
+			if (_page.Count > 0 && _page[0].Id == last.Id)
+			{
+				repeated = _page[0].RepeatCount != last.RepeatCount;
+				_items[_items.Count - 1] = _page[0];
+				_page.RemoveAt(0);
+			}
+
 			if (_page.Count == 0)
 			{
+				if (repeated)
+				{
+					_list.RefreshItem(_items.Count - 1);
+				}
+
 				return false;
 			}
 
@@ -441,32 +485,97 @@ namespace DTech.OmniDebugger.UI
 
 		private void ApplySearch()
 		{
-			_filter.Text = _search.value ?? string.Empty;
+			_filter.Query = _search.value ?? string.Empty;
 			OnFilterChanged();
 		}
 
 		private void ToggleType(LogTypeMask type)
 		{
-			LogTypeMask types = _filter.Types ^ type;
-			_filter.Types = types == LogTypeMask.None ? LogTypeMask.All : types;
+			_filter.ToggleType(type);
+			ShowQuery();
+		}
+
+		private void AddTag(string tag)
+		{
+			_filter.AddTag(tag, excluded: false);
+			ShowQuery();
+		}
+
+		private void RemoveTerm(LogQueryToken token)
+		{
+			_filter.Remove(token);
+			ShowQuery();
+		}
+
+		private void ShowQuery()
+		{
+			_searchDebounce.Pause();
+			_search.SetValueWithoutNotify(_filter.Query);
 			OnFilterChanged();
 		}
 
 		private void OnFilterChanged()
 		{
 			RefreshFilterButtons();
+			RefreshChips();
 			Reload();
 		}
 
 		private void RefreshFilterButtons()
 		{
-			_logFilter.EnableInClassList(OmniDebuggerUiClasses.LogsFilterActive, (_filter.Types & LogTypeMask.Log) != 0);
-			_warningFilter.EnableInClassList(OmniDebuggerUiClasses.LogsFilterActive, (_filter.Types & LogTypeMask.Warning) != 0);
-			_errorFilter.EnableInClassList(OmniDebuggerUiClasses.LogsFilterActive, (_filter.Types & LogTypeMask.Error) != 0);
+			LogTypeMask types = _filter.Types;
+			_logFilter.EnableInClassList(OmniDebuggerUiClasses.LogsFilterActive, (types & LogTypeMask.Log) != 0);
+			_warningFilter.EnableInClassList(OmniDebuggerUiClasses.LogsFilterActive, (types & LogTypeMask.Warning) != 0);
+			_errorFilter.EnableInClassList(OmniDebuggerUiClasses.LogsFilterActive, (types & LogTypeMask.Error) != 0);
+		}
 
-			int selected = _filter.Tags.Count;
-			_tagsButton.text = selected > 0 ? $"Tags ({selected})" : "Tags";
-			_tagsButton.EnableInClassList(OmniDebuggerUiClasses.ButtonPrimary, selected > 0);
+		private void RefreshChips()
+		{
+			_chips.ClearChips();
+
+			foreach (LogQueryToken token in _filter.GetTerms())
+			{
+				LogQueryToken captured = token;
+				string key = token.Kind == LogQueryTokenKind.Tag ? LogQuerySyntax.TagKey : LogQuerySyntax.TypeKey;
+				string text = (token.Negated ? ExcludePrefix : string.Empty) + key + ":" + token.Value;
+				_chips.AddRemovableChip(text, () => RemoveTerm(captured), token.Negated ? OmniDebuggerUiClasses.ChipNegated : null);
+			}
+
+			bool separated = _chips.Count == 0;
+
+			for (int i = 0; i < _knownTags.Count; i++)
+			{
+				string tag = _knownTags[i];
+				if (_filter.HasTag(tag))
+				{
+					continue;
+				}
+
+				if (!separated)
+				{
+					_chips.AddSeparator();
+					separated = true;
+				}
+
+				_chips.AddChip(tag, () => AddTag(tag), selected: false, OmniDebuggerUiClasses.ChipSuggestion);
+			}
+
+			UiBuild.SetVisible(_chips, _chips.Count > 0);
+		}
+
+		private void RefreshSuggestions()
+		{
+			_scratchTags.Clear();
+			_feed.GetKnownTags(_scratchTags);
+
+			if (SameTags(_scratchTags, _knownTags))
+			{
+				return;
+			}
+
+			_knownTags.Clear();
+			_knownTags.AddRange(_scratchTags);
+			RefreshChips();
 		}
 
 		private void RefreshCounts()
@@ -482,20 +591,6 @@ namespace DTech.OmniDebugger.UI
 			bool empty = _items.Count == 0;
 			UiBuild.SetVisible(_empty, empty);
 			UiBuild.SetVisible(_list, !empty);
-		}
-
-		private void ShowTags()
-		{
-			_listPage.RemoveFromHierarchy();
-			_root.Insert(0, _tagsPage.Root);
-			_tagsPage.Show(_feed);
-		}
-
-		private void ShowList()
-		{
-			_tagsPage.Root.RemoveFromHierarchy();
-			_root.Insert(0, _listPage);
-			RefreshFilterButtons();
 		}
 
 		private void ClearFeed()

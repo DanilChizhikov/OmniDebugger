@@ -81,8 +81,11 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 
 			Assert.That(Messages(store, new LogQuery(types: LogTypeMask.Error)), Is.EqualTo(new[] { "[Net] [Auth] login failed" }));
 			Assert.That(Messages(store, new LogQuery(text: "REFRESH()")), Is.EqualTo(new[] { "[Auth] token refreshed" }), "the stack trace is searched too");
-			Assert.That(Messages(store, new LogQuery(tags: new[] { "Net", "Auth" })).Count, Is.EqualTo(1));
-			Assert.That(Messages(store, new LogQuery(tags: new[] { "Net", "Auth" }, tagMode: LogTagMode.Any)).Count, Is.EqualTo(3));
+			Assert.That(Messages(store, new LogQuery(tags: new[] { "Net", "Auth" })).Count, Is.EqualTo(3), "tags match any of them");
+			Assert.That(Messages(store, new LogQuery(tags: new[] { "net" })).Count, Is.EqualTo(2), "tags ignore case");
+			Assert.That(Messages(store, new LogQuery(excludedTags: new[] { "Auth" })), Is.EqualTo(new[] { "[Net] ping" }));
+			Assert.That(Messages(store, new LogQuery(text: "login net")), Is.EqualTo(new[] { "[Net] [Auth] login failed" }), "every word has to appear");
+			Assert.That(Messages(store, new LogQuery(text: "\"login net\"")), Is.Empty, "a quoted phrase has to appear as written");
 		}
 
 		[Test]
@@ -95,8 +98,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			store.Query(default, records);
 
 			Assert.That(records[0].Message.Length, Is.EqualTo(LogStore.MaxMessageLength));
-			Assert.That(records[0].IsMessageTruncated, Is.True);
-			Assert.That(records[0].IsStackTraceTruncated, Is.False);
+			Assert.That(records[0].Flags, Is.EqualTo(LogFlags.MessageTruncated));
 		}
 
 		[Test]
@@ -119,17 +121,45 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		{
 			LogStore store = new LogStore();
 			store.Add(Fresh("[Net] ping"), Fresh("at Ping()"), LogType.Log, _time);
+			store.Add("between", string.Empty, LogType.Log, _time);
 			store.Add(Fresh("[Net] ping"), Fresh("at Ping()"), LogType.Log, _time);
 
 			List<LogRecord> records = new List<LogRecord>();
-			store.Query(default, records);
+			store.Query(new LogQuery(text: "ping"), records);
 
-			Assert.That(store.Count, Is.EqualTo(2));
-			Assert.That(store.BodyCount, Is.EqualTo(1));
+			Assert.That(store.Count, Is.EqualTo(3));
+			Assert.That(store.BodyCount, Is.EqualTo(2));
 			Assert.That(records[1].Message, Is.SameAs(records[0].Message));
 			Assert.That(records[1].StackTrace, Is.SameAs(records[0].StackTrace));
 			Assert.That(records[1].Tags, Is.SameAs(records[0].Tags), "tags are parsed once per distinct message");
 			Assert.That(records[1].Id, Is.GreaterThan(records[0].Id));
+		}
+
+		[Test]
+		public void Add_FoldsABackToBackRepeatIntoTheRecordBeforeIt()
+		{
+			LogStore store = new LogStore();
+			DateTime later = _time.AddSeconds(5);
+
+			store.Add("tick", string.Empty, LogType.Error, _time);
+			long version = store.Version;
+			store.Add("tick", string.Empty, LogType.Error, _time.AddSeconds(1));
+			store.Add("tick", string.Empty, LogType.Error, later);
+			store.Add("done", string.Empty, LogType.Log, later);
+			store.Add("tick", string.Empty, LogType.Error, later);
+
+			List<LogRecord> records = new List<LogRecord>();
+			store.Query(default, records);
+
+			Assert.That(records.ConvertAll(record => record.RepeatCount), Is.EqualTo(new[] { 3, 1, 1 }));
+			Assert.That(records[0].TimestampUtc, Is.EqualTo(_time));
+			Assert.That(records[0].LastTimestampUtc, Is.EqualTo(later));
+			Assert.That(store.Count, Is.EqualTo(3));
+			Assert.That(store.Version, Is.GreaterThan(version), "a repeat is news to a reader too");
+			Assert.That(store.ErrorCount, Is.EqualTo(4), "every repeat of an error counts");
+
+			store.CountByType(out int logs, out _, out int errors);
+			Assert.That((logs, errors), Is.EqualTo((1, 2)), "counts are per record");
 		}
 
 		[Test]
@@ -153,10 +183,11 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			LogStore store = new LogStore(capacity: 2);
 			store.Add(Fresh("first"), string.Empty, LogType.Log, _time);
 			store.Add(Fresh("second"), string.Empty, LogType.Log, _time);
+			store.Add(Fresh("third"), string.Empty, LogType.Log, _time);
 			store.Add(Fresh("second"), string.Empty, LogType.Log, _time);
 
-			Assert.That(Messages(store, default), Is.EqualTo(new[] { "second", "second" }));
-			Assert.That(store.BodyCount, Is.EqualTo(1));
+			Assert.That(Messages(store, default), Is.EqualTo(new[] { "third", "second" }));
+			Assert.That(store.BodyCount, Is.EqualTo(2));
 		}
 
 		[Test]
@@ -169,7 +200,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 
 			Assert.That(Messages(store, default), Is.EqualTo(new[] { "bbbb", "cccc" }));
 
-			store.Add("cccc", string.Empty, LogType.Log, _time);
+			store.Add("bbbb", string.Empty, LogType.Log, _time);
 			store.Add("cccc", string.Empty, LogType.Log, _time);
 
 			Assert.That(store.Count, Is.EqualTo(4));
@@ -184,6 +215,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			for (int i = 0; i < 3; i++)
 			{
 				store.Add("[Net] retry", string.Empty, LogType.Warning, _time);
+				store.Add("waiting", string.Empty, LogType.Log, _time);
 			}
 
 			store.Add("done", string.Empty, LogType.Log, _time);
@@ -192,8 +224,8 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			List<string> tags = new List<string>();
 			store.GetKnownTags(tags);
 
-			Assert.That((logs, warnings, errors), Is.EqualTo((1, 2, 0)));
-			Assert.That(tags, Is.EqualTo(new[] { "Net" }), "two records still carry the tag");
+			Assert.That((logs, warnings, errors), Is.EqualTo((2, 1, 0)));
+			Assert.That(tags, Is.EqualTo(new[] { "Net" }), "a record still carries the tag");
 		}
 
 		[Test]
@@ -201,8 +233,8 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		{
 			LogStore store = new LogStore();
 			store.Add("[Net] ping", string.Empty, LogType.Log, _time);
-			store.Add("[Net] ping", string.Empty, LogType.Log, _time);
 			store.Add("pong", string.Empty, LogType.Log, _time);
+			store.Add("[Net] ping", string.Empty, LogType.Log, _time);
 
 			Assert.That(Messages(store, new LogQuery(text: "ping")).Count, Is.EqualTo(2));
 			Assert.That(Messages(store, new LogQuery(text: "pong")), Is.EqualTo(new[] { "pong" }));

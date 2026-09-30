@@ -1,6 +1,6 @@
 namespace DTech.OmniDebugger.UI
 {
-	internal sealed class LogsTabFactory : IOmniDebuggerTabFactory, IBuiltInTabIcon
+	internal sealed class LogsTabFactory : IOmniDebuggerTabFactory
 	{
 		private const string TabId = "logs";
 
@@ -8,11 +8,9 @@ namespace DTech.OmniDebugger.UI
 
 		public string DisplayName => "Logs";
 
-		public int Order => 30;
+		public int Order => 10;
 
-		public CommandIcon Icon => default;
-
-		public IconGlyph Glyph => IconGlyph.Terminal;
+		public string Icon => "terminal";
 
 		public IOmniDebuggerTab CreateTab(in OmniDebuggerTabContext context) => new LogsTab(context);
 	}

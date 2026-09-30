@@ -2,17 +2,22 @@ using System;
 
 namespace DTech.OmniDebugger
 {
-	internal readonly struct LogSlot
+	internal struct LogSlot
 	{
 		public readonly long Id;
 		public readonly DateTime TimestampUtc;
 		public readonly LogBody Body;
+
+		public DateTime LastTimestampUtc;
+		public int RepeatCount;
 
 		public LogSlot(long id, DateTime timestampUtc, LogBody body)
 		{
 			Id = id;
 			TimestampUtc = timestampUtc;
 			Body = body;
+			LastTimestampUtc = timestampUtc;
+			RepeatCount = 1;
 		}
 
 		public LogRecord ToRecord() =>
@@ -23,7 +28,8 @@ namespace DTech.OmniDebugger
 				Body.Message,
 				Body.StackTrace,
 				Body.Tags,
-				Body.IsMessageTruncated,
-				Body.IsStackTraceTruncated);
+				Body.Flags,
+				RepeatCount,
+				LastTimestampUtc);
 	}
 }
