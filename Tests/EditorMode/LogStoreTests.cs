@@ -170,8 +170,8 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 
 			store.Add(limit, string.Empty, LogType.Log, _time);
 			store.Add(limit + "tail", string.Empty, LogType.Log, _time);
-			store.Add(limit + "another tail", string.Empty, LogType.Log, _time);
 			store.Add(limit, string.Empty, LogType.Warning, _time);
+			store.Add(limit + "another tail", string.Empty, LogType.Log, _time);
 
 			Assert.That(store.Count, Is.EqualTo(4));
 			Assert.That(store.BodyCount, Is.EqualTo(3), "two cut messages that read the same share their text");

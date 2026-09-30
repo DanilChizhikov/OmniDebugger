@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using DTech.OmniDebugger.UI;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 
 namespace DTech.OmniDebugger.Tests.EditorMode
 {
@@ -190,6 +192,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			Assert.That(model.Items[0].Path, Is.EqualTo("Player/God Mode"));
 			Assert.That(model.Items[0].Label, Is.EqualTo("God Mode"));
 
+			LogAssert.Expect(LogType.Error, new Regex("Info section 'Commands' failed to describe itself"));
 			InfoSectionModel blank = InfoSectionModel.Describe(new CommandInfo(" "));
 			Assert.That(blank.Error, Is.InstanceOf<System.ArgumentException>());
 		}
