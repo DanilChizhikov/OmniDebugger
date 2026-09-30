@@ -90,6 +90,33 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		}
 
 		[Test]
+		public void OpenButton_SnapsToTheNearestEdgeAndKeepsItsPlaceAlongIt()
+		{
+			Rect bounds = Rect.MinMaxRect(0.0f, 0.0f, 100.0f, 200.0f);
+
+			OpenButtonGesture.Snap(new Vector2(10.0f, 50.0f), bounds, out ScreenEdge edge, out float along);
+			Assert.That(edge, Is.EqualTo(ScreenEdge.Left));
+			Assert.That(along, Is.EqualTo(0.25f).Within(0.001f));
+
+			OpenButtonGesture.Snap(new Vector2(60.0f, 195.0f), bounds, out edge, out along);
+			Assert.That(edge, Is.EqualTo(ScreenEdge.Bottom));
+			Assert.That(along, Is.EqualTo(0.6f).Within(0.001f));
+
+			Vector2 back = OpenButtonGesture.ToPosition(ScreenEdge.Bottom, along, bounds);
+			Assert.That(back, Is.EqualTo(new Vector2(60.0f, 200.0f)), "on the edge, where it was along it");
+		}
+
+		[Test]
+		public void OpenButton_StartsWhereItsAnchorSays()
+		{
+			OpenButtonGesture.ResolveAnchor(OpenButtonAnchor.BottomRight, out ScreenEdge edge, out float along);
+			Assert.That((edge, along), Is.EqualTo((ScreenEdge.Right, 1.0f)));
+
+			OpenButtonGesture.ResolveAnchor(OpenButtonAnchor.Top, out edge, out along);
+			Assert.That((edge, along), Is.EqualTo((ScreenEdge.Top, 0.5f)));
+		}
+
+		[Test]
 		public void ClickSeries_OneClickOpensRightAway()
 		{
 			Assert.That(new ClickSeries().Register(5.0f, 1, 0.4f), Is.True);

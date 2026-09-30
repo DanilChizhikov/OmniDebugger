@@ -70,7 +70,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 
 				OmniDebuggerHost.ReleaseShared();
 
-				Assert.DoesNotThrow(() => _ = second.Catalog, "a handed-over slot still belongs to the game");
+				Assert.DoesNotThrow(() => _ = second.Commands, "a handed-over slot still belongs to the game");
 			}
 			finally
 			{
@@ -93,7 +93,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 
 				Assert.That(OmniDebuggerHost.TryGetShared(out OmniDebuggerHost found), Is.True);
 				Assert.That(found, Is.SameAs(own));
-				Assert.DoesNotThrow(() => _ = own.Catalog, "the game's own debugger stays alive");
+				Assert.DoesNotThrow(() => _ = own.Commands, "the game's own debugger stays alive");
 			}
 			finally
 			{
@@ -104,7 +104,7 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 			OmniDebuggerHost.ReleaseShared();
 
 			Assert.That(OmniDebuggerHost.TryGetShared(out _), Is.False);
-			Assert.Throws<ObjectDisposedException>(() => _ = built.Catalog);
+			Assert.Throws<ObjectDisposedException>(() => _ = built.Commands);
 		}
 	}
 }

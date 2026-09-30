@@ -16,15 +16,14 @@ namespace DTech.OmniDebugger
 		/// <inheritdoc/>
 		public event Action OnRefreshRequested;
 
-		private static readonly Version _version = new (1, 0, 0);
+		private static readonly Version _version = new (2, 0, 0);
 		private static readonly List<OmniDebuggerHost> _alive = new ();
 
-		private readonly CommandCatalog _catalog;
-		private readonly CommandInvoker _invoker;
+		private readonly CommandRegistry _commands;
+		private readonly Hotbar _hotbar;
 		private readonly GroupOrder _groups;
 		private readonly LogStore _logs;
-		private readonly LogCapture _capture;
-		private readonly WindowRegistry _windows;
+		private readonly InfoRegistry _info;
 		private readonly TabRegistry _tabs;
 		private readonly ThemeCatalog _themes;
 		private readonly IconRegistry _icons;
@@ -35,12 +34,6 @@ namespace DTech.OmniDebugger
 		/// The app's debugger: the first one built and not disposed yet — by the game's code or by
 		/// <see cref="OmniDebuggerOptions.CreateOnStartup"/> — and, while there is none, a new one built right
 		/// here from the project settings, the way the parameterless constructor builds it. Main thread only.
-		/// <para>
-		/// A debugger built here belongs to the package: in the editor it is disposed once play mode is over.
-		/// Disposing the shared debugger hands the slot to the oldest debugger still alive, or empties it, and
-		/// the next read of an empty slot builds a fresh one. Code that must not build one, such as
-		/// <c>OnDisable</c> or <c>OnDestroy</c>, reads <see cref="TryGetShared"/> instead.
-		/// </para>
 		/// </summary>
 		public static OmniDebuggerHost Shared
 		{
@@ -59,22 +52,22 @@ namespace DTech.OmniDebugger
 		}
 
 		/// <inheritdoc/>
-		public ICommandCatalog Catalog
+		public ICommandRegistry Commands
 		{
 			get
 			{
 				ThrowIfDisposed();
-				return _catalog;
+				return _commands;
 			}
 		}
 
 		/// <inheritdoc/>
-		public ICommandInvoker Commands
+		public IHotbar Hotbar
 		{
 			get
 			{
 				ThrowIfDisposed();
-				return _invoker;
+				return _hotbar;
 			}
 		}
 
@@ -99,12 +92,12 @@ namespace DTech.OmniDebugger
 		}
 
 		/// <inheritdoc/>
-		public IWindowRegistry Windows
+		public IInfoRegistry Info
 		{
 			get
 			{
 				ThrowIfDisposed();
-				return _windows;
+				return _info;
 			}
 		}
 
@@ -200,11 +193,11 @@ namespace DTech.OmniDebugger
 			_options = options ?? OmniDebuggerOptions.Default;
 
 			_groups = new GroupOrder();
-			_catalog = new CommandCatalog(log);
-			_invoker = new CommandInvoker(_catalog, log);
+			_commands = new CommandRegistry(log);
+			_hotbar = new Hotbar();
 			_logs = new LogStore();
-			_capture = new LogCapture(_logs);
-			_windows = new WindowRegistry();
+			_logs.StartCapture();
+			_info = new InfoRegistry(log);
 			_tabs = new TabRegistry(log);
 			_themes = new ThemeCatalog(log);
 			_icons = new IconRegistry(log);
@@ -259,7 +252,7 @@ namespace DTech.OmniDebugger
 		}
 
 		/// <summary>
-		/// Releases every registered source — MonoBehaviours included — empties every registry and
+		/// Releases every registered object — MonoBehaviours included — empties every registry and
 		/// clears their <c>OnChanged</c> subscriber lists, and the one of <see cref="OnRefreshRequested"/>.
 		/// Every member throws <see cref="ObjectDisposedException"/> afterwards. Disposing
 		/// <see cref="Shared"/> hands its slot to the oldest debugger still alive, or empties it. Safe to call
@@ -289,11 +282,12 @@ namespace DTech.OmniDebugger
 			PanelLauncher.Release(_panel);
 			_panel = null;
 			OmniDebuggerViews.Unregister(this);
-			_capture.Dispose();
+			_logs.StopCapture();
 
-			_catalog.Clear();
+			_commands.Clear();
+			_hotbar.Release();
+			_info.Clear();
 			_groups.Clear();
-			_windows.Clear();
 			_tabs.Clear();
 			_themes.Clear();
 			_icons.Clear();
@@ -353,16 +347,6 @@ namespace DTech.OmniDebugger
 				}
 			}
 
-			for (int i = 0; i < options.IconCatalogs.Count; i++)
-			{
-				OmniDebuggerIconCatalog catalog = options.IconCatalogs[i];
-
-				if (catalog != null)
-				{
-					_icons.AddCatalog(catalog);
-				}
-			}
-
 			_themes.SetDefault(options.DefaultTheme);
 		}
 
@@ -375,16 +359,6 @@ namespace DTech.OmniDebugger
 				if (theme != null && !Contains(next.Themes, theme))
 				{
 					_themes.Unregister(theme);
-				}
-			}
-
-			for (int i = 0; i < previous.IconCatalogs.Count; i++)
-			{
-				OmniDebuggerIconCatalog catalog = previous.IconCatalogs[i];
-
-				if (catalog != null && !Contains(next.IconCatalogs, catalog))
-				{
-					_icons.RemoveCatalog(catalog);
 				}
 			}
 		}

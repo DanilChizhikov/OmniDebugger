@@ -1,20 +1,19 @@
 using System;
+using System.Globalization;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace DTech.OmniDebugger.UI
 {
-	internal sealed class HoldToDragButtonGesture : IOmniDebuggerGesture
+	internal sealed class OpenButtonGesture : IOmniDebuggerGesture
 	{
-		private const long UnlockDelayMs = 600;
 		private const long ErrorPollMs = 250;
-		private const long PulseFrameMs = 16;
 		private const long MinLitMs = 150;
+		private const long SnapFrameMs = 16;
+		private const float SnapDuration = 0.2f;
 		private const float EdgePadding = 12.0f;
-		private const float PulsePeriod = 0.8f;
-		private const float PulseMinOpacity = 0.45f;
-		private const float PulseDuration = 45.0f;
 		private const float LitOpacity = 1.0f;
+		private const int MaxBadgeCount = 99;
 
 		private readonly ILogFeed _logs;
 		private readonly IViewPrefs _prefs;
@@ -23,30 +22,29 @@ namespace DTech.OmniDebugger.UI
 		private OmniDebuggerOpenOptions _options;
 		private VisualElement _root;
 		private VisualElement _button;
-		private VisualElement _alert;
-		private DragCornersIndicator _corners;
+		private Label _badge;
 		private Action _requestOpen;
-		private IVisualElementScheduledItem _unlock;
 		private IVisualElementScheduledItem _errorPoll;
-		private IVisualElementScheduledItem _pulse;
 		private IVisualElementScheduledItem _unlit;
+		private IVisualElementScheduledItem _snap;
 
-		private Vector2 _normalized;
+		private ScreenEdge _edge;
+		private float _along;
 		private Vector2 _pointerStart;
-		private Vector2 _pointerLast;
-		private Vector2 _pressNormalized;
+		private Vector2 _pressPosition;
+		private Vector2 _position;
+		private Vector2 _snapFrom;
+		private Vector2 _snapTo;
 		private int _pointerId = PointerId.invalidPointerId;
 		private bool _hasPosition;
-		private bool _pressedInside;
-		private bool _unlocked;
 		private bool _dragging;
 		private bool _panelOpen;
 		private bool _lit;
 		private long _seenErrors;
-		private float _pulseStart;
 		private float _pressStart;
+		private float _snapStart;
 
-		public HoldToDragButtonGesture(OmniDebuggerOpenOptions options, ILogFeed logs, IViewPrefs prefs)
+		public OpenButtonGesture(OmniDebuggerOpenOptions options, ILogFeed logs, IViewPrefs prefs)
 		{
 			_options = options ?? new OmniDebuggerOpenOptions();
 			_logs = logs;
@@ -78,15 +76,10 @@ namespace DTech.OmniDebugger.UI
 			mark.AddToClassList(OmniDebuggerUiClasses.OpenButtonMark);
 			_button.Add(mark);
 
-			_alert = new VisualElement();
-			_alert.AddToClassList(OmniDebuggerUiClasses.OpenButtonAlert);
-			_alert.Add(new OmniIcon(IconGlyph.Alert));
-			_alert.pickingMode = PickingMode.Ignore;
-			_alert.style.display = DisplayStyle.None;
-			_button.Add(_alert);
-
-			_corners = new DragCornersIndicator();
-			_button.Add(_corners);
+			_badge = UiBuild.Label(string.Empty, OmniDebuggerUiClasses.OpenButtonBadge);
+			_badge.pickingMode = PickingMode.Ignore;
+			UiBuild.SetVisible(_badge, false);
+			_button.Add(_badge);
 
 			_button.RegisterCallback<PointerDownEvent>(OnPointerDown);
 			_button.RegisterCallback<PointerMoveEvent>(OnPointerMove);
@@ -98,7 +91,11 @@ namespace DTech.OmniDebugger.UI
 
 			if (!_hasPosition)
 			{
-				_normalized = TryRestorePosition(out Vector2 restored) ? restored : GetDefaultPosition();
+				if (!TryRestorePosition())
+				{
+					ResolveAnchor(_options.ButtonAnchor, out _edge, out _along);
+				}
+
 				_hasPosition = true;
 			}
 
@@ -127,8 +124,8 @@ namespace DTech.OmniDebugger.UI
 
 			if (open)
 			{
-				StopAlert();
-				ResetPress();
+				ClearBadge();
+				CancelPress();
 				SetLit(false);
 			}
 		}
@@ -152,26 +149,94 @@ namespace DTech.OmniDebugger.UI
 
 			_root?.UnregisterCallback<GeometryChangedEvent>(OnRootGeometryChanged);
 
-			_unlock?.Pause();
 			_errorPoll?.Pause();
-			_pulse?.Pause();
 			_unlit?.Pause();
+			_snap?.Pause();
 
-			_unlock = null;
 			_errorPoll = null;
-			_pulse = null;
 			_unlit = null;
+			_snap = null;
 			_button = null;
-			_alert = null;
-			_corners = null;
+			_badge = null;
 			_root = null;
 			_requestOpen = null;
 			_pointerId = PointerId.invalidPointerId;
-			_pressedInside = false;
-			_unlocked = false;
 			_dragging = false;
 			_lit = false;
 			_clicks.Reset();
+		}
+
+		internal static void ResolveAnchor(OpenButtonAnchor anchor, out ScreenEdge edge, out float along)
+		{
+			switch (anchor)
+			{
+				case OpenButtonAnchor.TopLeft:
+					edge = ScreenEdge.Left;
+					along = 0.0f;
+					break;
+				case OpenButtonAnchor.Top:
+					edge = ScreenEdge.Top;
+					along = 0.5f;
+					break;
+				case OpenButtonAnchor.TopRight:
+					edge = ScreenEdge.Right;
+					along = 0.0f;
+					break;
+				case OpenButtonAnchor.Left:
+					edge = ScreenEdge.Left;
+					along = 0.5f;
+					break;
+				case OpenButtonAnchor.BottomLeft:
+					edge = ScreenEdge.Left;
+					along = 1.0f;
+					break;
+				case OpenButtonAnchor.Bottom:
+					edge = ScreenEdge.Bottom;
+					along = 0.5f;
+					break;
+				case OpenButtonAnchor.BottomRight:
+					edge = ScreenEdge.Right;
+					along = 1.0f;
+					break;
+				default:
+					edge = ScreenEdge.Right;
+					along = 0.5f;
+					break;
+			}
+		}
+
+		internal static void Snap(Vector2 position, Rect bounds, out ScreenEdge edge, out float along)
+		{
+			float left = position.x - bounds.xMin;
+			float right = bounds.xMax - position.x;
+			float top = position.y - bounds.yMin;
+			float bottom = bounds.yMax - position.y;
+			float nearest = Mathf.Min(Mathf.Min(left, right), Mathf.Min(top, bottom));
+
+			if (nearest == left || nearest == right)
+			{
+				edge = nearest == left ? ScreenEdge.Left : ScreenEdge.Right;
+				along = bounds.height > 0.0f ? Mathf.Clamp01((position.y - bounds.yMin) / bounds.height) : 0.5f;
+				return;
+			}
+
+			edge = nearest == top ? ScreenEdge.Top : ScreenEdge.Bottom;
+			along = bounds.width > 0.0f ? Mathf.Clamp01((position.x - bounds.xMin) / bounds.width) : 0.5f;
+		}
+
+		internal static Vector2 ToPosition(ScreenEdge edge, float along, Rect bounds)
+		{
+			switch (edge)
+			{
+				case ScreenEdge.Left:
+					return new Vector2(bounds.xMin, Mathf.Lerp(bounds.yMin, bounds.yMax, along));
+				case ScreenEdge.Right:
+					return new Vector2(bounds.xMax, Mathf.Lerp(bounds.yMin, bounds.yMax, along));
+				case ScreenEdge.Top:
+					return new Vector2(Mathf.Lerp(bounds.xMin, bounds.xMax, along), bounds.yMin);
+				default:
+					return new Vector2(Mathf.Lerp(bounds.xMin, bounds.xMax, along), bounds.yMax);
+			}
 		}
 
 		internal void SetOptions(OmniDebuggerOpenOptions options)
@@ -181,20 +246,12 @@ namespace DTech.OmniDebugger.UI
 
 			if (_hasPosition && anchor != _options.ButtonAnchor)
 			{
-				_normalized = GetDefaultPosition();
+				ResolveAnchor(_options.ButtonAnchor, out _edge, out _along);
 				Place();
 			}
 
 			RefreshOpacity();
 		}
-
-		private static Vector2 FromNormalized(Vector2 normalized, Rect bounds) =>
-			new (Mathf.Lerp(bounds.xMin, bounds.xMax, normalized.x), Mathf.Lerp(bounds.yMin, bounds.yMax, normalized.y));
-
-		private static Vector2 ToNormalized(Vector2 position, Rect bounds) =>
-			new (
-				bounds.width > 0.0f ? Mathf.Clamp01((position.x - bounds.xMin) / bounds.width) : 0.5f,
-				bounds.height > 0.0f ? Mathf.Clamp01((position.y - bounds.yMin) / bounds.height) : 0.5f);
 
 		private void OnPointerDown(PointerDownEvent evt)
 		{
@@ -203,21 +260,16 @@ namespace DTech.OmniDebugger.UI
 				return;
 			}
 
+			_snap?.Pause();
 			_pointerId = evt.pointerId;
 			_pointerStart = evt.position;
-			_pointerLast = evt.position;
-			_pressNormalized = _normalized;
-			_pressedInside = true;
-			_unlocked = false;
+			_pressPosition = _position;
 			_dragging = false;
 			_pressStart = Time.realtimeSinceStartup;
 
 			_button.CapturePointer(_pointerId);
 			_button.AddToClassList(OmniDebuggerUiClasses.OpenButtonPressed);
 			SetLit(true);
-
-			_unlock?.Pause();
-			_unlock = _button.schedule.Execute(UnlockDrag).StartingIn(UnlockDelayMs);
 
 			evt.StopPropagation();
 		}
@@ -229,43 +281,26 @@ namespace DTech.OmniDebugger.UI
 				return;
 			}
 
-			Vector2 position = evt.position;
-			_pointerLast = position;
+			Vector2 delta = (Vector2)evt.position - _pointerStart;
 
-			if (!_unlocked)
+			if (!_dragging)
 			{
-				bool inside = _button.worldBound.Contains(position);
-
-				if (inside != _pressedInside)
+				if (delta.magnitude < TouchSlop.Distance)
 				{
-					_pressedInside = inside;
-					_button.EnableInClassList(OmniDebuggerUiClasses.OpenButtonPressed, inside);
-					SetLit(inside);
+					return;
 				}
 
-				if (!inside)
-				{
-					_unlock?.Pause();
-				}
-
-				return;
+				_dragging = true;
+				_clicks.Reset();
+				_button.AddToClassList(OmniDebuggerUiClasses.OpenButtonDragging);
 			}
-
-			Vector2 delta = position - _pointerStart;
-
-			if (!_dragging && delta.magnitude < TouchSlop.Distance)
-			{
-				return;
-			}
-
-			_dragging = true;
-			_clicks.Reset();
 
 			if (TryGetBounds(out Rect bounds))
 			{
-				Vector2 start = FromNormalized(_pressNormalized, bounds);
-				_normalized = ToNormalized(start + delta, bounds);
-				Place();
+				Vector2 target = _pressPosition + delta;
+				SetPosition(new Vector2(
+					Mathf.Clamp(target.x, bounds.xMin, bounds.xMax),
+					Mathf.Clamp(target.y, bounds.yMin, bounds.yMax)));
 			}
 		}
 
@@ -276,7 +311,6 @@ namespace DTech.OmniDebugger.UI
 				return;
 			}
 
-			bool wasUnlocked = _unlocked;
 			bool wasDragging = _dragging;
 			bool inside = _button.worldBound.Contains(evt.position);
 
@@ -284,25 +318,15 @@ namespace DTech.OmniDebugger.UI
 
 			if (wasDragging)
 			{
-				_prefs?.SetOpenButton(_options.ButtonAnchor, _normalized);
+				SnapToEdge();
+				return;
 			}
 
-			if (wasUnlocked)
+			if (!inside || !_clicks.Register(Time.realtimeSinceStartup, _options.ButtonClicks, _options.MultiClickWindow))
 			{
 				return;
 			}
 
-			if (!inside)
-			{
-				return;
-			}
-
-			if (!_clicks.Register(Time.realtimeSinceStartup, _options.ButtonClicks, _options.MultiClickWindow))
-			{
-				return;
-			}
-
-			StopAlert();
 			_requestOpen?.Invoke();
 		}
 
@@ -324,32 +348,19 @@ namespace DTech.OmniDebugger.UI
 
 		private void CancelPress()
 		{
-			if (_dragging)
-			{
-				_normalized = _pressNormalized;
-				Place();
-			}
-
+			bool wasDragging = _dragging;
 			EndPress();
+
+			if (wasDragging)
+			{
+				SnapToEdge();
+			}
 		}
 
 		private void EndPress()
 		{
 			int pointerId = _pointerId;
-			ResetPress();
-
-			if (_button != null && pointerId != PointerId.invalidPointerId && _button.HasPointerCapture(pointerId))
-			{
-				_button.ReleasePointer(pointerId);
-			}
-		}
-
-		private void ResetPress()
-		{
-			_unlock?.Pause();
 			_pointerId = PointerId.invalidPointerId;
-			_pressedInside = false;
-			_unlocked = false;
 			_dragging = false;
 
 			if (_button == null)
@@ -357,10 +368,45 @@ namespace DTech.OmniDebugger.UI
 				return;
 			}
 
+			if (pointerId != PointerId.invalidPointerId && _button.HasPointerCapture(pointerId))
+			{
+				_button.ReleasePointer(pointerId);
+			}
+
 			_button.RemoveFromClassList(OmniDebuggerUiClasses.OpenButtonPressed);
 			_button.RemoveFromClassList(OmniDebuggerUiClasses.OpenButtonDragging);
-			_corners.Hide();
 			ReleaseLit();
+		}
+
+		private void SnapToEdge()
+		{
+			if (!TryGetBounds(out Rect bounds))
+			{
+				return;
+			}
+
+			Snap(_position, bounds, out _edge, out _along);
+			_prefs?.SetOpenButton(_options.ButtonAnchor, _edge, _along);
+
+			_snapFrom = _position;
+			_snapTo = ToPosition(_edge, _along, bounds);
+			_snapStart = Time.realtimeSinceStartup;
+
+			_snap ??= _button.schedule.Execute(StepSnap).Every(SnapFrameMs);
+			_snap.Resume();
+		}
+
+		private void StepSnap()
+		{
+			float t = Mathf.Clamp01((Time.realtimeSinceStartup - _snapStart) / SnapDuration);
+			float eased = 1.0f - Mathf.Pow(1.0f - t, 3.0f);
+			SetPosition(Vector2.LerpUnclamped(_snapFrom, _snapTo, eased));
+
+			if (t >= 1.0f)
+			{
+				_snap.Pause();
+				Place();
+			}
 		}
 
 		private void SetLit(bool lit)
@@ -395,94 +441,60 @@ namespace DTech.OmniDebugger.UI
 			}
 
 			_unlit?.Pause();
-			_unlit = _button.schedule.Execute(Unlight).StartingIn(restMs);
+			_unlit = _button.schedule.Execute(() => SetLit(false)).StartingIn(restMs);
 		}
-
-		private void Unlight() => SetLit(false);
 
 		private void RefreshOpacity()
 		{
 			if (_button != null)
 			{
-				_button.style.opacity = _lit || _unlocked ? LitOpacity : _options.ButtonOpacity;
+				_button.style.opacity = _lit || _dragging || _seenErrors < (_logs?.ErrorCount ?? 0)
+					? LitOpacity
+					: _options.ButtonOpacity;
 			}
-		}
-
-		private void UnlockDrag()
-		{
-			if (_button == null || _pointerId == PointerId.invalidPointerId || !_pressedInside)
-			{
-				return;
-			}
-
-			_unlocked = true;
-			_pointerStart = _pointerLast;
-			_pressNormalized = _normalized;
-			_clicks.Reset();
-			_button.AddToClassList(OmniDebuggerUiClasses.OpenButtonDragging);
-			_corners.Show();
-			RefreshOpacity();
 		}
 
 		private void PollErrors()
 		{
-			long errors = _logs.ErrorCount;
-
-			if (errors <= _seenErrors)
+			if (_panelOpen)
 			{
+				_seenErrors = _logs.ErrorCount;
 				return;
 			}
 
-			_seenErrors = errors;
+			long unseen = _logs.ErrorCount - _seenErrors;
+			bool visible = unseen > 0;
 
-			if (!_panelOpen)
-			{
-				StartAlert();
-			}
+			_badge.text = unseen > MaxBadgeCount
+				? MaxBadgeCount.ToString(CultureInfo.InvariantCulture) + "+"
+				: unseen.ToString(CultureInfo.InvariantCulture);
+
+			UiBuild.SetVisible(_badge, visible);
+			_button.EnableInClassList(OmniDebuggerUiClasses.OpenButtonHasErrors, visible);
+			RefreshOpacity();
 		}
 
-		private void StartAlert()
+		private void ClearBadge()
 		{
-			_pulseStart = Time.realtimeSinceStartup;
-			_alert.style.display = DisplayStyle.Flex;
-			_button.AddToClassList(OmniDebuggerUiClasses.OpenButtonAlerting);
-
-			_pulse ??= _alert.schedule.Execute(Pulse).Every(PulseFrameMs);
-			_pulse.Resume();
-		}
-
-		private void Pulse()
-		{
-			float elapsed = Time.realtimeSinceStartup - _pulseStart;
-
-			if (elapsed >= PulseDuration)
-			{
-				StopAlert();
-				return;
-			}
-
-			float wave = Mathf.PingPong(elapsed / PulsePeriod, 1.0f);
-			_alert.style.opacity = Mathf.Lerp(PulseMinOpacity, 1.0f, wave);
-		}
-
-		private void StopAlert()
-		{
-			_pulse?.Pause();
-
-			if (_alert != null)
-			{
-				_alert.style.display = DisplayStyle.None;
-			}
-
-			_button?.RemoveFromClassList(OmniDebuggerUiClasses.OpenButtonAlerting);
-
 			if (_logs != null)
 			{
 				_seenErrors = _logs.ErrorCount;
 			}
+
+			if (_badge != null)
+			{
+				UiBuild.SetVisible(_badge, false);
+				_button.RemoveFromClassList(OmniDebuggerUiClasses.OpenButtonHasErrors);
+			}
 		}
 
-		private void OnRootGeometryChanged(GeometryChangedEvent evt) => Place();
+		private void OnRootGeometryChanged(GeometryChangedEvent evt)
+		{
+			if (_pointerId == PointerId.invalidPointerId && (_snap == null || !_snap.isActive))
+			{
+				Place();
+			}
+		}
 
 		private void Place()
 		{
@@ -491,7 +503,12 @@ namespace DTech.OmniDebugger.UI
 				return;
 			}
 
-			Vector2 position = FromNormalized(_normalized, bounds);
+			SetPosition(ToPosition(_edge, _along, bounds));
+		}
+
+		private void SetPosition(Vector2 position)
+		{
+			_position = position;
 			_button.style.left = position.x;
 			_button.style.top = position.y;
 		}
@@ -525,41 +542,19 @@ namespace DTech.OmniDebugger.UI
 			return true;
 		}
 
-		private bool TryRestorePosition(out Vector2 position)
+		private bool TryRestorePosition()
 		{
-			position = default;
-
-			if (_prefs == null || !_prefs.TryGetOpenButton(out OpenButtonAnchor anchor, out Vector2 saved) ||
-				anchor != _options.ButtonAnchor)
+			if (_prefs == null ||
+				!_prefs.TryGetOpenButton(out OpenButtonAnchor anchor, out ScreenEdge edge, out float along) ||
+				anchor != _options.ButtonAnchor ||
+				edge > ScreenEdge.Bottom)
 			{
 				return false;
 			}
 
-			position = new Vector2(Mathf.Clamp01(saved.x), Mathf.Clamp01(saved.y));
+			_edge = edge;
+			_along = Mathf.Clamp01(along);
 			return true;
-		}
-
-		private Vector2 GetDefaultPosition()
-		{
-			switch (_options.ButtonAnchor)
-			{
-				case OpenButtonAnchor.TopLeft:
-					return new Vector2(0.0f, 0.0f);
-				case OpenButtonAnchor.Top:
-					return new Vector2(0.5f, 0.0f);
-				case OpenButtonAnchor.TopRight:
-					return new Vector2(1.0f, 0.0f);
-				case OpenButtonAnchor.Left:
-					return new Vector2(0.0f, 0.5f);
-				case OpenButtonAnchor.BottomLeft:
-					return new Vector2(0.0f, 1.0f);
-				case OpenButtonAnchor.Bottom:
-					return new Vector2(0.5f, 1.0f);
-				case OpenButtonAnchor.BottomRight:
-					return new Vector2(1.0f, 1.0f);
-				default:
-					return new Vector2(1.0f, 0.5f);
-			}
 		}
 	}
 }

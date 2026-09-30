@@ -6,9 +6,8 @@ using UnityEngine.UIElements;
 namespace DTech.OmniDebugger.UI
 {
 	/// <summary>
-	/// The panel itself, built into an element the caller owns. One class serves both mounts: the
-	/// runtime <see cref="OmniDebuggerPanel"/> and the editor window pass the same settings with
-	/// different values, and neither one knows how the other renders.
+	/// The panel itself, built into an element the caller owns: the runtime <see cref="OmniDebuggerPanel"/>
+	/// mounts it over the game, and a UI of your own can mount it anywhere else.
 	/// </summary>
 	public sealed class OmniDebuggerView : IDisposable
 	{
@@ -16,10 +15,12 @@ namespace DTech.OmniDebugger.UI
 		public event Action OnClosed;
 
 		private const float OrientationHysteresis = 1.1f;
-		private const long WindowScaleSaveDelayMs = 400;
+		private const long ArgumentsSaveDelayMs = 400;
 
 		private readonly IOmniDebuggerHost _debugger;
-		private readonly ICommandCatalog _catalog;
+		private readonly ICommandRegistry _commands;
+		private readonly IHotbar _hotbar;
+		private readonly IIconRegistry _icons;
 		private readonly IThemeRegistry _themeRegistry;
 		private readonly ITabRegistry _tabRegistry;
 		private readonly OmniDebuggerViewState _state;
@@ -39,9 +40,11 @@ namespace DTech.OmniDebugger.UI
 		private readonly PopupLayer _popups;
 		private readonly ViewServices _services;
 		private readonly SafeArea _safeArea;
-		private readonly WindowsHost _windows;
-		private readonly WindowRegistry _windowRegistry;
-		private readonly IVisualElementScheduledItem _saveWindowScale;
+		private readonly FloatingSectionsHost _floatingSections;
+		private readonly InfoRegistry _infoRegistry;
+		private readonly IVisualElementScheduledItem _saveArguments;
+		private readonly CommandPalette _palette;
+		private readonly HotbarOverlay _hotbarOverlay;
 		private readonly IVisualElementScheduledItem _pendingRefresh;
 		private readonly FloatingPanel _floating;
 
@@ -58,11 +61,11 @@ namespace DTech.OmniDebugger.UI
 		/// <summary>The theme in use. Never null once the view is built.</summary>
 		public OmniDebuggerTheme Theme => _themes.Theme;
 
-		private ViewOrientation _orientation;
 		private bool _landscape;
 		private bool _fullScreen;
 		private bool _orientationResolved;
-		private bool _windowScaleDirty;
+		private bool _argumentsDirty;
+		private int _paletteFrame = -1;
 		private bool _disposed;
 
 		private bool IsFloating => _overlay && _landscape && !_fullScreen;
@@ -70,7 +73,6 @@ namespace DTech.OmniDebugger.UI
 		/// <summary>
 		/// Builds the panel into <see cref="OmniDebuggerViewSettings.Root"/> as its one new child. Main thread only.
 		/// </summary>
-		/// <exception cref="ArgumentNullException">The settings carry no root or no debugger.</exception>
 		public OmniDebuggerView(in OmniDebuggerViewSettings settings)
 		{
 			MainThreadGuard.Verify(nameof(OmniDebuggerView));
@@ -91,7 +93,9 @@ namespace DTech.OmniDebugger.UI
 			_prefs = settings.Prefs;
 			_origin = settings.Origin;
 			_overlay = settings.ShowCloseButton;
-			_catalog = _debugger.Catalog;
+			_commands = _debugger.Commands;
+			_hotbar = _debugger.Hotbar;
+			_icons = _debugger.Icons;
 			_themeRegistry = _debugger.Themes;
 			_tabRegistry = _debugger.Tabs;
 
@@ -101,15 +105,16 @@ namespace DTech.OmniDebugger.UI
 			_themes = new ThemeApplier(_root);
 			_popups = new PopupLayer();
 
-			RestoreFavorites();
+			RestoreHotbar();
+			RestoreArguments();
 
-			_services = new ViewServices(
-				_debugger,
-				_origin,
-				_state.Arguments,
-				_state.Favorites,
-				settings.HostWindows ? _state.Pins : null,
-				_popups);
+			if (settings.HostOverlays && _debugger.Info is InfoRegistry infoRegistry)
+			{
+				_infoRegistry = infoRegistry;
+				RestoreFloating();
+			}
+
+			_services = new ViewServices(_debugger, _origin, _state.Commands, _popups, _infoRegistry != null);
 
 			_desk = UiBuild.Element(OmniDebuggerUiClasses.Desk);
 			_desk.pickingMode = PickingMode.Ignore;
@@ -124,20 +129,20 @@ namespace DTech.OmniDebugger.UI
 			_panel.RegisterCallback<PointerDownEvent>(OnPanelPointerDown, TrickleDown.TrickleDown);
 			_stage.Add(_panel);
 
-			if (settings.HostWindows && _debugger.Windows is WindowRegistry windowRegistry)
+			if (_infoRegistry != null)
 			{
-				_windowRegistry = windowRegistry;
-				RestoreWindowScale();
-				_windows = new WindowsHost(_desk, _services, windowRegistry);
-				_saveWindowScale = _root.schedule.Execute(SaveWindowScale);
-				_saveWindowScale.Pause();
-				_windowRegistry.OnScaleChanged += OnWindowScaleChanged;
+				_floatingSections = new FloatingSectionsHost(_desk, _services, _infoRegistry, _prefs);
+				_infoRegistry.OnFloatingChanged += SaveFloating;
 			}
+
+			_saveArguments = _root.schedule.Execute(SaveArguments);
+			_saveArguments.Pause();
 
 			string version = _debugger is OmniDebuggerHost debuggerHost ? debuggerHost.Version.ToString() : null;
 			_chrome = new PanelChrome(_overlay, _popups, _debugger.Icons, version);
 			_chrome.OnThemeSelected += OnThemePicked;
 			_chrome.OnCloseRequested += Close;
+			_chrome.OnPaletteRequested += ShowPalette;
 
 			VisualElement rail = UiBuild.Element(OmniDebuggerUiClasses.Rail);
 			_panel.Add(rail);
@@ -158,7 +163,14 @@ namespace DTech.OmniDebugger.UI
 			_floating.AddHandle(_chrome.Brand);
 			_floating.AddHandle(_chrome.PageBar);
 
+			if (settings.HostOverlays)
+			{
+				_hotbarOverlay = new HotbarOverlay(_root, _services, _prefs);
+			}
+
 			_root.Add(_popups);
+			_palette = new CommandPalette(_services, Reveal);
+			_root.RegisterCallback<KeyDownEvent>(OnKeyDown, TrickleDown.TrickleDown);
 
 			_tabHost = new TabHost(_tabBar, _tabBody, _debugger, _state, _origin, _services);
 			_tabHost.OnSelectionChanged += OnTabSelectionChanged;
@@ -180,10 +192,12 @@ namespace DTech.OmniDebugger.UI
 			_pendingRefresh.Pause();
 
 			_debugger.OnRefreshRequested += OnRefreshRequested;
-			_catalog.OnChanged += OnCatalogChanged;
+			_commands.OnChanged += OnCommandsChanged;
 			_themeRegistry.OnChanged += OnThemesChanged;
 			_tabRegistry.OnChanged += OnTabsChanged;
-			_state.Favorites.OnChanged += SaveFavorites;
+			_icons.OnChanged += OnTabsChanged;
+			_hotbar.OnChanged += SaveHotbar;
+			_state.Commands.OnChanged += OnArgumentsChanged;
 
 			_tabHost.Rebuild();
 			RefreshPage();
@@ -223,7 +237,7 @@ namespace DTech.OmniDebugger.UI
 		}
 
 		/// <summary>
-		/// Re-reads and redraws everything the view shows: the selected tab and the floating windows.
+		/// Re-reads and redraws everything the view shows: the selected tab and the floating sections.
 		/// Called on its own, once per frame at most, whenever <see cref="IOmniDebuggerHost.Refresh"/> is.
 		/// </summary>
 		public void Refresh()
@@ -232,7 +246,8 @@ namespace DTech.OmniDebugger.UI
 			ThrowIfDisposed();
 
 			RefreshTabs();
-			_windows?.Refresh();
+			_floatingSections?.Refresh();
+			_hotbarOverlay?.Refresh();
 		}
 
 		/// <summary>
@@ -251,27 +266,32 @@ namespace DTech.OmniDebugger.UI
 
 			_pendingRefresh.Pause();
 			_debugger.OnRefreshRequested -= OnRefreshRequested;
-			_catalog.OnChanged -= OnCatalogChanged;
+			_commands.OnChanged -= OnCommandsChanged;
 			_themeRegistry.OnChanged -= OnThemesChanged;
 			_tabRegistry.OnChanged -= OnTabsChanged;
-			_state.Favorites.OnChanged -= SaveFavorites;
+			_icons.OnChanged -= OnTabsChanged;
+			_hotbar.OnChanged -= SaveHotbar;
+			_state.Commands.OnChanged -= OnArgumentsChanged;
+			_root.UnregisterCallback<KeyDownEvent>(OnKeyDown, TrickleDown.TrickleDown);
 
+			_saveArguments.Pause();
+			if (_argumentsDirty)
+			{
+				SaveArguments();
+			}
+
+			_palette.Dispose();
 			_popups.Hide();
 			_tabHost.OnSelectionChanged -= OnTabSelectionChanged;
 			_tabHost.Dispose();
 
-			if (_windowRegistry != null)
+			if (_infoRegistry != null)
 			{
-				_windowRegistry.OnScaleChanged -= OnWindowScaleChanged;
-				_saveWindowScale.Pause();
-
-				if (_windowScaleDirty)
-				{
-					SaveWindowScale();
-				}
+				_infoRegistry.OnFloatingChanged -= SaveFloating;
 			}
 
-			_windows?.Dispose();
+			_floatingSections?.Dispose();
+			_hotbarOverlay?.Dispose();
 			_floating.Dispose();
 			_panel.UnregisterCallback<PointerDownEvent>(OnPanelPointerDown, TrickleDown.TrickleDown);
 			_stage.UnregisterCallback<GeometryChangedEvent>(OnGeometryChanged);
@@ -292,21 +312,23 @@ namespace DTech.OmniDebugger.UI
 			OnClosed = null;
 		}
 
-		internal void SetOrientation(ViewOrientation orientation)
+		internal void ShowPalette()
 		{
-			MainThreadGuard.Verify(nameof(SetOrientation));
 			ThrowIfDisposed();
 
-			_orientation = orientation;
-
-			if (orientation != ViewOrientation.Auto)
+			if (_paletteFrame == Time.frameCount)
 			{
-				ApplyOrientation(orientation == ViewOrientation.Landscape);
 				return;
 			}
 
-			_orientationResolved = false;
-			ResolveOrientation(_stage.layout.width, _stage.layout.height);
+			_paletteFrame = Time.frameCount;
+
+			if (!IsOpen)
+			{
+				SetOpen(true, notify: false);
+			}
+
+			_palette.Show();
 		}
 
 		internal void SetLandscapeLayout(OmniDebuggerLandscapeLayout layout)
@@ -324,6 +346,14 @@ namespace DTech.OmniDebugger.UI
 			ThrowIfDisposed();
 
 			_floating.SetScale(scale);
+		}
+
+		internal void SetHotbarEdge(OmniDebuggerHotbarEdge edge)
+		{
+			MainThreadGuard.Verify(nameof(SetHotbarEdge));
+			ThrowIfDisposed();
+
+			_hotbarOverlay?.SetEdge(edge);
 		}
 
 		internal void SetShortcutHint(string hint)
@@ -363,42 +393,64 @@ namespace DTech.OmniDebugger.UI
 			_state.ThemeId = theme == null ? null : theme.Id;
 		}
 
-		private void RestoreFavorites()
+		private void RestoreHotbar()
 		{
-			if (_prefs == null || _state.Favorites.Count > 0)
+			if (_prefs == null || !(_hotbar is Hotbar hotbar) || hotbar.IsRestored)
 			{
 				return;
 			}
 
-			IReadOnlyList<string> keys = _prefs.GetFavorites();
+			hotbar.IsRestored = true;
+			IReadOnlyList<string> paths = _prefs.GetHotbar();
 
-			for (int i = 0; i < keys.Count; i++)
+			for (int i = 0; i < paths.Count; i++)
 			{
-				_state.Favorites.Add(keys[i]);
+				hotbar.Pin(paths[i]);
 			}
 		}
 
-		private void SaveFavorites() => _prefs?.SetFavorites(_state.Favorites.Keys);
+		private void SaveHotbar() => _prefs?.SetHotbar(_hotbar.Paths);
 
-		private void RestoreWindowScale()
+		private void RestoreArguments()
 		{
-			if (_prefs != null && _prefs.TryGetWindowScale(out float scale))
+			if (_prefs == null || _state.Commands.IsRestored)
 			{
-				_windowRegistry.SetScale(scale);
+				return;
 			}
+
+			_state.Commands.IsRestored = true;
+			_state.Commands.Restore(_prefs.GetArguments());
 		}
 
-		private void OnWindowScaleChanged()
+		private void OnArgumentsChanged()
 		{
-			_windowScaleDirty = true;
-			_saveWindowScale.ExecuteLater(WindowScaleSaveDelayMs);
+			if (_prefs == null)
+			{
+				return;
+			}
+
+			_argumentsDirty = true;
+			_saveArguments.ExecuteLater(ArgumentsSaveDelayMs);
 		}
 
-		private void SaveWindowScale()
+		private void SaveArguments()
 		{
-			_windowScaleDirty = false;
-			_prefs?.SetWindowScale(_windowRegistry.Scale);
+			_argumentsDirty = false;
+			_prefs?.SetArguments(_state.Commands.Serialize());
 		}
+
+		private void RestoreFloating()
+		{
+			if (_prefs == null || _infoRegistry.IsRestored)
+			{
+				return;
+			}
+
+			_infoRegistry.IsRestored = true;
+			_infoRegistry.RestoreFloating(_prefs.GetFloating());
+		}
+
+		private void SaveFloating() => _prefs?.SetFloating(_infoRegistry.FloatingKeys);
 
 		private void RefreshTabs()
 		{
@@ -417,7 +469,7 @@ namespace DTech.OmniDebugger.UI
 			_state.IsOpen = open;
 			_root.EnableInClassList(OmniDebuggerUiClasses.RootClosed, !open);
 			_tabHost.SetPanelOpen(open);
-			RefreshWindows();
+			RefreshOverlays();
 
 			if (open)
 			{
@@ -450,17 +502,22 @@ namespace DTech.OmniDebugger.UI
 			_root.EnableInClassList(OmniDebuggerUiClasses.RootFloating, floating);
 			_floating.SetActive(floating);
 			ApplySafeArea();
-			RefreshWindows();
+			RefreshOverlays();
 		}
 
-		private void RefreshWindows() => _windows?.SetVisible(!IsOpen || IsFloating);
+		private void RefreshOverlays()
+		{
+			bool overGame = !IsOpen || IsFloating;
+			_floatingSections?.SetVisible(overGame);
+			_hotbarOverlay?.SetVisible(overGame);
+		}
 
 		private void OnGeometryChanged(GeometryChangedEvent evt) =>
 			ResolveOrientation(evt.newRect.width, evt.newRect.height);
 
 		private void ResolveOrientation(float width, float height)
 		{
-			if (_orientation != ViewOrientation.Auto || !(width > 0.0f) || !(height > 0.0f))
+			if (!(width > 0.0f) || !(height > 0.0f))
 			{
 				return;
 			}
@@ -507,12 +564,13 @@ namespace DTech.OmniDebugger.UI
 			_panel.style.paddingTop = panel.z;
 			_panel.style.paddingBottom = panel.w;
 
-			_windows?.SetInsets(insets);
+			_floatingSections?.SetInsets(insets);
+			_hotbarOverlay?.SetInsets(insets);
 		}
 
 		private void OnPanelPointerDown(PointerDownEvent evt)
 		{
-			if (_windows != null && IsFloating)
+			if (_floatingSections != null && IsFloating)
 			{
 				_stage.BringToFront();
 			}
@@ -547,7 +605,32 @@ namespace DTech.OmniDebugger.UI
 			RefreshPage();
 		}
 
-		private void OnCatalogChanged() => RefreshTabs();
+		private void OnCommandsChanged()
+		{
+			RefreshTabs();
+			_hotbarOverlay?.Refresh();
+		}
+
+		private void Reveal(CommandDefinition definition)
+		{
+			_tabHost.Select(CommandsTabFactory.TabId);
+
+			if (_tabHost.TryGetTab(CommandsTabFactory.TabId, out IOmniDebuggerTab tab) && tab is CommandsTab commands)
+			{
+				commands.Reveal(definition);
+			}
+		}
+
+		private void OnKeyDown(KeyDownEvent evt)
+		{
+			bool modifier = evt.ctrlKey || evt.commandKey;
+
+			if (modifier && evt.keyCode == KeyCode.K)
+			{
+				ShowPalette();
+				evt.StopPropagation();
+			}
+		}
 
 		private void OnRefreshRequested() => _pendingRefresh.ExecuteLater(0);
 
