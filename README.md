@@ -7,7 +7,7 @@
 OmniDebugger is a runtime cheat and debug panel for Unity. It is built on UI Toolkit, so it draws on top of any
 project without pulling in uGUI, TextMeshPro, or any other dependency.
 
-![The Commands tab floating over a game in landscape](Documentation~/images/commands-landscape-floating.png)
+![The Commands tab floating over a game in landscape, with the hotbar and two floating Info sections](Documentation~/images/commands-landscape-floating.png)
 
 Annotate a method or a property, hand the object over, and it becomes a debug command you can run by its path:
 
@@ -522,17 +522,17 @@ indicator; edge to edge, its glass reaches under the notch while the content sta
 <table>
   <tr>
     <td rowspan="2" align="center">
-      <img src="Documentation~/images/info-portrait.png" alt="Portrait: edge to edge, tabs along the top" width="260"><br>
+      <img src="Documentation~/images/commands-portrait.png" alt="Portrait: edge to edge, tabs along the top" width="260"><br>
       <sub>Portrait</sub>
     </td>
     <td align="center">
-      <img src="Documentation~/images/info-landscape-floating.png" alt="Landscape: a floating window over the game" width="560"><br>
+      <img src="Documentation~/images/commands-landscape-floating.png" alt="Landscape: a floating window over the game" width="560"><br>
       <sub>Landscape, floating</sub>
     </td>
   </tr>
   <tr>
     <td align="center">
-      <img src="Documentation~/images/info-landscape-fullscreen.png" alt="Landscape: edge to edge, tabs in a sidebar" width="560"><br>
+      <img src="Documentation~/images/commands-landscape-fullscreen.png" alt="Landscape: edge to edge, tabs in a sidebar" width="560"><br>
       <sub>Landscape, <i>Full Screen</i></sub>
     </td>
   </tr>
@@ -565,6 +565,8 @@ With nothing typed it lists the hotbar, then the rest. ↑ and ↓ pick a result
 arguments last typed for it or their defaults, a switch flipped. A command that needs a value typed opens in the
 Commands tab instead, scrolled to and lit up. Esc closes the palette. It goes through the [lock](#locking-it) like every
 other way in.
+
+![The command palette open over the Logs tab, listing commands with their groups](Documentation~/images/palette-landscape.png)
 
 To bind a shortcut, press *Add Shortcut*, click the new field, hold the keys and release them; `Esc` cancels and `×`
 removes the row. Shortcuts are `KeyCode`s whichever input backend runs: the Input System package is used when it is
@@ -600,6 +602,19 @@ The header holds the search that opens the [palette](#opening-it), the theme swi
 is remembered per command and saved on the device, so a command run with 500 offers 500 again after a restart. The
 captured log is also readable in code through `debugger.Logs` (`ILogFeed`) — see [Reading the Log](#reading-the-log).
 Tabs of your own sit next to these, and any of these can be dropped — see [Your Own Tab](#your-own-tab).
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="Documentation~/images/info-portrait.png" alt="The Info tab in portrait: sections in one column" width="260"><br>
+      <sub>Info, portrait</sub>
+    </td>
+    <td align="center">
+      <img src="Documentation~/images/info-landscape-fullscreen.png" alt="The Info tab in landscape: sections in two columns" width="560"><br>
+      <sub>Info, landscape — two columns</sub>
+    </td>
+  </tr>
+</table>
 
 The log keeps up to 16 384 records within a budget of about 4 million characters of text (some 8 MB), dropping the
 oldest first. A message repeated word for word is stored once and shared by its records — back to back, it is one
