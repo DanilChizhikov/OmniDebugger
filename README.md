@@ -1,6 +1,8 @@
 # OmniDebugger
 [![Unity Version](https://img.shields.io/badge/unity-6000.0+-000.svg)](https://unity.com/releases/editor/archive)
+[![openupm](https://img.shields.io/npm/v/com.dtech.omnidebugger?label=openupm&registry_uri=https://package.openupm.com)](https://openupm.com/packages/com.dtech.omnidebugger/)
 ![Unity Tests](https://github.com/DanilChizhikov/OmniDebugger/actions/workflows/tests.yml/badge.svg?branch=master)
+[![openupm](https://img.shields.io/badge/dynamic/json?color=brightgreen&label=downloads&query=%24.downloads&suffix=%2Fmonth&url=https%3A%2F%2Fpackage.openupm.com%2Fdownloads%2Fpoint%2Flast-month%2Fcom.dtech.omnidebugger)](https://openupm.com/packages/com.dtech.omnidebugger/)
 [![Donate](https://img.shields.io/badge/donate-DonationAlerts-f59c07.svg)](https://www.donationalerts.com/r/danilchizhikov)
 
 ## Overview
