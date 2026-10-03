@@ -1,5 +1,10 @@
 # Changelog
 
+## unreleased
+
+### Added
+- Check for updates on startup with update window. Also, for check update added menu item `Tools/DTech/OmniDebugger/Check Update`.
+
 ## [2.1.0] - 2026-10-03
 
 ### Added
