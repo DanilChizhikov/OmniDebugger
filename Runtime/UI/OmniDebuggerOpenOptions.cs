@@ -6,8 +6,8 @@ using UnityEngine.Serialization;
 namespace DTech.OmniDebugger.UI
 {
 	/// <summary>
-	/// Ways into the runtime panel: the floating button and keyboard shortcuts. Both can be used
-	/// together; turn the button off and a shortcut is the only way in.
+	/// Ways into the runtime panel: the floating button, keyboard shortcuts and a gamepad combo. All
+	/// can be used together; turn the button off and a shortcut or the combo is the only way in.
 	/// </summary>
 	[Serializable]
 	public sealed class OmniDebuggerOpenOptions
@@ -72,6 +72,17 @@ namespace DTech.OmniDebugger.UI
 			set => _shortcuts = value;
 		}
 
+		/// <summary>
+		/// Gamepad buttons that toggle the panel when held together. Fires when the last one goes down.
+		/// <see cref="OmniDebuggerGamepadButtons.None"/> turns it off. Needs the Input System package.
+		/// Select + Start by default.
+		/// </summary>
+		public OmniDebuggerGamepadButtons GamepadCombo
+		{
+			get => _gamepadCombo;
+			set => _gamepadCombo = value;
+		}
+
 		[Tooltip("Shows the floating button that opens the panel.")]
 		[FormerlySerializedAs("_showButton")]
 		[SerializeField] private bool _buttonEnabled = true;
@@ -90,6 +101,10 @@ namespace DTech.OmniDebugger.UI
 
 		[Tooltip("Each entry toggles the panel. An entry fires when all its keys are held and the last one goes down.")]
 		[SerializeField] private List<OmniDebuggerShortcut> _shortcuts = new ();
+
+		[Tooltip("Gamepad buttons that toggle the panel when held together. Needs the Input System package.")]
+		[SerializeField] private OmniDebuggerGamepadButtons _gamepadCombo =
+			OmniDebuggerGamepadButtons.Select | OmniDebuggerGamepadButtons.Start;
 
 		internal OmniDebuggerOpenOptions Clone()
 		{
@@ -113,6 +128,7 @@ namespace DTech.OmniDebugger.UI
 				_buttonAnchor = _buttonAnchor,
 				_buttonOpacity = _buttonOpacity,
 				_shortcuts = shortcuts,
+				_gamepadCombo = _gamepadCombo,
 			};
 		}
 	}

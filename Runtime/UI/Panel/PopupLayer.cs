@@ -128,7 +128,6 @@ namespace DTech.OmniDebugger.UI
 		{
 			int attempts = 0;
 
-			// An anchored popup stays hidden until its first layout, and a hidden element refuses focus.
 			popup.schedule
 				.Execute(() =>
 				{

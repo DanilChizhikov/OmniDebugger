@@ -9,10 +9,17 @@
   the focus back to its anchor when it hides.
 - A focus ring (`.od-focus-ring`, colored by `--od-color-focus`) drawn while the focus is moved by a gamepad or the
   keyboard, and hidden after a touch or a click.
+- `OmniDebuggerOpenOptions.GamepadCombo` (`OmniDebuggerGamepadButtons`): gamepad buttons that toggle the runtime
+  panel, Select + Start by default. Needs the Input System package.
 
 ### Fixed
 - Command palette results could not take focus, so a gamepad could not run them.
 - Scrollbars took focus and trapped gamepad navigation.
+- Navigation stopped at the last control on screen: UI Toolkit looks for the next control inside the panel's bounds
+  only. A move now scrolls the next control into view first, and past the last one scrolls the rest of the list.
+- The D-pad of an Xbox controller on macOS did not navigate: Input System 1.19's `XboxGamepadMacOSNative` layout keeps
+  the D-pad buttons outside the D-pad's own state, so actions bound to `<Gamepad>/dpad` never fire. The panel reads
+  the D-pad itself when a layout is like that.
 
 ## [2.0.0] - 2026-09-30
 

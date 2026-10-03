@@ -26,7 +26,6 @@ namespace DTech.OmniDebugger.UI
 			UiBuild.SetVisible(_ring, false);
 			_root.Add(_ring);
 
-			// The ring follows the control every frame: scrolling and dragging move it without a layout pass.
 			_track = _root.schedule.Execute(Track).Every(TrackIntervalMs);
 			_track.Pause();
 		}

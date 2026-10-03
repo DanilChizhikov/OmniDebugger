@@ -153,7 +153,6 @@ namespace DTech.OmniDebugger.UI
 
 			SetNavigating(true);
 
-			// The first move only reveals where the focus already is, so it never jumps unseen.
 			if (evt.target is VisualElement target && target != _root && _root.Contains(target))
 			{
 				_root.panel?.focusController?.IgnoreEvent(evt);

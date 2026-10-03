@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace DTech.OmniDebugger.UI
 {
@@ -8,5 +9,8 @@ namespace DTech.OmniDebugger.UI
 
 		bool IsKeyHeld(KeyCode key);
 		bool WasKeyPressed(KeyCode key);
+		bool IsGamepadButtonHeld(OmniDebuggerGamepadButtons button);
+		bool WasGamepadButtonPressed(OmniDebuggerGamepadButtons button);
+		NavigationMoveEvent.Direction PollStrandedDpad();
 	}
 }

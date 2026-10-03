@@ -1,5 +1,6 @@
 #if ENABLE_LEGACY_INPUT_MANAGER
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace DTech.OmniDebugger.UI
 {
@@ -9,6 +10,10 @@ namespace DTech.OmniDebugger.UI
 
 		public bool IsKeyHeld(KeyCode key) => key != KeyCode.None && Input.GetKey(key);
 		public bool WasKeyPressed(KeyCode key) => key != KeyCode.None && Input.GetKeyDown(key);
+
+		public bool IsGamepadButtonHeld(OmniDebuggerGamepadButtons button) => false;
+		public bool WasGamepadButtonPressed(OmniDebuggerGamepadButtons button) => false;
+		public NavigationMoveEvent.Direction PollStrandedDpad() => NavigationMoveEvent.Direction.None;
 	}
 }
 #endif
