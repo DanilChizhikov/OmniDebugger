@@ -97,7 +97,7 @@ namespace DTech.OmniDebugger.UI
 			}
 
 			StopInertia();
-			_scroll.ScrollTo(focused);
+			Reveal(focused);
 		}
 
 		private void OnNavigationMove(NavigationMoveEvent evt)
@@ -117,12 +117,7 @@ namespace DTech.OmniDebugger.UI
 
 			if (next != null)
 			{
-				if (!IsInViewport(next.worldBound))
-				{
-					StopInertia();
-					_scroll.ScrollTo(next);
-				}
-
+				Reveal(next);
 				return;
 			}
 
@@ -179,11 +174,37 @@ namespace DTech.OmniDebugger.UI
 			}
 		}
 
-		private bool IsInViewport(Rect bounds)
+		private void Reveal(VisualElement element)
 		{
-			Rect viewport = _scroll.contentViewport.worldBound;
-			return AlongMin(bounds) >= AlongMin(viewport) - NavigationTolerance &&
-				AlongMax(bounds) <= AlongMax(viewport) + NavigationTolerance;
+			Rect bounds = _scroll.contentViewport.WorldToLocal(element.worldBound);
+			float viewport = Along(_scroll.contentViewport.layout.size);
+			float start = AlongMin(bounds);
+			float end = AlongMax(bounds);
+			float delta;
+
+			if (start < -NavigationTolerance || end - start > viewport)
+			{
+				delta = start;
+			}
+			else if (end > viewport + NavigationTolerance)
+			{
+				delta = end - viewport;
+			}
+			else
+			{
+				return;
+			}
+
+			float offset = AxisOffset();
+			float revealed = Clamp(offset + delta);
+
+			if (Mathf.Approximately(offset, revealed))
+			{
+				return;
+			}
+
+			StopInertia();
+			SetAxisOffset(revealed);
 		}
 
 		private int AxisSign(NavigationMoveEvent.Direction direction)
@@ -604,6 +625,12 @@ namespace DTech.OmniDebugger.UI
 
 		private void SetAxisOffset(float value)
 		{
+			Scroller scroller = IsHorizontal ? _scroll.horizontalScroller : _scroll.verticalScroller;
+			if (scroller.highValue < value)
+			{
+				scroller.highValue = value;
+			}
+
 			Vector2 offset = _scroll.scrollOffset;
 
 			if (IsHorizontal)

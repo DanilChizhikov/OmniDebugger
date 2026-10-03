@@ -9,6 +9,7 @@ namespace DTech.OmniDebugger.UI
 	{
 		private const int MaxStepDecimals = 6;
 		private const double DecimalTolerance = 1e-9;
+		private const double NudgeFraction = 0.01;
 
 		public int Priority => 0;
 
@@ -93,10 +94,13 @@ namespace DTech.OmniDebugger.UI
 				return null;
 			}
 
+			float unit = Math.Max(step, (float)ClosestPowerOfTen((high - low) * NudgeFraction));
+
 			return new RangeArgumentField<float>(
 				new Slider(low, high) { fill = true },
 				new FloatField(),
 				value => SnapFractional(value, low, high, step, decimals),
+				(value, sign) => SnapFractional(value + sign * unit, low, high, step, decimals),
 				value => ParseFractional(value, low),
 				value => isDouble ? ToDouble(value) : value,
 				request);
@@ -120,11 +124,13 @@ namespace DTech.OmniDebugger.UI
 			int low = (int)lowBound;
 			int high = (int)highBound;
 			int step = Math.Max(1, (int)Math.Round(range.Step));
+			long unit = Math.Max(step, (long)ClosestPowerOfTen((highBound - lowBound) * NudgeFraction));
 
 			return new RangeArgumentField<int>(
 				new SliderInt(low, high) { fill = true },
 				new IntegerField(),
 				value => SnapInteger(value, low, high, step),
+				(value, sign) => SnapInteger((int)Math.Max(low, Math.Min(high, value + sign * unit)), low, high, step),
 				value => ParseInteger(value, low),
 				value => type == typeof(int) ? value : Convert.ChangeType(value, type, CultureInfo.InvariantCulture),
 				request);
@@ -193,6 +199,9 @@ namespace DTech.OmniDebugger.UI
 			long snapped = low + (long)Math.Round(((long)value - low) / (double)step, MidpointRounding.AwayFromZero) * step;
 			return (int)Math.Max(low, Math.Min(high, snapped));
 		}
+
+		private static double ClosestPowerOfTen(double value) =>
+			value > 0.0 ? Math.Pow(10.0, Math.Floor(Math.Log10(value))) : 0.0;
 
 		private static float ParseFractional(object value, float fallback)
 		{
