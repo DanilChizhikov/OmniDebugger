@@ -9,12 +9,15 @@ namespace DTech.OmniDebugger.UI
 		private const float AnchorGap = 4.0f;
 		private const float MinAnchoredWidth = 192.0f;
 		private const float EdgeMargin = 6.0f;
+		private const long FocusRetryMs = 16;
+		private const int FocusAttempts = 5;
 
 		public bool IsShowing => _popup != null;
 
 		private VisualElement _popup;
 		private VisualElement _anchor;
 		private Action _onHidden;
+		private VisualElement _returnFocus;
 
 		public PopupLayer()
 		{
@@ -91,10 +94,21 @@ namespace DTech.OmniDebugger.UI
 				return;
 			}
 
+			VisualElement focused = FocusedElement();
+			bool focusLeaves = focused == null || _popup.Contains(focused);
+
 			_popup.UnregisterCallback<GeometryChangedEvent>(OnAnchoredGeometryChanged);
 			_popup.RemoveFromHierarchy();
 			_popup = null;
 			_anchor = null;
+
+			VisualElement returnFocus = _returnFocus;
+			_returnFocus = null;
+
+			if (focusLeaves && returnFocus != null && returnFocus.panel != null && !PanelNavigation.IsTextInput(returnFocus))
+			{
+				returnFocus.Focus();
+			}
 
 			RemoveFromClassList(OmniDebuggerUiClasses.PopupLayerVisible);
 			RemoveFromClassList(OmniDebuggerUiClasses.PopupLayerAnchored);
@@ -110,19 +124,46 @@ namespace DTech.OmniDebugger.UI
 			return float.IsNaN(scale) || float.IsInfinity(scale) || scale <= 0.0f ? 1.0f : scale;
 		}
 
+		private static void FocusFirst(VisualElement popup)
+		{
+			int attempts = 0;
+
+			// An anchored popup stays hidden until its first layout, and a hidden element refuses focus.
+			popup.schedule
+				.Execute(() =>
+				{
+					attempts++;
+					PanelNavigation.FindFocusable(popup)?.Focus();
+				})
+				.Every(FocusRetryMs)
+				.Until(() => attempts >= FocusAttempts || popup.panel == null || IsFocusWithin(popup));
+		}
+
+		private static bool IsFocusWithin(VisualElement element) =>
+			element.panel?.focusController?.focusedElement is VisualElement focused && element.Contains(focused);
+
 		private void Show(VisualElement popup, VisualElement anchor, Action onHidden)
 		{
+			VisualElement returnFocus = _popup == null ? FocusedElement() : _returnFocus;
 			Hide();
 
 			_popup = popup;
 			_anchor = anchor;
 			_onHidden = onHidden;
+			_returnFocus = returnFocus;
 
 			Add(popup);
 			AddToClassList(OmniDebuggerUiClasses.PopupLayerVisible);
 			EnableInClassList(OmniDebuggerUiClasses.PopupLayerAnchored, anchor != null);
 			BringToFront();
+
+			if (parent != null && parent.ClassListContains(OmniDebuggerUiClasses.RootNavigating))
+			{
+				FocusFirst(popup);
+			}
 		}
+
+		private VisualElement FocusedElement() => panel?.focusController?.focusedElement as VisualElement;
 
 		private void OnAnchoredGeometryChanged(GeometryChangedEvent evt)
 		{

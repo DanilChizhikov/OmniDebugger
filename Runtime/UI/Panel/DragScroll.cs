@@ -36,6 +36,11 @@ namespace DTech.OmniDebugger.UI
 			_inertia = _scroll.schedule.Execute(Coast).Every(InertiaIntervalMs);
 			_inertia.Pause();
 
+			// Scrollbars are for pointers; as focus stops they would trap gamepad navigation.
+			_scroll.verticalScroller.slider.focusable = false;
+			_scroll.horizontalScroller.slider.focusable = false;
+
+			_scroll.RegisterCallback<FocusInEvent>(OnFocusIn);
 			_scroll.RegisterCallback<PointerDownEvent>(OnPointerDown, TrickleDown.TrickleDown);
 			_scroll.RegisterCallback<PointerMoveEvent>(OnPointerMove, TrickleDown.TrickleDown);
 			_scroll.RegisterCallback<PointerUpEvent>(OnPointerUp, TrickleDown.TrickleDown);
@@ -46,6 +51,7 @@ namespace DTech.OmniDebugger.UI
 
 		protected override void UnregisterCallbacksFromTarget()
 		{
+			_scroll.UnregisterCallback<FocusInEvent>(OnFocusIn);
 			_scroll.UnregisterCallback<PointerDownEvent>(OnPointerDown, TrickleDown.TrickleDown);
 			_scroll.UnregisterCallback<PointerMoveEvent>(OnPointerMove, TrickleDown.TrickleDown);
 			_scroll.UnregisterCallback<PointerUpEvent>(OnPointerUp, TrickleDown.TrickleDown);
@@ -67,6 +73,19 @@ namespace DTech.OmniDebugger.UI
 			using NavigationSubmitEvent submit = NavigationSubmitEvent.GetPooled();
 			submit.target = element;
 			element.SendEvent(submit);
+		}
+
+		private void OnFocusIn(FocusInEvent evt)
+		{
+			if (_pointerId != PointerId.invalidPointerId ||
+				evt.target is not VisualElement focused ||
+				!_scroll.contentContainer.Contains(focused))
+			{
+				return;
+			}
+
+			StopInertia();
+			_scroll.ScrollTo(focused);
 		}
 
 		private void OnPointerDown(PointerDownEvent evt)

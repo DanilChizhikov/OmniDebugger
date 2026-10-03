@@ -47,6 +47,7 @@ namespace DTech.OmniDebugger.UI
 		private readonly HotbarOverlay _hotbarOverlay;
 		private readonly IVisualElementScheduledItem _pendingRefresh;
 		private readonly FloatingPanel _floating;
+		private readonly PanelNavigation _navigation;
 
 		/// <summary>Whether the panel is showing. A closed panel keeps its state but stops working.</summary>
 		public bool IsOpen { get; private set; }
@@ -169,6 +170,7 @@ namespace DTech.OmniDebugger.UI
 			}
 
 			_root.Add(_popups);
+			_navigation = new PanelNavigation(_root, _panel, _popups, _overlay ? (Action)OnCancelRequested : null);
 			_palette = new CommandPalette(_services, Reveal);
 			_root.RegisterCallback<KeyDownEvent>(OnKeyDown, TrickleDown.TrickleDown);
 
@@ -280,6 +282,7 @@ namespace DTech.OmniDebugger.UI
 				SaveArguments();
 			}
 
+			_navigation.Dispose();
 			_palette.Dispose();
 			_popups.Hide();
 			_tabHost.OnSelectionChanged -= OnTabSelectionChanged;
@@ -475,10 +478,17 @@ namespace DTech.OmniDebugger.UI
 			{
 				_stage.SendToBack();
 				_tabHost.Refresh();
+
+				if (_overlay)
+				{
+					_navigation.FocusOnOpen();
+				}
+
 				return;
 			}
 
 			_popups.Hide();
+			_navigation.Release();
 
 			if (notify)
 			{
@@ -629,6 +639,14 @@ namespace DTech.OmniDebugger.UI
 			{
 				ShowPalette();
 				evt.StopPropagation();
+			}
+		}
+
+		private void OnCancelRequested()
+		{
+			if (IsOpen)
+			{
+				Close();
 			}
 		}
 

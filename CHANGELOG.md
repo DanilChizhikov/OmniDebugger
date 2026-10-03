@@ -1,5 +1,19 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Gamepad and keyboard navigation in the runtime panel. Opening it focuses the control focused last, or the selected
+  tab, so navigation reaches the panel at once; lists scroll to the focused control; *Cancel* closes the open popup,
+  then the panel; closing it hands the focus back. A popup opened while navigating focuses its first item and gives
+  the focus back to its anchor when it hides.
+- A focus ring (`.od-focus-ring`, colored by `--od-color-focus`) drawn while the focus is moved by a gamepad or the
+  keyboard, and hidden after a touch or a click.
+
+### Fixed
+- Command palette results could not take focus, so a gamepad could not run them.
+- Scrollbars took focus and trapped gamepad navigation.
+
 ## [2.0.0] - 2026-09-30
 
 A redesign of registration and of the panel. Breaking: see *Migration* below.
