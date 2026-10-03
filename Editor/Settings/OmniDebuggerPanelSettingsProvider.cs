@@ -32,6 +32,7 @@ namespace DTech.OmniDebugger.Editor
 		private const string ButtonAnchorField = "_buttonAnchor";
 		private const string ButtonOpacityField = "_buttonOpacity";
 		private const string ShortcutsField = "_shortcuts";
+		private const string GamepadComboField = "_gamepadCombo";
 
 		private const string LockField = "_lock";
 		private const string LockModeField = "_mode";
@@ -179,6 +180,7 @@ namespace DTech.OmniDebugger.Editor
 			using (new EditorGUI.IndentLevelScope())
 			{
 				DrawShortcuts(open.FindPropertyRelative(ShortcutsField));
+				DrawField(open, GamepadComboField);
 			}
 
 			DrawHeader("Lock");

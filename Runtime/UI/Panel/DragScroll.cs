@@ -15,6 +15,8 @@ namespace DTech.OmniDebugger.UI
 		private const float MaxReleaseDelay = 0.1f;
 		private const long InertiaIntervalMs = 16;
 		private const int PrimaryButtonMask = 1;
+		private const float NavigationStep = 0.33f;
+		private const float NavigationTolerance = 1.0f;
 
 		public bool IsDragging { get; private set; }
 		
@@ -36,6 +38,11 @@ namespace DTech.OmniDebugger.UI
 			_inertia = _scroll.schedule.Execute(Coast).Every(InertiaIntervalMs);
 			_inertia.Pause();
 
+			_scroll.verticalScroller.slider.focusable = false;
+			_scroll.horizontalScroller.slider.focusable = false;
+
+			_scroll.RegisterCallback<FocusInEvent>(OnFocusIn);
+			_scroll.RegisterCallback<NavigationMoveEvent>(OnNavigationMove);
 			_scroll.RegisterCallback<PointerDownEvent>(OnPointerDown, TrickleDown.TrickleDown);
 			_scroll.RegisterCallback<PointerMoveEvent>(OnPointerMove, TrickleDown.TrickleDown);
 			_scroll.RegisterCallback<PointerUpEvent>(OnPointerUp, TrickleDown.TrickleDown);
@@ -46,6 +53,8 @@ namespace DTech.OmniDebugger.UI
 
 		protected override void UnregisterCallbacksFromTarget()
 		{
+			_scroll.UnregisterCallback<FocusInEvent>(OnFocusIn);
+			_scroll.UnregisterCallback<NavigationMoveEvent>(OnNavigationMove);
 			_scroll.UnregisterCallback<PointerDownEvent>(OnPointerDown, TrickleDown.TrickleDown);
 			_scroll.UnregisterCallback<PointerMoveEvent>(OnPointerMove, TrickleDown.TrickleDown);
 			_scroll.UnregisterCallback<PointerUpEvent>(OnPointerUp, TrickleDown.TrickleDown);
@@ -68,6 +77,128 @@ namespace DTech.OmniDebugger.UI
 			submit.target = element;
 			element.SendEvent(submit);
 		}
+
+		private void OnFocusIn(FocusInEvent evt)
+		{
+			if (_pointerId != PointerId.invalidPointerId ||
+				evt.target is not VisualElement focused ||
+				!_scroll.contentContainer.Contains(focused))
+			{
+				return;
+			}
+
+			StopInertia();
+			_scroll.ScrollTo(focused);
+		}
+
+		private void OnNavigationMove(NavigationMoveEvent evt)
+		{
+			int sign = AxisSign(evt.direction);
+
+			if (sign == 0 || evt.target is not VisualElement focused || !_scroll.contentContainer.Contains(focused))
+			{
+				return;
+			}
+
+			Rect from = focused.worldBound;
+			VisualElement next = null;
+			float bestAlong = float.MaxValue;
+			float bestAcross = float.MaxValue;
+			FindNext(_scroll.contentContainer, focused, from, sign, ref next, ref bestAlong, ref bestAcross);
+
+			if (next != null)
+			{
+				if (!IsInViewport(next.worldBound))
+				{
+					StopInertia();
+					_scroll.ScrollTo(next);
+				}
+
+				return;
+			}
+
+			float offset = AxisOffset();
+			float stepped = Clamp(offset + sign * Along(_scroll.contentViewport.layout.size) * NavigationStep);
+
+			if (Mathf.Approximately(offset, stepped))
+			{
+				return;
+			}
+
+			StopInertia();
+			SetAxisOffset(stepped);
+			focused.focusController?.IgnoreEvent(evt);
+			evt.StopPropagation();
+		}
+
+		private void FindNext(
+			VisualElement element,
+			VisualElement focused,
+			Rect from,
+			int sign,
+			ref VisualElement next,
+			ref float bestAlong,
+			ref float bestAcross)
+		{
+			if (element.resolvedStyle.display == DisplayStyle.None)
+			{
+				return;
+			}
+
+			if (element != focused && element.canGrabFocus)
+			{
+				Rect bounds = element.worldBound;
+				float along = sign > 0 ? AlongMin(bounds) - AlongMax(from) : AlongMin(from) - AlongMax(bounds);
+
+				if (along >= -NavigationTolerance)
+				{
+					float across = Mathf.Abs(AcrossCenter(bounds) - AcrossCenter(from));
+
+					if (along < bestAlong - NavigationTolerance ||
+						(along <= bestAlong + NavigationTolerance && across < bestAcross))
+					{
+						next = element;
+						bestAlong = along;
+						bestAcross = across;
+					}
+				}
+			}
+
+			for (int i = 0; i < element.hierarchy.childCount; i++)
+			{
+				FindNext(element.hierarchy[i], focused, from, sign, ref next, ref bestAlong, ref bestAcross);
+			}
+		}
+
+		private bool IsInViewport(Rect bounds)
+		{
+			Rect viewport = _scroll.contentViewport.worldBound;
+			return AlongMin(bounds) >= AlongMin(viewport) - NavigationTolerance &&
+				AlongMax(bounds) <= AlongMax(viewport) + NavigationTolerance;
+		}
+
+		private int AxisSign(NavigationMoveEvent.Direction direction)
+		{
+			switch (direction)
+			{
+				case NavigationMoveEvent.Direction.Down:
+					return IsHorizontal ? 0 : 1;
+				case NavigationMoveEvent.Direction.Up:
+					return IsHorizontal ? 0 : -1;
+				case NavigationMoveEvent.Direction.Right:
+					return IsHorizontal ? 1 : 0;
+				case NavigationMoveEvent.Direction.Left:
+					return IsHorizontal ? -1 : 0;
+				default:
+					return 0;
+			}
+		}
+
+		private float AlongMin(Rect rect) => IsHorizontal ? rect.xMin : rect.yMin;
+
+		private float AlongMax(Rect rect) => IsHorizontal ? rect.xMax : rect.yMax;
+
+		private float AcrossCenter(Rect rect) => IsHorizontal ? rect.center.y : rect.center.x;
 
 		private void OnPointerDown(PointerDownEvent evt)
 		{

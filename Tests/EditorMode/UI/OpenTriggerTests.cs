@@ -3,6 +3,7 @@ using DTech.OmniDebugger.UI;
 using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.TestTools.Utils;
+using UnityEngine.UIElements;
 
 namespace DTech.OmniDebugger.Tests.EditorMode
 {
@@ -78,6 +79,44 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		}
 
 		[Test]
+		public void GamepadCombo_FiresOnTheFrameTheLastButtonGoesDown()
+		{
+			FakeInput input = new FakeInput();
+			ShortcutTrigger trigger = new ShortcutTrigger(input);
+			const OmniDebuggerGamepadButtons combo = OmniDebuggerGamepadButtons.Select | OmniDebuggerGamepadButtons.Start;
+
+			input.Hold(OmniDebuggerGamepadButtons.Select, pressedNow: true);
+			Assert.That(trigger.PollGamepad(combo), Is.False, "half a combo is not a combo");
+
+			input.Hold(OmniDebuggerGamepadButtons.Select, pressedNow: false);
+			input.Hold(OmniDebuggerGamepadButtons.Start, pressedNow: true);
+			Assert.That(trigger.PollGamepad(combo), Is.True);
+
+			input.Hold(OmniDebuggerGamepadButtons.Start, pressedNow: false);
+			Assert.That(trigger.PollGamepad(combo), Is.False, "holding the combo must not repeat it");
+		}
+
+		[Test]
+		public void GamepadCombo_NoneNeverFires()
+		{
+			FakeInput input = new FakeInput();
+			ShortcutTrigger trigger = new ShortcutTrigger(input);
+
+			input.Hold(OmniDebuggerGamepadButtons.South, pressedNow: true);
+			Assert.That(trigger.PollGamepad(OmniDebuggerGamepadButtons.None), Is.False);
+		}
+
+		[Test]
+		public void OpenOptions_GamepadComboDefaultsToSelectAndStart_AndSurvivesClone()
+		{
+			OmniDebuggerOpenOptions options = new OmniDebuggerOpenOptions();
+			Assert.That(options.GamepadCombo, Is.EqualTo(OmniDebuggerGamepadButtons.Select | OmniDebuggerGamepadButtons.Start));
+
+			options.GamepadCombo = OmniDebuggerGamepadButtons.LeftStickPress | OmniDebuggerGamepadButtons.RightStickPress;
+			Assert.That(options.Clone().GamepadCombo, Is.EqualTo(options.GamepadCombo));
+		}
+
+		[Test]
 		public void ClickSeries_NeedsTheWholeSeriesWithinTheWindow()
 		{
 			ClickSeries series = new ClickSeries();
@@ -147,6 +186,8 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 		{
 			private readonly HashSet<KeyCode> _held = new ();
 			private readonly HashSet<KeyCode> _pressed = new ();
+			private readonly HashSet<OmniDebuggerGamepadButtons> _heldButtons = new ();
+			private readonly HashSet<OmniDebuggerGamepadButtons> _pressedButtons = new ();
 
 			public bool IsTouchSupported => false;
 
@@ -164,9 +205,29 @@ namespace DTech.OmniDebugger.Tests.EditorMode
 				}
 			}
 
+			public void Hold(OmniDebuggerGamepadButtons button, bool pressedNow)
+			{
+				_heldButtons.Add(button);
+
+				if (pressedNow)
+				{
+					_pressedButtons.Add(button);
+				}
+				else
+				{
+					_pressedButtons.Remove(button);
+				}
+			}
+
 			public bool IsKeyHeld(KeyCode key) => _held.Contains(key);
 
 			public bool WasKeyPressed(KeyCode key) => _pressed.Contains(key);
+
+			public bool IsGamepadButtonHeld(OmniDebuggerGamepadButtons button) => _heldButtons.Contains(button);
+
+			public bool WasGamepadButtonPressed(OmniDebuggerGamepadButtons button) => _pressedButtons.Contains(button);
+
+			public NavigationMoveEvent.Direction PollStrandedDpad() => NavigationMoveEvent.Direction.None;
 		}
 	}
 }

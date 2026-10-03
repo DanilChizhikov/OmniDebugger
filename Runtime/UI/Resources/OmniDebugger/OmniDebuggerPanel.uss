@@ -177,6 +177,15 @@
     border-color: var(--od-color-focus);
 }
 
+/*
+ * Drawn over the focused control while a gamepad or the keyboard moves the focus, and hidden after
+ * any touch or click. One element follows the focus, so no control changes its own box for it.
+ */
+.od-root .od-focus-ring {
+    border-width: 2px;
+    border-color: var(--od-color-focus);
+}
+
 .od-root .unity-base-text-field__input {
     padding-left: var(--od-space-4);
     padding-right: var(--od-space-4);
