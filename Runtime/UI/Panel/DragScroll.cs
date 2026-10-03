@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.UIElements;
+using PointerType = UnityEngine.UIElements.PointerType;
 
 namespace DTech.OmniDebugger.UI
 {
@@ -18,19 +19,26 @@ namespace DTech.OmniDebugger.UI
 		private const float NavigationStep = 0.33f;
 		private const float NavigationTolerance = 1.0f;
 
+		private readonly PrimaryPress _press = new PrimaryPress();
+
 		public bool IsDragging { get; private set; }
-		
+
 		private bool IsHorizontal => _scroll.mode == ScrollViewMode.Horizontal;
 
 		private ScrollView _scroll;
 		private IVisualElementScheduledItem _inertia;
 		private VisualElement _pressed;
+		private VisualElement _pressTarget;
+		private VisualElement _adjustable;
+		private VisualElement _editable;
 		private Vector2 _pointerStart;
 		private Vector2 _pointerLast;
 		private float _lastMoveTime;
 		private float _lastInertiaTime;
 		private float _velocity;
+		private bool _coasting;
 		private int _pointerId = PointerId.invalidPointerId;
+		private int _handOffPointerId = PointerId.invalidPointerId;
 
 		protected override void RegisterCallbacksOnTarget()
 		{
@@ -64,6 +72,7 @@ namespace DTech.OmniDebugger.UI
 
 			StopInertia();
 			EndPointer();
+			_handOffPointerId = PointerId.invalidPointerId;
 		}
 
 		private static void Tap(VisualElement element)
@@ -202,9 +211,17 @@ namespace DTech.OmniDebugger.UI
 
 		private void OnPointerDown(PointerDownEvent evt)
 		{
+			if (evt.pointerId == _handOffPointerId)
+			{
+				_handOffPointerId = PointerId.invalidPointerId;
+				return;
+			}
+
 			VisualElement pressed = evt.target as VisualElement;
 
-			if (evt.button != 0 || !evt.isPrimary || IsExempt(pressed))
+			if (evt.button != 0 ||
+				!evt.isPrimary ||
+				!TryClassify(pressed, evt.pointerType, out VisualElement adjustable, out VisualElement editable))
 			{
 				return;
 			}
@@ -219,6 +236,7 @@ namespace DTech.OmniDebugger.UI
 				EndPointer();
 			}
 
+			_coasting = _inertia.isActive;
 			StopInertia();
 
 			_pointerId = evt.pointerId;
@@ -227,8 +245,20 @@ namespace DTech.OmniDebugger.UI
 			_lastMoveTime = Time.realtimeSinceStartup;
 			IsDragging = false;
 
-			_pressed = FindTappable(pressed);
-			_pressed?.AddToClassList(OmniDebuggerUiClasses.Pressed);
+			_pressTarget = pressed;
+			_adjustable = adjustable;
+			_editable = editable;
+
+			if (_editable != null)
+			{
+				_scroll.focusController?.IgnoreEvent(evt);
+			}
+
+			if (!_coasting && _adjustable == null && _editable == null)
+			{
+				_pressed = FindTappable(pressed);
+				_pressed?.AddToClassList(OmniDebuggerUiClasses.Pressed);
+			}
 
 			_scroll.CapturePointer(_pointerId);
 			evt.StopPropagation();
@@ -257,9 +287,15 @@ namespace DTech.OmniDebugger.UI
 
 				Vector2 travel = position - _pointerStart;
 				float along = Mathf.Abs(Along(travel));
+				float across = Mathf.Abs(Across(travel));
 
-				if (along < TouchSlop.Distance || along <= Mathf.Abs(Across(travel)))
+				if (along < TouchSlop.Distance || along <= across)
 				{
+					if (across >= TouchSlop.Distance && across > along)
+					{
+						TryHandOff(evt);
+					}
+
 					return;
 				}
 
@@ -284,11 +320,26 @@ namespace DTech.OmniDebugger.UI
 		{
 			if (evt.pointerId != _pointerId)
 			{
+				ForgetHandOff(evt.pointerId);
 				return;
 			}
 
-			VisualElement tapped = !IsDragging && _pressed != null && _pressed.worldBound.Contains(evt.position)
+			bool tap = !IsDragging && !_coasting;
+			VisualElement target = _pressTarget;
+
+			if (tap && _adjustable != null && _adjustable.worldBound.Contains(evt.position) && TryHandOff(evt))
+			{
+				using PointerUpEvent up = PointerUpEvent.GetPooled(evt);
+				up.target = target;
+				target.SendEvent(up);
+				return;
+			}
+
+			VisualElement tapped = tap && _pressed != null && _pressed.worldBound.Contains(evt.position)
 				? _pressed
+				: null;
+			VisualElement edited = tap && _editable != null && _editable.worldBound.Contains(evt.position)
+				? _editable
 				: null;
 
 			Release(evt);
@@ -297,6 +348,10 @@ namespace DTech.OmniDebugger.UI
 			{
 				Tap(tapped);
 			}
+			else if (edited != null && edited.enabledInHierarchy)
+			{
+				edited.Focus();
+			}
 		}
 
 		private void OnPointerCancel(PointerCancelEvent evt)
@@ -304,6 +359,10 @@ namespace DTech.OmniDebugger.UI
 			if (evt.pointerId == _pointerId)
 			{
 				Release(evt);
+			}
+			else
+			{
+				ForgetHandOff(evt.pointerId);
 			}
 		}
 
@@ -345,6 +404,10 @@ namespace DTech.OmniDebugger.UI
 
 			_pointerId = PointerId.invalidPointerId;
 			IsDragging = false;
+			_coasting = false;
+			_pressTarget = null;
+			_adjustable = null;
+			_editable = null;
 			ClearPressed();
 
 			if (pointerId != PointerId.invalidPointerId && _scroll.HasPointerCapture(pointerId))
@@ -413,21 +476,98 @@ namespace DTech.OmniDebugger.UI
 			_velocity = 0.0f;
 		}
 
-		private bool IsExempt(VisualElement element)
+		private bool TryHandOff(IPointerEvent at)
 		{
+			VisualElement target = _pressTarget;
+
+			if (_adjustable == null || !_adjustable.enabledInHierarchy || target == null)
+			{
+				return false;
+			}
+
+			int pointerId = _pointerId;
+			EndPointer();
+			_handOffPointerId = pointerId;
+
+			_press.Set(at);
+			using PointerDownEvent down = PointerDownEvent.GetPooled(_press);
+			_press.Set(null);
+
+			down.target = target;
+			target.SendEvent(down);
+			return true;
+		}
+
+		private void ForgetHandOff(int pointerId)
+		{
+			if (pointerId == _handOffPointerId)
+			{
+				_handOffPointerId = PointerId.invalidPointerId;
+			}
+		}
+
+		private bool TryClassify(
+			VisualElement element,
+			string pointerType,
+			out VisualElement adjustable,
+			out VisualElement editable)
+		{
+			adjustable = null;
+			editable = null;
+
+			VisualElement slider = null;
+			VisualElement field = null;
+
 			while (element != null && element != _scroll)
 			{
-				if (element is Scroller ||
-					element.ClassListContains(TextInputBaseField<string>.ussClassName) ||
-					element.ClassListContains(BaseSlider<float>.ussClassName))
+				if (element is Scroller)
 				{
-					return true;
+					return false;
+				}
+
+				if (slider == null && element.ClassListContains(BaseSlider<float>.ussClassName))
+				{
+					slider = element;
+				}
+
+				if (field == null && element.ClassListContains(TextInputBaseField<string>.ussClassName))
+				{
+					field = element;
 				}
 
 				element = element.parent;
 			}
 
-			return false;
+			if (pointerType == PointerType.mouse)
+			{
+				return slider == null && field == null;
+			}
+
+			if (slider != null)
+			{
+				string across = IsHorizontal
+					? BaseSlider<float>.verticalVariantUssClassName
+					: BaseSlider<float>.horizontalVariantUssClassName;
+
+				if (!slider.ClassListContains(across))
+				{
+					return false;
+				}
+
+				adjustable = slider;
+			}
+
+			if (field != null)
+			{
+				if (field.focusController?.focusedElement is VisualElement focused && field.Contains(focused))
+				{
+					return false;
+				}
+
+				editable = field;
+			}
+
+			return true;
 		}
 
 		private VisualElement FindTappable(VisualElement element)
