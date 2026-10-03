@@ -14,6 +14,7 @@ namespace DTech.OmniDebugger.UI
 		private readonly BaseSlider<TValue> _slider;
 		private readonly BaseField<TValue> _box;
 		private readonly Func<TValue, TValue> _normalize;
+		private readonly Func<TValue, int, TValue> _nudge;
 		private readonly Func<object, TValue> _parse;
 		private readonly Func<TValue, object> _toTarget;
 
@@ -27,6 +28,7 @@ namespace DTech.OmniDebugger.UI
 			BaseSlider<TValue> slider,
 			BaseField<TValue> box,
 			Func<TValue, TValue> normalize,
+			Func<TValue, int, TValue> nudge,
 			Func<object, TValue> parse,
 			Func<TValue, object> toTarget,
 			in ArgumentFieldRequest request)
@@ -34,6 +36,7 @@ namespace DTech.OmniDebugger.UI
 			_slider = slider ?? throw new ArgumentNullException(nameof(slider));
 			_box = box ?? throw new ArgumentNullException(nameof(box));
 			_normalize = normalize ?? throw new ArgumentNullException(nameof(normalize));
+			_nudge = nudge ?? throw new ArgumentNullException(nameof(nudge));
 			_parse = parse ?? throw new ArgumentNullException(nameof(parse));
 			_toTarget = toTarget ?? throw new ArgumentNullException(nameof(toTarget));
 
@@ -56,6 +59,7 @@ namespace DTech.OmniDebugger.UI
 			_slider.RegisterValueChangedCallback(OnSliderChanged);
 			_slider.RegisterCallback<PointerDownEvent>(OnSliderPressed, TrickleDown.TrickleDown);
 			_slider.RegisterCallback<PointerCaptureOutEvent>(OnSliderReleased);
+			_slider.RegisterCallback<NavigationMoveEvent>(OnSliderNavigationMove, TrickleDown.TrickleDown);
 			_box.RegisterCallback<KeyDownEvent>(OnBoxKeyDown);
 			_box.RegisterCallback<FocusOutEvent>(OnBoxFocusOut);
 		}
@@ -87,6 +91,7 @@ namespace DTech.OmniDebugger.UI
 			_slider.UnregisterValueChangedCallback(OnSliderChanged);
 			_slider.UnregisterCallback<PointerDownEvent>(OnSliderPressed, TrickleDown.TrickleDown);
 			_slider.UnregisterCallback<PointerCaptureOutEvent>(OnSliderReleased);
+			_slider.UnregisterCallback<NavigationMoveEvent>(OnSliderNavigationMove, TrickleDown.TrickleDown);
 			_box.UnregisterCallback<KeyDownEvent>(OnBoxKeyDown);
 			_box.UnregisterCallback<FocusOutEvent>(OnBoxFocusOut);
 			OnCommitted = null;
@@ -128,6 +133,53 @@ namespace DTech.OmniDebugger.UI
 
 			_pointerDown = false;
 			CommitIfChanged();
+		}
+
+		private void OnSliderNavigationMove(NavigationMoveEvent evt)
+		{
+			int sign = NudgeSign(evt.direction);
+
+			if (sign == 0 || !_slider.enabledInHierarchy)
+			{
+				return;
+			}
+
+			TValue next = _nudge(_slider.value, sign);
+
+			if (!EqualityComparer<TValue>.Default.Equals(next, _slider.value))
+			{
+				_slider.value = next;
+			}
+
+			evt.StopImmediatePropagation();
+			_slider.focusController?.IgnoreEvent(evt);
+		}
+
+		private int NudgeSign(NavigationMoveEvent.Direction direction)
+		{
+			bool horizontal = _slider.direction == SliderDirection.Horizontal;
+			int sign;
+
+			switch (direction)
+			{
+				case NavigationMoveEvent.Direction.Right:
+					sign = horizontal ? 1 : 0;
+					break;
+				case NavigationMoveEvent.Direction.Left:
+					sign = horizontal ? -1 : 0;
+					break;
+				case NavigationMoveEvent.Direction.Up:
+					sign = horizontal ? 0 : 1;
+					break;
+				case NavigationMoveEvent.Direction.Down:
+					sign = horizontal ? 0 : -1;
+					break;
+				default:
+					sign = 0;
+					break;
+			}
+
+			return _slider.inverted ? -sign : sign;
 		}
 
 		private void OnBoxKeyDown(KeyDownEvent evt)

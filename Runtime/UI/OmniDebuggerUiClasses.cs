@@ -7,6 +7,8 @@ namespace DTech.OmniDebugger.UI
 		public const string RootOverlay = "od-root--overlay";
 		public const string RootLandscape = "od-root--landscape";
 		public const string RootFloating = "od-root--floating";
+		public const string RootNavigating = "od-root--navigating";
+		public const string FocusRing = "od-focus-ring";
 		public const string Desk = "od-desk";
 		public const string DeskFloatingHidden = "od-desk--floating-hidden";
 		public const string Stage = "od-stage";

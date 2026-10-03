@@ -51,6 +51,7 @@ _debugger.Commands.Build()
 - [The Panel](#the-panel)
     - [At Runtime](#at-runtime)
     - [Opening It](#opening-it)
+    - [With a Gamepad](#with-a-gamepad)
     - [Locking It](#locking-it)
     - [Tabs](#tabs)
     - [The Hotbar](#the-hotbar)
@@ -88,9 +89,9 @@ _debugger.Commands.Build()
     ```
 3. Unity will automatically import the package.
 
-If you want to set a target version, OmniDebugger uses the `v*.*.*` release tag so you can specify a version like #v1.0.0.
+If you want to set a target version, OmniDebugger uses the `v*.*.*` release tag so you can specify a version like #v2.1.0.
 
-For example `https://github.com/DanilChizhikov/OmniDebugger.git#v2.0.0`.
+For example `https://github.com/DanilChizhikov/OmniDebugger.git#v2.1.0`.
 
 ## Enabling the Debugger
 
@@ -572,6 +573,28 @@ To bind a shortcut, press *Add Shortcut*, click the new field, hold the keys and
 removes the row. Shortcuts are `KeyCode`s whichever input backend runs: the Input System package is used when it is
 installed and active, the legacy Input Manager otherwise. Shift, Ctrl, Alt and Cmd/Win match either side of the
 keyboard. Nothing is required: with neither backend, shortcuts stay silent and the button still works.
+
+### With a Gamepad
+
+Select + Start toggles the runtime panel: hold one, press the other. Panel settings → *Shortcuts* → *Gamepad Combo*
+picks other buttons, or None to turn it off; it needs the Input System package, since the legacy Input Manager has no
+fixed gamepad layout.
+
+Inside, the panel is driven by UI Toolkit navigation, so a gamepad or the arrow keys work without setup. When it
+opens, the focus goes to the control focused last, or to the selected tab. The first move only shows a ring around
+it; the next ones move it. Lists scroll to follow the focus, and past the last control a move scrolls the rest of the
+list into view. *Submit* presses the control, *Cancel* closes the open popup first and then the panel. A touch or a
+click hides the ring, and closing the panel hands the focus back to the game.
+
+The bindings come from your project, not from the package: the `UI` action map of the Input System's project-wide
+actions (*Navigate*, *Submit*, *Cancel*), or the input module of your `EventSystem` if the scene has one. With the
+Input System as the only active input handling, install `com.unity.inputsystem` 1.8 or newer: without it UI Toolkit
+falls back to the legacy Input Manager and logs `InvalidOperationException` every frame. The ring takes its color
+from `--od-color-focus` in your [theme](#themes).
+
+Input System 1.19 lays out the D-pad of an Xbox controller on macOS (`XboxGamepadMacOSNative`) so that actions bound
+to `<Gamepad>/dpad` never fire, and UI navigation misses it. The panel notices such a layout and reads the D-pad
+itself, on that device only.
 
 ### Locking It
 

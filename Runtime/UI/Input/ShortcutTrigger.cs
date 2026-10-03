@@ -30,6 +30,35 @@ namespace DTech.OmniDebugger.UI
 			return false;
 		}
 
+		public bool PollGamepad(OmniDebuggerGamepadButtons combo)
+		{
+			if (combo == OmniDebuggerGamepadButtons.None)
+			{
+				return false;
+			}
+
+			bool pressedNow = false;
+
+			for (int bit = 1; bit <= (int)combo && bit > 0; bit <<= 1)
+			{
+				OmniDebuggerGamepadButtons button = (OmniDebuggerGamepadButtons)bit;
+
+				if ((combo & button) == 0)
+				{
+					continue;
+				}
+
+				if (!_input.IsGamepadButtonHeld(button))
+				{
+					return false;
+				}
+
+				pressedNow |= _input.WasGamepadButtonPressed(button);
+			}
+
+			return pressedNow;
+		}
+
 		private static KeyCode Twin(KeyCode key)
 		{
 			switch (key)

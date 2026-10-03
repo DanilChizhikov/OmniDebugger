@@ -315,7 +315,7 @@ namespace DTech.OmniDebugger.UI
 
 			_shortcuts ??= new ShortcutTrigger(InputBackends.Current);
 
-			if (_shortcuts.Poll(Options.Open.Shortcuts))
+			if (_shortcuts.Poll(Options.Open.Shortcuts) || _shortcuts.PollGamepad(Options.Open.GamepadCombo))
 			{
 				Toggle();
 			}
@@ -323,6 +323,25 @@ namespace DTech.OmniDebugger.UI
 			{
 				OpenPalette();
 			}
+
+			RouteStrandedDpad();
+		}
+
+		private void RouteStrandedDpad()
+		{
+			NavigationMoveEvent.Direction direction = InputBackends.Current.PollStrandedDpad();
+			VisualElement root = _view.Root;
+
+			if (direction == NavigationMoveEvent.Direction.None ||
+				root.panel?.focusController?.focusedElement is not VisualElement focused ||
+				!root.Contains(focused))
+			{
+				return;
+			}
+
+			using NavigationMoveEvent move = NavigationMoveEvent.GetPooled(direction);
+			move.target = focused;
+			focused.SendEvent(move);
 		}
 
 		private void BuildView()

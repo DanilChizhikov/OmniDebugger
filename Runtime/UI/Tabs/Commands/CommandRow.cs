@@ -69,6 +69,7 @@ namespace DTech.OmniDebugger.UI
 				OmniIcon chevron = new OmniIcon(IconGlyph.Chevron);
 				chevron.AddToClassList(OmniDebuggerUiClasses.RowChevron);
 				_main.Add(chevron);
+				focusable = true;
 				MakeTappable();
 				return;
 			}

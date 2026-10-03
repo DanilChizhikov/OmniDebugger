@@ -16,7 +16,7 @@ namespace DTech.OmniDebugger
 		/// <inheritdoc/>
 		public event Action OnRefreshRequested;
 
-		private static readonly Version _version = new (2, 0, 0);
+		private static readonly Version _version = new (2, 1, 0);
 		private static readonly List<OmniDebuggerHost> _alive = new ();
 
 		private readonly CommandRegistry _commands;
