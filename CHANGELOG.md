@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [2.1.0] - 2026-10-03
 
 ### Added
 - Gamepad and keyboard navigation in the runtime panel. Opening it focuses the control focused last, or the selected
@@ -13,6 +13,7 @@
   panel, Select + Start by default. Needs the Input System package.
 
 ### Fixed
+- Srolling for touch screen
 - Command palette results could not take focus, so a gamepad could not run them.
 - Scrollbars took focus and trapped gamepad navigation.
 - Navigation stopped at the last control on screen: UI Toolkit looks for the next control inside the panel's bounds
