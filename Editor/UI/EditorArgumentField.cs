@@ -1,5 +1,6 @@
 #if OMNI_DEBUGGER
 using System;
+using System.Collections.Generic;
 using UnityEditor.UIElements;
 using UnityEngine.UIElements;
 
@@ -13,8 +14,18 @@ namespace DTech.OmniDebugger.UI.Editor
 
 		public virtual bool IsEditing => Root.focusController?.focusedElement is VisualElement focused && Root.Contains(focused);
 
-		public static EditorArgumentField Create(ArgumentDefinition argument, IArgumentFieldRegistry fallback, string label)
+		public static EditorArgumentField Create(
+			ArgumentDefinition argument,
+			IArgumentFieldRegistry fallback,
+			string label,
+			Action<ICollection<object>> options)
 		{
+			if (options != null)
+			{
+				ArgumentFieldRequest request = ArgumentFieldRequest.For(argument, null, showLabel: false, options);
+				return new Registered(fallback.Create(request), label);
+			}
+
 			Type type = Nullable.GetUnderlyingType(argument.Type) ?? argument.Type;
 			bool nullable = type != argument.Type;
 			EditorArgumentField field = CreateFor(type, argument, label) ?? CreateFallback(argument, fallback, label);

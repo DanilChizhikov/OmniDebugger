@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.CompilerServices;
@@ -207,6 +208,69 @@ namespace DTech.OmniDebugger
 			catch (Exception exception)
 			{
 				_log.Exception($"Reading a command value failed. Path: {path}.", exception);
+				return false;
+			}
+		}
+
+		public bool TryGetOptions(string path, int argumentIndex, ICollection<object> options)
+		{
+			MainThreadGuard.Verify(nameof(TryGetOptions));
+			ThrowIfDisposed();
+
+			if (string.IsNullOrWhiteSpace(path))
+			{
+				throw new ArgumentException("Command path cannot be null or whitespace.", nameof(path));
+			}
+
+			if (options == null)
+			{
+				throw new ArgumentNullException(nameof(options));
+			}
+
+			if (!TryGetCommand(path, out DebugCommand command))
+			{
+				_log.Error($"Command was not found. Path: {path}.");
+				return false;
+			}
+
+			if (!command.HasOptions(argumentIndex))
+			{
+				_log.Error($"Command argument has no options. Path: {path}; Argument: {argumentIndex}.");
+				return false;
+			}
+
+			Type type = command.Definition.Arguments[argumentIndex].Type;
+
+			try
+			{
+				IEnumerable source = command.GetOptions(argumentIndex);
+				if (source == null)
+				{
+					return true;
+				}
+
+				foreach (object option in source)
+				{
+					if (option == null)
+					{
+						continue;
+					}
+
+					if (type.IsInstanceOfType(option))
+					{
+						options.Add(option);
+					}
+					else if (CommandArguments.TryConvert(option, type, out object converted))
+					{
+						options.Add(converted);
+					}
+				}
+
+				return true;
+			}
+			catch (Exception exception)
+			{
+				_log.Exception($"Reading command options failed. Path: {path}; Argument: {argumentIndex}.", exception);
 				return false;
 			}
 		}
