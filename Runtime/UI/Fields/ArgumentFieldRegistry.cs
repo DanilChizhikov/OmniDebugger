@@ -63,9 +63,9 @@ namespace DTech.OmniDebugger.UI
 			MainThreadGuard.Verify(nameof(Create));
 			Sort();
 
-			IArgumentField field = null;
+			IArgumentField field = request.Options != null ? new OptionArgumentField(request) : null;
 
-			for (int i = 0; i < _handlers.Count; i++)
+			for (int i = 0; i < _handlers.Count && field == null; i++)
 			{
 				IArgumentFieldHandler handler = _handlers[i].Handler;
 

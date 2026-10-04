@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace DTech.OmniDebugger.UI
 {
@@ -26,25 +27,45 @@ namespace DTech.OmniDebugger.UI
 		/// </summary>
 		public object InitialValue { get; }
 
+		/// <summary>
+		/// Appends the values the argument is picked from, as they are right now; null when the argument has
+		/// no <see cref="ArgumentDefinition.HasOptions"/>. Such an argument is edited with a dropdown whatever
+		/// its type, before any handler is asked.
+		/// </summary>
+		public Action<ICollection<object>> Options { get; }
+
 		public ArgumentFieldRequest(
 			ArgumentDefinition argument,
 			Type valueType,
 			bool isNullable,
 			bool showLabel,
-			object initialValue)
+			object initialValue,
+			Action<ICollection<object>> options = null)
 		{
 			Argument = argument;
 			ValueType = valueType;
 			IsNullable = isNullable;
 			ShowLabel = showLabel;
 			InitialValue = initialValue;
+			Options = options;
 		}
 
 		/// <summary>
 		/// Builds a request from a definition, unwrapping <see cref="Nullable{T}"/> and falling back to
 		/// the argument's default when no value is remembered.
 		/// </summary>
-		public static ArgumentFieldRequest For(ArgumentDefinition argument, object initialValue, bool showLabel)
+		public static ArgumentFieldRequest For(ArgumentDefinition argument, object initialValue, bool showLabel) =>
+			For(argument, initialValue, showLabel, null);
+
+		/// <summary>
+		/// Builds a request like <see cref="For(ArgumentDefinition, object, bool)"/>, with the source of the
+		/// values a dropdown offers.
+		/// </summary>
+		public static ArgumentFieldRequest For(
+			ArgumentDefinition argument,
+			object initialValue,
+			bool showLabel,
+			Action<ICollection<object>> options)
 		{
 			if (argument == null)
 			{
@@ -59,7 +80,8 @@ namespace DTech.OmniDebugger.UI
 				underlying ?? declared,
 				underlying != null,
 				showLabel,
-				initialValue ?? argument.DefaultValue);
+				initialValue ?? argument.DefaultValue,
+				options);
 		}
 	}
 }

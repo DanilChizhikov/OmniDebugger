@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace DTech.OmniDebugger
@@ -43,7 +44,7 @@ namespace DTech.OmniDebugger
 				throw new ArgumentNullException(nameof(action));
 			}
 
-			return AddAction(name, _ => action(), Array.Empty<ArgumentDefinition>());
+			return AddAction(name, _ => action(), Array.Empty<ArgumentBuilder>());
 		}
 
 		/// <summary>A command that takes one argument.</summary>
@@ -54,7 +55,7 @@ namespace DTech.OmniDebugger
 				throw new ArgumentNullException(nameof(action));
 			}
 
-			ArgumentDefinition[] arguments = { Describe<T>("value", argument) };
+			ArgumentBuilder[] arguments = { Describe<T>("value", argument) };
 			return AddAction(name, values => action(Cast<T>(values[0])), arguments);
 		}
 
@@ -70,7 +71,7 @@ namespace DTech.OmniDebugger
 				throw new ArgumentNullException(nameof(action));
 			}
 
-			ArgumentDefinition[] arguments = { Describe<T1>("arg1", first), Describe<T2>("arg2", second) };
+			ArgumentBuilder[] arguments = { Describe<T1>("arg1", first), Describe<T2>("arg2", second) };
 			return AddAction(name, values => action(Cast<T1>(values[0]), Cast<T2>(values[1])), arguments);
 		}
 
@@ -87,7 +88,7 @@ namespace DTech.OmniDebugger
 				throw new ArgumentNullException(nameof(action));
 			}
 
-			ArgumentDefinition[] arguments =
+			ArgumentBuilder[] arguments =
 			{
 				Describe<T1>("arg1", first),
 				Describe<T2>("arg2", second),
@@ -117,6 +118,20 @@ namespace DTech.OmniDebugger
 			Field(name, get, set);
 
 		/// <summary>
+		/// A dropdown bound to a value of any type, offering what <paramref name="options"/> yields each time
+		/// it opens.
+		/// </summary>
+		public CommandBuilder Dropdown<T>(string name, Func<IEnumerable<T>> options, Func<T> get, Action<T> set)
+		{
+			if (options == null)
+			{
+				throw new ArgumentNullException(nameof(options));
+			}
+
+			return Field(name, get, set, argument => argument.Options(() => options()));
+		}
+
+		/// <summary>
 		/// A value that can be read and written, edited with whatever control fits <typeparamref name="T"/>.
 		/// </summary>
 		public CommandBuilder Field<T>(string name, Func<T> get, Action<T> set, Action<ArgumentBuilder> argument = null)
@@ -131,7 +146,7 @@ namespace DTech.OmniDebugger
 				throw new ArgumentNullException(nameof(set));
 			}
 
-			ArgumentDefinition[] arguments = { Describe<T>(name, argument) };
+			ArgumentBuilder[] arguments = { Describe<T>(name, argument) };
 			return AddValue(name, CommandKind.Value, arguments, () => get(), value => set(Cast<T>(value)));
 		}
 
@@ -143,7 +158,7 @@ namespace DTech.OmniDebugger
 				throw new ArgumentNullException(nameof(get));
 			}
 
-			ArgumentDefinition[] arguments = { Describe<T>(name, null) };
+			ArgumentBuilder[] arguments = { Describe<T>(name, null) };
 			return AddValue(name, CommandKind.ReadonlyValue, arguments, () => get(), null);
 		}
 
@@ -197,14 +212,14 @@ namespace DTech.OmniDebugger
 
 		private static T Cast<T>(object value) => value == null ? default : (T)value;
 
-		private static ArgumentDefinition Describe<T>(string name, Action<ArgumentBuilder> configure)
+		private static ArgumentBuilder Describe<T>(string name, Action<ArgumentBuilder> configure)
 		{
 			ArgumentBuilder builder = new ArgumentBuilder(name, typeof(T), default(T));
 			configure?.Invoke(builder);
-			return builder.Build();
+			return builder;
 		}
 
-		private CommandBuilder AddAction(string name, Action<object[]> invoke, ArgumentDefinition[] arguments)
+		private CommandBuilder AddAction(string name, Action<object[]> invoke, ArgumentBuilder[] arguments)
 		{
 			_commands.Add(new Pending(RequireGroup(), name, CommandKind.Action, arguments) { Invoke = invoke });
 			return this;
@@ -213,7 +228,7 @@ namespace DTech.OmniDebugger
 		private CommandBuilder AddValue(
 			string name,
 			CommandKind kind,
-			ArgumentDefinition[] arguments,
+			ArgumentBuilder[] arguments,
 			Func<object> get,
 			Action<object> set)
 		{
@@ -247,6 +262,7 @@ namespace DTech.OmniDebugger
 			private readonly string _name;
 			private readonly CommandKind _kind;
 			private readonly ArgumentDefinition[] _arguments;
+			private readonly Func<IEnumerable>[] _options;
 
 			public Action<object[]> Invoke;
 			public Func<object> Get;
@@ -256,14 +272,25 @@ namespace DTech.OmniDebugger
 			public string Description;
 			public int Order = CommandDefinition.DefaultSortOrder;
 
-			public Pending(string group, string name, CommandKind kind, ArgumentDefinition[] arguments)
+			public Pending(string group, string name, CommandKind kind, ArgumentBuilder[] arguments)
 			{
 				CommandPath.Combine(group, name);
 
 				_group = group;
 				_name = name;
 				_kind = kind;
-				_arguments = arguments;
+				_arguments = new ArgumentDefinition[arguments.Length];
+
+				for (int i = 0; i < arguments.Length; i++)
+				{
+					_arguments[i] = arguments[i].Build();
+
+					if (arguments[i].OptionsSource != null)
+					{
+						_options ??= new Func<IEnumerable>[arguments.Length];
+						_options[i] = arguments[i].OptionsSource;
+					}
+				}
 			}
 
 			public DebugCommand Create()
@@ -278,7 +305,7 @@ namespace DTech.OmniDebugger
 					Description,
 					IconKey);
 
-				return new DebugCommand(definition, Invoke, Get, Set);
+				return new DebugCommand(definition, Invoke, Get, Set, _options);
 			}
 		}
 	}

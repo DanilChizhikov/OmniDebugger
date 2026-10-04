@@ -1,5 +1,32 @@
 # Changelog
 
+## [2.2.0] - 2026-10-04
+
+### Added
+- An update check when the editor loads: with a newer release out — a Git tag, or a version on OpenUPM when the
+  package comes from there — a window shows its release notes and offers *Update*, which points the entry in
+  `Packages/manifest.json` at it, *Skip this version* and *Skip always*. `Tools/DTech/OmniDebugger/Check Update` checks
+  on demand, skips included.
+- `[DebugOptions(memberName)]` on a command property or parameter: the panel edits it with a dropdown of the values
+  another member yields — a field, property or parameterless method returning `IEnumerable<T>`, or a `Func` returning
+  one. Read live each time the dropdown opens. Checked at compile time (`OMNI014`–`OMNI016`).
+- `ArgumentDefinition.HasOptions`, `ICommandRegistry.TryGetOptions`, the `options` parameter of `DebugCommand`,
+  `ArgumentBuilder.Options`, `CommandBuilder.Dropdown<T>(name, options, get, set)` and `ArgumentFieldRequest.Options`.
+- The source generator DLL carries its own version (2.2.0, `<Version>` in its project) and stamps it into the
+  `[GeneratedCode]` attribute of the code it writes.
+- Logs tab: tapping a log (or *Submit* on it) opens a pane under the list with the full message and stack trace and
+  a copy button; tapping it again or *Close* hides it. The selected row is highlighted.
+- `--od-color-log-card-warning` and `--od-color-log-card-error`, the tint of warning and error cards in the Logs tab,
+  and the classes of the log pane (`od-log-detail`, `od-log-detail__header`, `__scroll`, `__message`, `__stack`, the
+  `--warning` / `--error` modifiers) and of the selected row (`od-log--selected`).
+
+### Changed
+- The editor window's inspector edits a `[DebugOptions]` argument with a dropdown of its options too.
+
+### Fixed
+- Logs tab: every message was drawn in the error colour. Messages now use the regular text colour; the type is shown by
+  the stripe, the type label and a faint tint on warning and error cards.
+
 ## [2.1.0] - 2026-10-03
 
 ### Added

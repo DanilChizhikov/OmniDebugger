@@ -167,6 +167,7 @@ namespace DTech.OmniDebugger.UI
 		public const string LogsFilterError = "od-logs-filter--error";
 		public const string LogsFilterActive = "od-logs-filter--active";
 		public const string LogsList = "od-logs-list";
+		public const string LogsArea = "od-logs-area";
 		public const string LogsFollow = "od-logs-follow";
 		public const string LogRow = "od-log-row";
 		public const string Log = "od-log";
@@ -179,6 +180,15 @@ namespace DTech.OmniDebugger.UI
 		public const string LogTags = "od-log__tags";
 		public const string LogRepeats = "od-log__repeats";
 		public const string LogMessage = "od-log__message";
+		public const string LogSelected = "od-log--selected";
+		public const string LogsListWithDetail = "od-logs-list--with-detail";
+		public const string LogDetail = "od-log-detail";
+		public const string LogDetailWarning = "od-log-detail--warning";
+		public const string LogDetailError = "od-log-detail--error";
+		public const string LogDetailHeader = "od-log-detail__header";
+		public const string LogDetailScroll = "od-log-detail__scroll";
+		public const string LogDetailMessage = "od-log-detail__message";
+		public const string LogDetailStack = "od-log-detail__stack";
 
 		public const string FloatingSection = "od-floating-section";
 		public const string FloatingSectionTitleBar = "od-floating-section__bar";

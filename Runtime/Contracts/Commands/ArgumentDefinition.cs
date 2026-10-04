@@ -26,12 +26,20 @@ namespace DTech.OmniDebugger
 		/// </summary>
 		public ArgumentRange Range { get; }
 
+		/// <summary>
+		/// Whether the value is picked from a list, declared with <see cref="DebugOptionsAttribute"/>. The list
+		/// itself is read through <see cref="ICommandRegistry.TryGetOptions"/>, since it belongs to the object
+		/// behind the command, not to its description.
+		/// </summary>
+		public bool HasOptions { get; }
+
 		public ArgumentDefinition(
 			string name,
 			Type type,
 			object defaultValue = null,
 			bool isOptional = false,
-			ArgumentRange range = default)
+			ArgumentRange range = default,
+			bool hasOptions = false)
 		{
 			if (string.IsNullOrWhiteSpace(name))
 			{
@@ -48,6 +56,7 @@ namespace DTech.OmniDebugger
 			DefaultValue = defaultValue;
 			IsOptional = isOptional;
 			Range = range;
+			HasOptions = hasOptions;
 		}
 
 		public override string ToString()
@@ -56,7 +65,12 @@ namespace DTech.OmniDebugger
 				? $"{Type.Name} {Name} = {DefaultValue ?? "null"}"
 				: $"{Type.Name} {Name}";
 
-			return Range.IsEmpty ? text : $"{text} {Range}";
+			if (!Range.IsEmpty)
+			{
+				text = $"{text} {Range}";
+			}
+
+			return HasOptions ? $"{text} {{options}}" : text;
 		}
 	}
 }

@@ -194,7 +194,13 @@ namespace DTech.OmniDebugger.UI.Editor
 
 		private EditorArgumentField AddField(ArgumentDefinition argument, string label)
 		{
-			EditorArgumentField field = EditorArgumentField.Create(argument, _debugger.Fields, label);
+			string path = _definition.Path;
+			int index = _fields.Count;
+			Action<ICollection<object>> options = argument.HasOptions
+				? list => _debugger.Commands.TryGetOptions(path, index, list)
+				: null;
+
+			EditorArgumentField field = EditorArgumentField.Create(argument, _debugger.Fields, label, options);
 			_fields.Add(field);
 			Root.Add(field.Root);
 			return field;

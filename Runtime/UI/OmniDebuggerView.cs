@@ -139,7 +139,7 @@ namespace DTech.OmniDebugger.UI
 			_saveArguments = _root.schedule.Execute(SaveArguments);
 			_saveArguments.Pause();
 
-			string version = _debugger is OmniDebuggerHost debuggerHost ? debuggerHost.Version.ToString() : null;
+			string version = OmniDebuggerHost.Version.ToString();
 			_chrome = new PanelChrome(_overlay, _popups, _debugger.Icons, version);
 			_chrome.OnThemeSelected += OnThemePicked;
 			_chrome.OnCloseRequested += Close;

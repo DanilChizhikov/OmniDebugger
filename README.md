@@ -1,6 +1,8 @@
 # OmniDebugger
 [![Unity Version](https://img.shields.io/badge/unity-6000.0+-000.svg)](https://unity.com/releases/editor/archive)
+[![openupm](https://img.shields.io/npm/v/com.dtech.omnidebugger?label=openupm&registry_uri=https://package.openupm.com)](https://openupm.com/packages/com.dtech.omnidebugger/)
 ![Unity Tests](https://github.com/DanilChizhikov/OmniDebugger/actions/workflows/tests.yml/badge.svg?branch=master)
+[![openupm](https://img.shields.io/badge/dynamic/json?color=brightgreen&label=downloads&query=%24.downloads&suffix=%2Fmonth&url=https%3A%2F%2Fpackage.openupm.com%2Fdownloads%2Fpoint%2Flast-month%2Fcom.dtech.omnidebugger)](https://openupm.com/packages/com.dtech.omnidebugger/)
 [![Donate](https://img.shields.io/badge/donate-DonationAlerts-f59c07.svg)](https://www.donationalerts.com/r/danilchizhikov)
 
 ## Overview
@@ -89,9 +91,9 @@ _debugger.Commands.Build()
     ```
 3. Unity will automatically import the package.
 
-If you want to set a target version, OmniDebugger uses the `v*.*.*` release tag so you can specify a version like #v2.1.0.
+If you want to set a target version, OmniDebugger uses the `v*.*.*` release tag so you can specify a version like #v2.2.0.
 
-For example `https://github.com/DanilChizhikov/OmniDebugger.git#v2.1.0`.
+For example `https://github.com/DanilChizhikov/OmniDebugger.git#v2.2.0`.
 
 ## Enabling the Debugger
 
@@ -186,6 +188,9 @@ the reason, so a rejected command is never silently missing:
 | `OMNI011` | `[DebugRange]` has bounds the wrong way round, or a negative step |
 | `OMNI012` | The group path is blank |
 | `OMNI013` | The name is blank or contains `/` |
+| `OMNI014` | `[DebugOptions]` names a member the type and its base types do not have |
+| `OMNI015` | The `[DebugOptions]` member is private or protected, an indexer, or a method that takes parameters |
+| `OMNI016` | The `[DebugOptions]` member is not a collection (or a `Func` returning one), or yields a type the argument cannot take |
 
 Arguments accept anything `IConvertible` (all numerics, `bool`, `char`, `string`, `DateTime`), any `enum`, and
 `Nullable<T>` of those. Text is always read with the invariant culture, so a device locale can never turn `"1.5"`
@@ -204,6 +209,32 @@ public void Teleport([DebugRange(-100, 100)] int x, [DebugRange(-100, 100)] int 
 
 A range is a hint for the panel, which keeps what is typed inside it; code that runs the command is not held to it.
 It covers `int`, `short`, `ushort`, `byte`, `sbyte`, `float` and `double` — other types keep a plain field.
+
+`[DebugOptions(memberName)]` on a property or parameter edits it with a dropdown of values taken from another member
+of the same type — any type, not only enums:
+
+```csharp
+[DebugCommand("Levels")]
+public void Load([DebugOptions(nameof(LevelIds))] string id) { … }
+
+[DebugCommand("Levels"), DebugOptions(nameof(LevelIds))]
+public string Current { get; set; }
+
+public IReadOnlyList<string> LevelIds => _levels.Select(level => level.Id).ToList();
+
+[DebugCommand("Enemies")]
+public void Spawn([DebugOptions(nameof(Prefabs))] Enemy prefab) { … }
+
+public Func<IEnumerable<Enemy>> Prefabs;   // assigned later, read through the delegate
+```
+
+The member can be a field, a property or a method without parameters, instance or static, public or internal, on the
+type or a base type. It yields an `IEnumerable<T>` whose `T` converts to the argument's type — or a `Func` returning
+one, which is invoked instead. The source is read each time the dropdown opens, so the list follows the game; a
+`null` collection or an unassigned `Func` shows no options, and null entries are left out. Options are labelled by
+`ToString()`, a `UnityEngine.Object` by its `name`. A command whose dropdown offers nothing refuses to run until it
+does, unless the argument is optional. `debugger.Commands.TryGetOptions(path, argumentIndex, list)` reads the same list
+from code.
 
 The panel lists groups by their order, then by name, at every level of the tree. `debugger.Groups.SetOrder("Economy", 10)`
 moves a group up — lower comes first, and a group never given an order sits at 1000
@@ -246,10 +277,11 @@ cheats.Dispose();   // takes the whole batch away again
 | Method | Becomes |
 |---|---|
 | `Group(path)` | Puts the commands that follow in that group |
-| `Button(name, action)` | An action; `Button<T>`, `Button<T1, T2>` and `Button<T1, T2, T3>` take arguments, each described by an `ArgumentBuilder` (`Name`, `Default`, `Optional`, `Range`, `Step`) |
+| `Button(name, action)` | An action; `Button<T>`, `Button<T1, T2>` and `Button<T1, T2, T3>` take arguments, each described by an `ArgumentBuilder` (`Name`, `Default`, `Optional`, `Range`, `Step`, `Options`) |
 | `Toggle(name, get, set)` | A switch bound to a `bool` |
 | `Slider(name, get, set, min, max)` | A slider bound to a `float` or an `int`; the `float` one also takes a `step` |
 | `Dropdown<TEnum>(name, get, set)` | A dropdown bound to an enum |
+| `Dropdown<T>(name, options, get, set)` | A dropdown bound to any value, offering what `options` yields each time it opens |
 | `Field<T>(name, get, set)` | A value edited with whatever control fits `T` |
 | `Value<T>(name, get)` | A read-only value, shown live |
 | `Icon`, `Tags`, `Description`, `Order` | Describe the command added last |
@@ -618,7 +650,7 @@ With a mode picked but no secret set, the panel opens without asking and the set
 | Tab | What it does |
 |---|---|
 | **Commands** | Every command in one list. A search box on top finds commands by name, group or tag. Under it, a chip per top-level group filters the list; picking one shows the way back up and the groups inside it, and the list below is headed by subgroup. Each command is a row — icon, name and its control: a switch for a `bool`, a slider for a ranged number, a field, a dropdown, a ▶ that runs it (arguments beside it or under it), or a read-only value. Values and property controls follow the game live. The pin puts the command on the [hotbar](#the-hotbar); *⋯* shows its path, tags and description |
-| **Logs** | Unity's console, captured since the debugger was built: type toggles with counts, a filter bar that takes the [filter syntax](#reading-the-log) — `tag:Net -tag:Ads type:error timeout` — with the terms in use as chips that take themselves out when tapped and a chip per known tag that adds it, copy one or everything, clear. A message repeated back to back is one row with a ×N badge. It follows new logs while scrolled to the bottom and loads older ones at the top |
+| **Logs** | Unity's console, captured since the debugger was built: type toggles with counts, a filter bar that takes the [filter syntax](#reading-the-log) — `tag:Net -tag:Ads type:error timeout` — with the terms in use as chips that take themselves out when tapped and a chip per known tag that adds it, copy one or everything, clear. A message repeated back to back is one row with a ×N badge. Tapping a row — or *Submit* on it — highlights it and opens a pane under the list with the full message, the stack trace and a copy button; tapping it again or *Close* hides the pane. It follows new logs while scrolled to the bottom and loads older ones at the top |
 | **Info** | A section per [info provider](#your-own-info): Performance (an FPS chart, frame time, target frame rate, VSync, time scale, scene, uptime), Memory (an allocated-memory chart, reserved, Mono and graphics memory), Graphics, Quality, Screen, Build and Device |
 
 The header holds the search that opens the [palette](#opening-it), the theme switch and ×. What is typed into a command's arguments
@@ -699,13 +731,20 @@ keys work for `CommandBuilder.Icon` and a tab's `Icon`. To serve icons from anyw
 - **Commands** — a tree built from the command paths on the left, with a search field over the window (Ctrl+K or
   Cmd+K focuses it) that narrows the tree to the matches. The inspector on the right shows the selected command: its
   path, kind, tags and description, a native control for its value — a toggle, a number field or a slider for a
-  range, an enum popup, a text field — or its arguments with a *Run* button, and *Pin to hotbar*, which pins it on
-  the game's hotbar. Values follow the game four times a second. Selecting a group shows every command in it.
+  range, an enum popup, a popup of its [options](#declaring-commands), a text field — or its arguments with a *Run*
+  button, and *Pin to hotbar*, which pins it on the game's hotbar. Values follow the game four times a second.
+  Selecting a group shows every command in it.
 - **Info** — the debugger's [info sections](#your-own-info) as foldouts, charts included.
 
 The window remembers per user, in the editor's preferences, which view was open, the tree's width, what was selected
 and unfolded, and the arguments typed into it — kept apart from the game's, which live in `PlayerPrefs`. An argument
 type the editor has no control for gets the field `debugger.Fields` builds for it.
+
+When the editor loads, the package looks for a newer release — among the repository's tags when it comes from Git, on
+OpenUPM when it comes from there — and, with one out, opens a window with its release notes: *Update* points the entry
+in `Packages/manifest.json` at the new version (a copy embedded in `Packages` or `Assets` opens the repository page
+instead), *Skip this version* waits for the next one, *Skip always* stops asking. `Tools → DTech → OmniDebugger →
+Check Update` checks on demand, whatever was skipped.
 
 ## Themes
 
@@ -995,16 +1034,18 @@ unconverted. The editor window uses your field too, for a type it has no control
 - `Dispose` unhooks everything and takes `Root` out of the tree.
 
 **The request** says what to edit: `Argument` (name, default, range), `ValueType` with `Nullable<T>` already peeled
-off, `IsNullable`, `ShowLabel` (whether to show the argument's name) and `InitialValue` (a remembered entry, the
-default, or null). Leave nullability to the panel: a `Vector3?` argument gets your field wrapped with a way to leave
-it unset.
+off, `IsNullable`, `ShowLabel` (whether to show the argument's name), `InitialValue` (a remembered entry, the
+default, or null) and `Options` (appends the values a [`[DebugOptions]`](#declaring-commands) argument is picked
+from; null for any other). Leave nullability to the panel: a `Vector3?` argument gets your field wrapped with a way
+to leave it unset.
 
 **Picking a handler.** The built-in handlers sit at priority 0, so any positive priority beats them — for `float` or
 `bool` too — and equal priorities are tried in registration order. A handler that returns null, or throws (which is
 logged), passes the type on to the next one; `Unregister` removes a handler again. A row picks its control when it is
 built, so register handlers before the panel draws its rows.
 
-Built in already: `bool` (a switch), every enum, every numeric type (a slider when it carries a range), `char`,
+Built in already: a dropdown for any argument with options — asked before every handler, whatever its type —
+`bool` (a switch), every enum, every numeric type (a slider when it carries a range), `char`,
 `string`, anything else convertible from text, and `Nullable<T>` of all of them. A type nobody claims still renders
 — as a disabled field saying so — and the command stays runnable when that argument is optional.
 

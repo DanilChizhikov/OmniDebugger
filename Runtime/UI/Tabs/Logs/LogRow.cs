@@ -12,16 +12,21 @@ namespace DTech.OmniDebugger.UI
 		private readonly Label _message;
 		private readonly Label _repeats;
 		private readonly Action<LogRecord> _copy;
+		private readonly Action<LogRecord> _select;
 
 		private LogRecord _record;
 
-		public LogRow(Action<LogRecord> copy)
+		public LogRow(Action<LogRecord> copy, Action<LogRecord> select)
 		{
 			_copy = copy;
+			_select = select;
 
 			AddToClassList(OmniDebuggerUiClasses.LogRow);
 
 			_card = UiBuild.Element(OmniDebuggerUiClasses.Log);
+			_card.AddToClassList(OmniDebuggerUiClasses.Tappable);
+			_card.focusable = true;
+			_card.RegisterCallback<NavigationSubmitEvent>(OnSubmitted);
 			Add(_card);
 
 			VisualElement body = UiBuild.Element(OmniDebuggerUiClasses.LogBody);
@@ -42,7 +47,7 @@ namespace DTech.OmniDebugger.UI
 			_card.Add(UiBuild.IconButton(IconGlyph.Copy, Copy, "Copy with stack trace"));
 		}
 
-		public void Bind(in LogRecord record)
+		public void Bind(in LogRecord record, bool selected)
 		{
 			_record = record;
 			_time.text = LogFormat.Timestamp(record);
@@ -59,8 +64,17 @@ namespace DTech.OmniDebugger.UI
 			LogTypeMask kind = LogFilter.MaskOf(record.Type);
 			_card.EnableInClassList(OmniDebuggerUiClasses.LogWarning, kind == LogTypeMask.Warning);
 			_card.EnableInClassList(OmniDebuggerUiClasses.LogError, kind == LogTypeMask.Error);
+			_card.EnableInClassList(OmniDebuggerUiClasses.LogSelected, selected);
 		}
 
 		private void Copy() => _copy?.Invoke(_record);
+
+		private void OnSubmitted(NavigationSubmitEvent evt)
+		{
+			if (evt.target == _card)
+			{
+				_select?.Invoke(_record);
+			}
+		}
 	}
 }
