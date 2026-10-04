@@ -1,33 +1,3 @@
-/*
- * Structure and skin — Glass HUD. Every colour and length here is a token, never a literal — that
- * is what makes a theme a handful of variables instead of a fork of this file. A literal colour in
- * this sheet is a bug:
- *
- *     grep -nE "rgb|rgba|#[0-9a-f]{3,8}" OmniDebuggerPanel.uss   must print nothing.
- *
- * The block right after the shell neutralises Unity's built-in control styling, because the editor
- * default theme and the runtime default theme skin the same controls differently and the panel must
- * look identical in both mounts. It comes first so every component rule after it, at equal
- * specificity, wins over it. The default theme is a .tss and loses ties, but it wins where its
- * selector is more specific — its hover and checked rules — so the rules that must hold in those
- * states repeat the state themselves.
- *
- * Glows and shadows are drawn by the Halo manipulator from two custom properties: --od-halo-color
- * and a unitless --od-halo-size. C# reads custom properties only from rules that match the element
- * itself, never inherited from an ancestor, so every state sets them on the glowing element; .od-halo
- * zeroes the size first.
- *
- * USS has no :first-child or :last-child. Lists part their items with a top divider and C# marks the
- * first item with .od-first.
- */
-
-/* ---------- shell ---------- */
-
-/*
- * The root stays in the tree even while the panel is closed: it carries the style sheets, and the
- * open button and the floating sections live inside it. It never takes input itself, so a closed panel
- * does not swallow a tap meant for the game, and neither does the game around a floating panel.
- */
 .od-root {
     position: absolute;
     left: 0;
@@ -46,10 +16,6 @@
     display: none;
 }
 
-/*
- * The desk holds the stage and the floating sections as siblings, so the one touched last is drawn on
- * top: C# brings a card forward when it is pressed, and the stage when the panel is.
- */
 .od-desk {
     position: absolute;
     left: 0;
@@ -58,10 +24,6 @@
     bottom: 0;
 }
 
-/*
- * The stage is the screen, minus the safe area C# writes into its offsets while the panel floats. It
- * never takes input either: a tap around a floating panel falls through to the game.
- */
 .od-stage {
     position: absolute;
     left: 0;
@@ -87,19 +49,10 @@
     flex-direction: row;
 }
 
-/*
- * Over the game the panel is glass. Edge to edge — portrait, and landscape set to Full Screen — it
- * reaches the screen's edges and C# moves the safe area into its padding.
- */
 .od-root--overlay .od-panel {
     background-color: var(--od-color-glass);
 }
 
-/*
- * Floating, it is a window with a lit edge and a shadow. C# sizes it inline for the floating scale
- * and moves it with translate; the caps here hold its unscaled size. It never shrinks: below scale 1
- * C# sizes it past the stage, and the stage's column would squash its height back to the stage's.
- */
 .od-root--floating .od-panel {
     flex-shrink: 0;
     max-width: var(--od-panel-max-width);
@@ -114,13 +67,6 @@
     --od-halo-size: var(--od-shadow-size);
 }
 
-/* ---------- neutralising Unity's own control styling ---------- */
-
-/*
- * unset, never inherit: Unity resolves only initial and unset as global keywords. inherit reaches the
- * colour reader as a raw keyword, logs an error on every restyle and leaves the label transparent at
- * font size zero. Both properties are inherited, so unset takes the parent's value.
- */
 .unity-label {
     color: unset;
     font-size: unset;
@@ -160,10 +106,6 @@
     color: var(--od-color-text-muted);
 }
 
-/*
- * Only text inputs get the well: toggles, sliders and the scrollers' own sliders share
- * .unity-base-field__input and must stay bare.
- */
 .od-root .unity-base-text-field > .unity-base-field__input,
 .od-root .unity-base-text-field:hover > .unity-base-field__input {
     background-color: var(--od-color-input);
@@ -177,10 +119,6 @@
     border-color: var(--od-color-focus);
 }
 
-/*
- * Drawn over the focused control while a gamepad or the keyboard moves the focus, and hidden after
- * any touch or click. One element follows the focus, so no control changes its own box for it.
- */
 .od-root .od-focus-ring {
     border-width: 2px;
     border-color: var(--od-color-focus);
@@ -194,10 +132,6 @@
     --unity-selection-color: var(--od-color-selection);
 }
 
-/*
- * Unity's text element inside an input is one line high and clips itself, cutting the descenders of
- * g, p and y. The input around it is a whole control high and still clips a long, scrolled value.
- */
 .od-root .unity-text-element--inner-input-field-component {
     font-size: var(--od-font-size-md);
     overflow: visible;
@@ -220,11 +154,6 @@
     -unity-background-image-tint-color: var(--od-color-accent);
 }
 
-/*
- * Every box of the scroller is pinned here, not only its width: the slider moves the thumb by the
- * drag area's height and never counts the thumb's margins, so any offset left over from Unity's own
- * theme pushes the thumb past the bottom and right edge of the view.
- */
 .od-root .unity-scroller {
     margin: 0;
     padding: 0;
@@ -310,9 +239,6 @@
     background-color: transparent;
 }
 
-/* ---------- rail: brand, tabs, footer ---------- */
-
-/* Portrait stacks the rail on top of the page; landscape turns it into a sidebar. */
 .od-rail {
     flex-direction: column;
     flex-shrink: 0;
@@ -329,7 +255,6 @@
     border-right-color: var(--od-color-divider);
 }
 
-/* The panel does not clip, so the sidebar's own tint follows the floating panel's corners. */
 .od-root--floating .od-rail {
     border-top-left-radius: var(--od-radius-panel);
     border-bottom-left-radius: var(--od-radius-panel);
@@ -368,10 +293,6 @@
     margin-left: var(--od-space-2);
 }
 
-/*
- * The button clips a long theme name, not the label: an ellipsis on the label cut the descenders of
- * g, p and y. The button is a whole control high, so only its sides ever clip.
- */
 .od-root .od-actions .od-actions__theme-picker {
     flex-grow: 0;
     flex-shrink: 1;
@@ -400,12 +321,6 @@
     flex-grow: 1;
 }
 
-/*
- * Unity nests the viewport inside a content-and-scroller container, so no child selector from the
- * scroll view reaches the content; the tab bar and every page scroll tag their content container
- * with a class of their own instead. The padding leaves room for the selected tab's glow, which the
- * viewport would clip.
- */
 .od-tabbar__content {
     flex-direction: row;
     align-items: center;
@@ -521,8 +436,6 @@
     letter-spacing: var(--od-letter-spacing-label);
 }
 
-/* ---------- main: page bar, tab body ---------- */
-
 .od-main {
     flex-grow: 1;
     flex-shrink: 1;
@@ -614,8 +527,6 @@
     -unity-text-align: middle-center;
 }
 
-/* ---------- shared building blocks ---------- */
-
 .od-icon {
     width: var(--od-icon-size);
     height: var(--od-icon-size);
@@ -642,7 +553,6 @@
     color: var(--od-color-text);
 }
 
-/* A scroll view takes the press away from the button under it, so it marks the button itself. */
 .od-root .unity-button:active,
 .od-root .unity-button.od-pressed {
     scale: 0.94 0.94;
@@ -671,11 +581,6 @@
     padding: 0;
 }
 
-/*
- * The Info tab's sections, one per line or two, wrapping. Every cell has a fixed share of the line,
- * never an auto width, so text that wraps inside is measured against the width it will get. With
- * two to a line, the left and right cells split the gutter between them.
- */
 .od-info-flow {
     flex-direction: row;
     flex-wrap: wrap;
@@ -706,7 +611,6 @@
     flex-grow: 1;
 }
 
-/* A glass tile: a faint wash over the panel, lit along its top edge. */
 .od-card {
     padding: var(--od-space-4);
     background-color: var(--od-color-card);
@@ -714,7 +618,7 @@
     border-color: var(--od-color-card-edge);
     border-top-color: var(--od-color-glass-edge);
     border-radius: var(--od-radius-lg);
-}/* A toolbar sits above a page's scroll view, padded like the scroll content under it. */
+}
 .od-toolbar {
     flex-direction: row;
     align-items: center;
@@ -738,11 +642,6 @@
     height: var(--od-icon-size-sm);
 }
 
-/*
- * The field clips, not Unity's input inside it: the input's box is shorter than a line of text and
- * cut the descenders of g, p and y off. The field is a whole control high and still keeps a long,
- * scrolled query off the magnifier.
- */
 .od-root .od-search-box__field {
     flex-grow: 1;
     margin: 0;
@@ -757,7 +656,6 @@
     overflow: visible;
 }
 
-/* A row of chips scrolls sideways rather than wrapping, so it never pushes the list under it around. */
 .od-chips {
     flex-shrink: 0;
     padding: var(--od-space-4) var(--od-space-6) 0 var(--od-space-6);
@@ -831,7 +729,7 @@
     -unity-font-style: bold;
     --od-halo-color: var(--od-color-glow);
     --od-halo-size: var(--od-glow-size-sm);
-}/* ---------- popups and menus ---------- */
+}
 
 .od-popup-layer {
     position: absolute;
@@ -899,7 +797,6 @@
     background-color: var(--od-color-control-selected);
 }
 
-/* An anchored popup is as wide as its content; a wrapping caption must not stretch it across the screen. */
 .od-menu {
     flex-direction: column;
     max-width: var(--od-menu-max-width);
@@ -957,8 +854,6 @@
 .od-toast--visible {
     opacity: 1;
 }
-
-/* ---------- info tab ---------- */
 
 .od-section {
     padding: var(--od-space-5) var(--od-space-6) var(--od-space-4) var(--od-space-6);
@@ -1029,7 +924,6 @@
     color: var(--od-color-accent-soft);
 }
 
-/* A chart under its row, drawn in the text colour: the accent. */
 .od-info-graph {
     height: 48px;
     margin-bottom: var(--od-space-3);
@@ -1037,8 +931,6 @@
     border-radius: var(--od-radius-sm);
     color: var(--od-color-accent);
 }
-
-/* ---------- commands ---------- */
 
 .od-section-header {
     margin: var(--od-space-5) 0 var(--od-space-3) var(--od-space-2);
@@ -1051,8 +943,6 @@
 .od-section-header.od-first {
     margin-top: 0;
 }
-
-/* ---------- commands: rows ---------- */
 
 .od-row-list {
     padding: 0 var(--od-space-5);
@@ -1199,7 +1089,7 @@
 
 .od-row--compact .od-row__main {
     min-height: var(--od-control-height);
-}/* ---------- argument fields ---------- */
+}
 
 .od-arguments {
     flex-direction: column;
@@ -1266,12 +1156,6 @@
     color: var(--od-color-text-muted);
 }
 
-/*
- * A switch is a field whose input is a button drawn as the track, with a knob inside it. It is not
- * Unity's toggle: a toggle's checkmark restyled into a track was not painted in the runtime panel.
- * The track keeps the button's transitions and press feedback; its rules repeat :hover because the
- * button rules above set the background in that state too.
- */
 .od-root .od-switch {
     flex-direction: row;
     align-items: center;
@@ -1319,10 +1203,6 @@
     background-color: var(--od-color-accent-text);
 }
 
-/*
- * A ranged number: Unity's slider with every box pinned — track and thumb centred on the drag area,
- * the fill Unity sizes inline — and a value box beside it.
- */
 .od-range {
     flex-direction: row;
     align-items: center;
@@ -1387,14 +1267,6 @@
     margin: 0;
 }
 
-/* ---------- logs ---------- */
-
-/*
- * Two fixed rows, never a wrapping line: a wrap line broke the controls one by one, the type
- * filters apart and the last button alone. Search sits above and the controls below as one row;
- * the wide modifier puts them side by side. Gaps are set on the toolbar's own classes, at least as
- * specific as the neutralised button margin, which beat the old child-selector gaps.
- */
 .od-logs-toolbar {
     flex-direction: column;
     flex-shrink: 0;
@@ -1439,7 +1311,9 @@
     padding-right: var(--od-space-4);
     border-radius: var(--od-capsule-radius);
     color: var(--od-color-text-muted);
-}.od-logs-chips {
+}
+
+.od-logs-chips {
     padding-top: 0;
     padding-bottom: var(--od-space-2);
 }
@@ -1469,6 +1343,12 @@
     color: var(--od-color-danger);
 }
 
+.od-logs-area {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
+}
+
 .od-logs-list {
     flex-grow: 1;
     flex-shrink: 1;
@@ -1479,10 +1359,10 @@
     margin-left: var(--od-space-6);
 }
 
-/*
- * The row is what the list measures, and a list with dynamic heights reads only its layout height —
- * a margin there would be lost from every offset. The gap is the row's padding, the card sits inside.
- */
+.od-logs-list--with-detail {
+    margin-bottom: var(--od-space-2);
+}
+
 .od-log-row {
     padding-bottom: var(--od-space-2);
 }
@@ -1502,11 +1382,18 @@
 }
 
 .od-log--warning {
+    background-color: var(--od-color-log-card-warning);
     border-left-color: var(--od-color-log-stripe-warning);
 }
 
 .od-log--error {
+    background-color: var(--od-color-log-card-error);
     border-left-color: var(--od-color-log-stripe-error);
+}
+
+.od-root .od-log--selected,
+.od-root .od-log--selected.od-pressed {
+    background-color: var(--od-color-control-selected);
 }
 
 .od-log__body {
@@ -1514,10 +1401,6 @@
     flex-shrink: 1;
 }
 
-/*
- * The record's header, one line: time, type and tags. Muted rather than faint — faint grey on the
- * card's grey read as one smudge. The tags wrap inside their own label, never as a wrapping line.
- */
 .od-log__meta {
     flex-direction: row;
     align-items: flex-start;
@@ -1565,36 +1448,9 @@
 
 .od-log__message {
     margin-top: var(--od-space-1);
+    color: var(--od-color-text);
     white-space: normal;
     font-size: var(--od-font-size-sm);
-}
-
-.od-log--warning .od-log__repeats {
-    flex-shrink: 0;
-    margin-left: var(--od-space-3);
-    padding: 0 var(--od-space-3);
-    background-color: var(--od-color-card-inset);
-    border-radius: var(--od-radius-sm);
-    color: var(--od-color-text-muted);
-    -unity-font-style: bold;
-}
-
-.od-log__message {
-    color: var(--od-color-warning);
-}
-
-.od-log--error .od-log__repeats {
-    flex-shrink: 0;
-    margin-left: var(--od-space-3);
-    padding: 0 var(--od-space-3);
-    background-color: var(--od-color-card-inset);
-    border-radius: var(--od-radius-sm);
-    color: var(--od-color-text-muted);
-    -unity-font-style: bold;
-}
-
-.od-log__message {
-    color: var(--od-color-danger);
 }
 
 .od-root .od-log .od-icon-button {
@@ -1603,6 +1459,71 @@
     min-width: var(--od-log-button-size);
     margin-left: var(--od-space-2);
     color: var(--od-color-text-faint);
+}
+
+.od-log-detail {
+    flex-shrink: 0;
+    height: 40%;
+    min-height: 120px;
+    margin-top: 0;
+    margin-right: var(--od-space-6);
+    margin-bottom: var(--od-space-6);
+    margin-left: var(--od-space-6);
+    background-color: var(--od-color-card);
+    border-width: var(--od-border-width);
+    border-color: var(--od-color-card-edge);
+    border-radius: var(--od-radius-md);
+}
+
+.od-log-detail__header {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    padding-top: var(--od-space-2);
+    padding-right: var(--od-space-2);
+    padding-bottom: var(--od-space-2);
+    padding-left: var(--od-space-4);
+    border-bottom-width: var(--od-border-width);
+    border-bottom-color: var(--od-color-divider);
+}
+
+.od-log-detail__header > .od-log__meta {
+    flex-grow: 1;
+    flex-shrink: 1;
+    align-items: center;
+}
+
+.od-log-detail--warning .od-log__type {
+    color: var(--od-color-warning);
+}
+
+.od-log-detail--error .od-log__type {
+    color: var(--od-color-danger);
+}
+
+.od-root .od-log-detail .od-icon-button {
+    width: var(--od-log-button-size);
+    height: var(--od-log-button-size);
+    min-width: var(--od-log-button-size);
+    margin-left: var(--od-space-2);
+    color: var(--od-color-text-faint);
+}
+
+.od-log-detail__scroll .od-scroll__content {
+    padding: var(--od-space-4);
+}
+
+.od-log-detail__message {
+    margin-bottom: var(--od-space-3);
+    color: var(--od-color-text);
+    white-space: normal;
+    font-size: var(--od-font-size-sm);
+}
+
+.od-log-detail__stack {
+    color: var(--od-color-text-muted);
+    white-space: normal;
+    font-size: var(--od-font-size-xs);
 }
 
 .od-root .od-logs-follow,
@@ -1620,12 +1541,6 @@
     --od-halo-size: var(--od-glow-size);
 }
 
-/* ---------- floating sections ---------- */
-
-/*
- * An Info section over the game. No clipping: the title bar is transparent, and a clip would cut the
- * card's own shadow. It scales from its top-left corner, so the grip stays under the pointer.
- */
 .od-floating-section {
     position: absolute;
     width: var(--od-floating-width);
@@ -1641,7 +1556,6 @@
     --od-pulse-ms: var(--od-value-refresh-ms);
 }
 
-/* Shares the desk with the stage, so cards are hidden one by one while the panel covers the screen. */
 .od-desk--floating-hidden > .od-floating-section {
     display: none;
 }
@@ -1672,7 +1586,6 @@
     min-width: var(--od-floating-button-size);
 }
 
-/* The bottom strip is the grip's, so it never lands on a control at the end of the last row. */
 .od-floating-section__body {
     flex-shrink: 1;
     padding: 0 var(--od-space-5) var(--od-floating-grip-size) var(--od-space-5);
@@ -1698,8 +1611,6 @@
     width: 100%;
     height: 100%;
 }
-
-/* ---------- open button ---------- */
 
 .od-open-button {
     position: absolute;
@@ -1742,7 +1653,6 @@
     --od-halo-color: var(--od-color-alert-glow);
 }
 
-/* The number of errors logged since the panel was last open, on the button's corner. */
 .od-open-button__badge {
     position: absolute;
     top: -6px;
@@ -1756,7 +1666,7 @@
     font-size: var(--od-font-size-xs);
     -unity-font-style: bold;
     -unity-text-align: middle-center;
-}/* ---------- command palette ---------- */
+}
 
 .od-popup--palette {
     width: 90%;
@@ -1794,8 +1704,6 @@
     max-width: 480px;
 }
 
-/* ---------- menus ---------- */
-
 .od-menu__header {
     flex-direction: row;
     align-items: center;
@@ -1807,12 +1715,6 @@
     padding: 0;
 }
 
-/* ---------- hotbar ---------- */
-
-/*
- * A strip along the bottom (or top) of the screen. Only the bar takes input; the rest of the width is
- * the game's. Folded, it shrinks to the pin and a count.
- */
 .od-hotbar {
     position: absolute;
     left: 0;
@@ -1926,12 +1828,6 @@
     white-space: nowrap;
 }
 
-/* ---------- lock ---------- */
-
-/*
- * Outside the stage: the prompt shows while the panel is still closed, and a closed root hides the
- * stage. The overlay takes input itself, so a tap beside the card never reaches the game.
- */
 .od-lock {
     position: absolute;
     left: 0;
@@ -2015,10 +1911,6 @@
     -unity-text-align: middle-center;
 }
 
-/*
- * The row holds the key height, not the key: on a short screen the card shrinks and takes the rows
- * down with it, and a fixed-height key would spill over the row below.
- */
 .od-lock__keypad-row {
     flex-direction: row;
     flex-shrink: 1;
@@ -2027,11 +1919,6 @@
     margin-top: var(--od-space-3);
 }
 
-/*
- * Text and icon keys share one padding: the layout never shrinks a flex basis below the padding,
- * so a padded digit key came out wider than the icon keys beside it. The gap sits between keys
- * only, keeping the outer keys flush with the card's content.
- */
 .od-root .od-lock__key {
     flex-grow: 1;
     flex-shrink: 1;

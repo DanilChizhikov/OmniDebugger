@@ -1,21 +1,3 @@
-/*
- * The complete token set — Glass + Electric Blue, dark. A theme is layered on top of this sheet, so
- * a theme that redefines one variable inherits every other one from here and can never leave a value
- * undefined.
- *
- * Glass is layered, not blurred: UI Toolkit has no backdrop filter, so the panel is a translucent
- * fill with a lighter top and left edge, tiles are a faint white wash over it, and fields sink into
- * darker wells. --od-color-glass paints the panel over the game; --od-color-bg is the opaque base
- * the editor window uses, where there is no game behind it.
- *
- * Every length is written for a portrait phone 360 units wide: the runtime panel either scales that
- * with the screen or reads it as desktop pixels (OmniDebuggerScaleMode).
- *
- * The --od-*-size halo values and --od-value-refresh-ms are read from C# and must stay unitless;
- * every other length carries its unit because only USS reads it. A capsule or a circle needs its
- * radius to be exactly half its height: USS clamps a bigger radius per axis into an ellipse, which is
- * why those radii come in pairs with their sizes.
- */
 .od-root {
     --od-color-bg: rgb(14, 16, 21);
     --od-color-glass: rgba(14, 16, 21, 0.86);
@@ -56,6 +38,8 @@
     --od-color-log-filter-log: rgba(255, 255, 255, 0.1);
     --od-color-log-filter-warning: rgba(246, 186, 72, 0.14);
     --od-color-log-filter-error: rgba(255, 99, 110, 0.14);
+    --od-color-log-card-warning: rgba(246, 186, 72, 0.06);
+    --od-color-log-card-error: rgba(255, 99, 110, 0.07);
     --od-color-floating-bg: rgba(14, 16, 21, 0.8);
     --od-color-scrim: rgba(4, 6, 10, 0.42);
     --od-color-open-button-fill: rgba(14, 16, 21, 0.72);
