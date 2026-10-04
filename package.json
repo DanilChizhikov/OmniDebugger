@@ -1,10 +1,10 @@
 {
     "name": "com.dtech.omnidebugger",
     "displayName": "OmniDebugger",
-    "version": "2.1.0",
+    "version": "2.2.0",
     "unity": "6000.0",
     "description": "Runtime cheat and debug panel for Unity, built on UI Toolkit.",
-    "changelogUrl": "https://github.com/DanilChizhikov/OmniDebugger/releases/tag/v2.1.0",
+    "changelogUrl": "https://github.com/DanilChizhikov/OmniDebugger/releases/tag/v2.2.0",
     "documentationUrl": "https://github.com/DanilChizhikov/OmniDebugger/",
     "keywords": [
         "cheat",

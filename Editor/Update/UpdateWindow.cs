@@ -17,6 +17,8 @@ namespace DTech.OmniDebugger.Editor.Update
 			set => SessionState.SetBool(UpdateWindowShownKey, value);
 		}
 
+		private Version _lastVersion;
+
 		[MenuItem("Tools/DTech/OmniDebugger/Check Update")]
 		private static void ForceCheckUpdate()
 		{
@@ -59,6 +61,7 @@ namespace DTech.OmniDebugger.Editor.Update
 		private void CreateGUI()
 		{
 			rootVisualElement.Clear();
+			_lastVersion = VersionUpdateChecker.GetLastVersion();
 
 			rootVisualElement.style.paddingLeft = 20;
 			rootVisualElement.style.paddingRight = 20;
@@ -141,7 +144,7 @@ namespace DTech.OmniDebugger.Editor.Update
 				}
 			};
 			
-			var lastVersionLabel = new Label($"New version: {VersionUpdateChecker.GetLastVersion()}")
+			var lastVersionLabel = new Label($"New version: {_lastVersion}")
 			{
 				style =
 				{
@@ -180,7 +183,7 @@ namespace DTech.OmniDebugger.Editor.Update
 				horizontalScrollerVisibility = ScrollerVisibility.Hidden,
 			};
 
-			GitHubReleaseLoader.Load("DanilChizhikov", "OmniDebugger", "v2.1.0", scrollView);
+			GitHubReleaseLoader.Load("DanilChizhikov", "OmniDebugger", $"v{_lastVersion}", scrollView);
 			
 			rootVisualElement.Add(changelogTitle);
 			rootVisualElement.Add(scrollView);
@@ -261,8 +264,7 @@ namespace DTech.OmniDebugger.Editor.Update
 
 		private void UpdateClickHandler()
 		{
-			Version version = VersionUpdateChecker.GetLastVersion();
-			if (ManifestUpdater.TryUpdateManifest(version, out string error))
+			if (ManifestUpdater.TryUpdateManifest(_lastVersion, out string error))
 			{
 				AssetDatabase.Refresh();
 			}
