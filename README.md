@@ -188,6 +188,9 @@ the reason, so a rejected command is never silently missing:
 | `OMNI011` | `[DebugRange]` has bounds the wrong way round, or a negative step |
 | `OMNI012` | The group path is blank |
 | `OMNI013` | The name is blank or contains `/` |
+| `OMNI014` | `[DebugOptions]` names a member the type and its base types do not have |
+| `OMNI015` | The `[DebugOptions]` member is private or protected, an indexer, or a method that takes parameters |
+| `OMNI016` | The `[DebugOptions]` member is not a collection (or a `Func` returning one), or yields a type the argument cannot take |
 
 Arguments accept anything `IConvertible` (all numerics, `bool`, `char`, `string`, `DateTime`), any `enum`, and
 `Nullable<T>` of those. Text is always read with the invariant culture, so a device locale can never turn `"1.5"`
@@ -206,6 +209,32 @@ public void Teleport([DebugRange(-100, 100)] int x, [DebugRange(-100, 100)] int 
 
 A range is a hint for the panel, which keeps what is typed inside it; code that runs the command is not held to it.
 It covers `int`, `short`, `ushort`, `byte`, `sbyte`, `float` and `double` — other types keep a plain field.
+
+`[DebugOptions(memberName)]` on a property or parameter edits it with a dropdown of values taken from another member
+of the same type — any type, not only enums:
+
+```csharp
+[DebugCommand("Levels")]
+public void Load([DebugOptions(nameof(LevelIds))] string id) { … }
+
+[DebugCommand("Levels"), DebugOptions(nameof(LevelIds))]
+public string Current { get; set; }
+
+public IReadOnlyList<string> LevelIds => _levels.Select(level => level.Id).ToList();
+
+[DebugCommand("Enemies")]
+public void Spawn([DebugOptions(nameof(Prefabs))] Enemy prefab) { … }
+
+public Func<IEnumerable<Enemy>> Prefabs;   // assigned later, read through the delegate
+```
+
+The member can be a field, a property or a method without parameters, instance or static, public or internal, on the
+type or a base type. It yields an `IEnumerable<T>` whose `T` converts to the argument's type — or a `Func` returning
+one, which is invoked instead. The source is read each time the dropdown opens, so the list follows the game; a
+`null` collection or an unassigned `Func` shows no options, and null entries are left out. Options are labelled by
+`ToString()`, a `UnityEngine.Object` by its `name`. A command whose dropdown offers nothing refuses to run until it
+does, unless the argument is optional. `debugger.Commands.TryGetOptions(path, argumentIndex, list)` reads the same list
+from code.
 
 The panel lists groups by their order, then by name, at every level of the tree. `debugger.Groups.SetOrder("Economy", 10)`
 moves a group up — lower comes first, and a group never given an order sits at 1000
@@ -248,10 +277,11 @@ cheats.Dispose();   // takes the whole batch away again
 | Method | Becomes |
 |---|---|
 | `Group(path)` | Puts the commands that follow in that group |
-| `Button(name, action)` | An action; `Button<T>`, `Button<T1, T2>` and `Button<T1, T2, T3>` take arguments, each described by an `ArgumentBuilder` (`Name`, `Default`, `Optional`, `Range`, `Step`) |
+| `Button(name, action)` | An action; `Button<T>`, `Button<T1, T2>` and `Button<T1, T2, T3>` take arguments, each described by an `ArgumentBuilder` (`Name`, `Default`, `Optional`, `Range`, `Step`, `Options`) |
 | `Toggle(name, get, set)` | A switch bound to a `bool` |
 | `Slider(name, get, set, min, max)` | A slider bound to a `float` or an `int`; the `float` one also takes a `step` |
 | `Dropdown<TEnum>(name, get, set)` | A dropdown bound to an enum |
+| `Dropdown<T>(name, options, get, set)` | A dropdown bound to any value, offering what `options` yields each time it opens |
 | `Field<T>(name, get, set)` | A value edited with whatever control fits `T` |
 | `Value<T>(name, get)` | A read-only value, shown live |
 | `Icon`, `Tags`, `Description`, `Order` | Describe the command added last |

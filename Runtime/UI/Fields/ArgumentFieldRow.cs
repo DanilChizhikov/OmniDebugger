@@ -13,6 +13,7 @@ namespace DTech.OmniDebugger.UI
 		private readonly List<ArgumentSlot> _slots = new ();
 		private readonly CommandStateStore _states;
 		private readonly IArgumentFieldRegistry _registry;
+		private readonly ICommandRegistry _commands;
 
 		public VisualElement Root => _root;
 		
@@ -22,10 +23,15 @@ namespace DTech.OmniDebugger.UI
 		private CommandState _state;
 		private bool _disposed;
 
-		public ArgumentFieldRow(CommandStateStore states, IArgumentFieldRegistry registry, bool showLabels)
+		public ArgumentFieldRow(
+			CommandStateStore states,
+			IArgumentFieldRegistry registry,
+			ICommandRegistry commands,
+			bool showLabels)
 		{
 			_states = states;
 			_registry = registry;
+			_commands = commands;
 			ShowLabels = showLabels;
 
 			_root = new VisualElement();
@@ -53,7 +59,8 @@ namespace DTech.OmniDebugger.UI
 				object remembered = null;
 				_state?.TryGetArgument(argument, out remembered);
 
-				ArgumentFieldRequest request = ArgumentFieldRequest.For(argument, remembered, ShowLabels);
+				Action<ICollection<object>> options = argument.HasOptions ? CollectOptions(definition.Path, i) : null;
+				ArgumentFieldRequest request = ArgumentFieldRequest.For(argument, remembered, ShowLabels, options);
 				IArgumentField field = _registry.Create(request);
 				field.OnCommitted += OnFieldCommitted;
 
@@ -140,6 +147,9 @@ namespace DTech.OmniDebugger.UI
 				_state.SetArgument(argumentName, fieldValue);
 			}
 		}
+
+		private Action<ICollection<object>> CollectOptions(string path, int argumentIndex) =>
+			options => _commands?.TryGetOptions(path, argumentIndex, options);
 
 		private void Release()
 		{

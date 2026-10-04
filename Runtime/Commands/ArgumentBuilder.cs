@@ -1,10 +1,12 @@
 using System;
+using System.Collections;
 
 namespace DTech.OmniDebugger
 {
 	/// <summary>
 	/// Describes one argument of a command built with <see cref="CommandBuilder"/>:
-	/// <c>a => a.Name("amount").Default(100).Range(0, 10_000)</c>.
+	/// <c>a => a.Name("amount").Default(100).Range(0, 10_000)</c>, or
+	/// <c>a => a.Options(() => _levelIds)</c> to pick it from a list.
 	/// </summary>
 	public sealed class ArgumentBuilder
 	{
@@ -18,6 +20,8 @@ namespace DTech.OmniDebugger
 		private double _max;
 		private double _step;
 		private bool _hasRange;
+
+		internal Func<IEnumerable> OptionsSource { get; private set; }
 
 		internal ArgumentBuilder(string name, Type type, object typeDefault)
 		{
@@ -82,6 +86,16 @@ namespace DTech.OmniDebugger
 			return this;
 		}
 
+		/// <summary>
+		/// Edits the argument with a dropdown of the values <paramref name="source"/> yields. It is called every
+		/// time the dropdown opens; values that cannot be read as the argument's type are left out.
+		/// </summary>
+		public ArgumentBuilder Options(Func<IEnumerable> source)
+		{
+			OptionsSource = source ?? throw new ArgumentNullException(nameof(source));
+			return this;
+		}
+
 		internal ArgumentDefinition Build()
 		{
 			return new ArgumentDefinition(
@@ -89,7 +103,8 @@ namespace DTech.OmniDebugger
 				_type,
 				_isOptional ? _defaultValue ?? _typeDefault : null,
 				_isOptional,
-				_hasRange ? new ArgumentRange(_min, _max, _step) : default);
+				_hasRange ? new ArgumentRange(_min, _max, _step) : default,
+				OptionsSource != null);
 		}
 	}
 }

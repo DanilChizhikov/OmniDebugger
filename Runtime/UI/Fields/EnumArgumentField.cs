@@ -1,14 +1,14 @@
 using System;
-using UnityEngine.UIElements;
+using System.Collections.Generic;
 
 namespace DTech.OmniDebugger.UI
 {
-	internal sealed class EnumArgumentField : ArgumentFieldBase<Enum>
+	internal sealed class EnumArgumentField : ArgumentFieldBase<object>
 	{
 		private readonly Type _enumType;
 
 		public EnumArgumentField(in ArgumentFieldRequest request)
-			: base(new EnumPopupField(request.ValueType), request, commitOnChange: true)
+			: base(new ChoicePopupField(CollectValues(request.ValueType)), request, commitOnChange: true)
 		{
 			_enumType = request.ValueType;
 			Field.SetValueWithoutNotify(Parse(request.InitialValue));
@@ -20,7 +20,7 @@ namespace DTech.OmniDebugger.UI
 			return value != null;
 		}
 
-		protected override Enum Parse(object value)
+		protected override object Parse(object value)
 		{
 			if (value is Enum typed && typed.GetType() == _enumType)
 			{
@@ -31,7 +31,7 @@ namespace DTech.OmniDebugger.UI
 			{
 				try
 				{
-					return (Enum)Enum.ToObject(_enumType, value);
+					return Enum.ToObject(_enumType, value);
 				}
 				catch (Exception)
 				{
@@ -41,10 +41,23 @@ namespace DTech.OmniDebugger.UI
 			return FirstValue(_enumType);
 		}
 
-		private static Enum FirstValue(Type enumType)
+		private static Action<ICollection<object>> CollectValues(Type enumType)
 		{
 			Array values = Enum.GetValues(enumType);
-			return values.Length > 0 ? (Enum)values.GetValue(0) : (Enum)Enum.ToObject(enumType, 0);
+
+			return options =>
+			{
+				for (int i = 0; i < values.Length; i++)
+				{
+					options.Add(values.GetValue(i));
+				}
+			};
+		}
+
+		private static object FirstValue(Type enumType)
+		{
+			Array values = Enum.GetValues(enumType);
+			return values.Length > 0 ? values.GetValue(0) : Enum.ToObject(enumType, 0);
 		}
 	}
 }

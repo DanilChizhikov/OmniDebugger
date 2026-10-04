@@ -235,7 +235,11 @@ namespace DTech.OmniDebugger.UI
 
 		private void BuildArguments(VisualElement control, bool showLabels)
 		{
-			_arguments = new ArgumentFieldRow(_services.Commands, _services.Debugger.Fields, showLabels);
+			_arguments = new ArgumentFieldRow(
+				_services.Commands,
+				_services.Debugger.Fields,
+				_services.Debugger.Commands,
+				showLabels);
 			_arguments.Bind(_definition);
 
 			if (_definition.Arguments.Count == 0)

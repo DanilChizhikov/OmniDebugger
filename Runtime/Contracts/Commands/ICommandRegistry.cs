@@ -63,5 +63,15 @@ namespace DTech.OmniDebugger
 		/// <summary>Reads a value command.</summary>
 		/// <returns><c>false</c> when no such command exists, it holds no value, or its getter threw.</returns>
 		bool TryGetValue(string path, out object value);
+
+		/// <summary>
+		/// Reads the values an argument declared with <see cref="DebugOptionsAttribute"/> is picked from, as
+		/// they are right now, and appends them to <paramref name="options"/>. Null entries and values that
+		/// cannot be read as the argument's type are left out; a source that yields null adds nothing.
+		/// </summary>
+		/// <returns>
+		/// <c>false</c> when no such command exists, the argument has no options, or the source threw.
+		/// </returns>
+		bool TryGetOptions(string path, int argumentIndex, ICollection<object> options);
 	}
 }

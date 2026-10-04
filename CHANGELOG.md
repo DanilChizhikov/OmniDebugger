@@ -4,6 +4,13 @@
 
 ### Added
 - Check for updates on startup with update window. Also, for check update added menu item `Tools/DTech/OmniDebugger/Check Update`.
+- `[DebugOptions(memberName)]` on a command property or parameter: the panel edits it with a dropdown of the values
+  another member yields — a field, property or parameterless method returning `IEnumerable<T>`, or a `Func` returning
+  one. Read live each time the dropdown opens. Checked at compile time (`OMNI014`–`OMNI016`).
+- `ArgumentDefinition.HasOptions`, `ICommandRegistry.TryGetOptions`, the `options` parameter of `DebugCommand`,
+  `ArgumentBuilder.Options`, `CommandBuilder.Dropdown<T>(name, options, get, set)` and `ArgumentFieldRequest.Options`.
+- The source generator DLL carries its own version (2.2.0, `<Version>` in its project) and stamps it into the
+  `[GeneratedCode]` attribute of the code it writes.
 
 ## [2.1.0] - 2026-10-03
 
