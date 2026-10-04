@@ -56,6 +56,8 @@
     --od-color-log-filter-log: rgba(255, 255, 255, 0.1);
     --od-color-log-filter-warning: rgba(246, 186, 72, 0.14);
     --od-color-log-filter-error: rgba(255, 99, 110, 0.14);
+    --od-color-log-card-warning: rgba(246, 186, 72, 0.06);
+    --od-color-log-card-error: rgba(255, 99, 110, 0.07);
     --od-color-floating-bg: rgba(14, 16, 21, 0.8);
     --od-color-scrim: rgba(4, 6, 10, 0.42);
     --od-color-open-button-fill: rgba(14, 16, 21, 0.72);

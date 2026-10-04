@@ -1439,7 +1439,9 @@
     padding-right: var(--od-space-4);
     border-radius: var(--od-capsule-radius);
     color: var(--od-color-text-muted);
-}.od-logs-chips {
+}
+
+.od-logs-chips {
     padding-top: 0;
     padding-bottom: var(--od-space-2);
 }
@@ -1469,6 +1471,13 @@
     color: var(--od-color-danger);
 }
 
+/* The list with its empty message and the follow button, which sits on the list, never on the detail pane. */
+.od-logs-area {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-height: 0;
+}
+
 .od-logs-list {
     flex-grow: 1;
     flex-shrink: 1;
@@ -1477,6 +1486,10 @@
     margin-right: var(--od-space-6);
     margin-bottom: var(--od-space-6);
     margin-left: var(--od-space-6);
+}
+
+.od-logs-list--with-detail {
+    margin-bottom: var(--od-space-2);
 }
 
 /*
@@ -1502,11 +1515,18 @@
 }
 
 .od-log--warning {
+    background-color: var(--od-color-log-card-warning);
     border-left-color: var(--od-color-log-stripe-warning);
 }
 
 .od-log--error {
+    background-color: var(--od-color-log-card-error);
     border-left-color: var(--od-color-log-stripe-error);
+}
+
+.od-root .od-log--selected,
+.od-root .od-log--selected.od-pressed {
+    background-color: var(--od-color-control-selected);
 }
 
 .od-log__body {
@@ -1565,36 +1585,9 @@
 
 .od-log__message {
     margin-top: var(--od-space-1);
+    color: var(--od-color-text);
     white-space: normal;
     font-size: var(--od-font-size-sm);
-}
-
-.od-log--warning .od-log__repeats {
-    flex-shrink: 0;
-    margin-left: var(--od-space-3);
-    padding: 0 var(--od-space-3);
-    background-color: var(--od-color-card-inset);
-    border-radius: var(--od-radius-sm);
-    color: var(--od-color-text-muted);
-    -unity-font-style: bold;
-}
-
-.od-log__message {
-    color: var(--od-color-warning);
-}
-
-.od-log--error .od-log__repeats {
-    flex-shrink: 0;
-    margin-left: var(--od-space-3);
-    padding: 0 var(--od-space-3);
-    background-color: var(--od-color-card-inset);
-    border-radius: var(--od-radius-sm);
-    color: var(--od-color-text-muted);
-    -unity-font-style: bold;
-}
-
-.od-log__message {
-    color: var(--od-color-danger);
 }
 
 .od-root .od-log .od-icon-button {
@@ -1603,6 +1596,75 @@
     min-width: var(--od-log-button-size);
     margin-left: var(--od-space-2);
     color: var(--od-color-text-faint);
+}
+
+/*
+ * The selected record in full, under the list. Its height is fixed, not fitted to the record: a
+ * fitted pane resized the list on every tap and the rows jumped under the finger.
+ */
+.od-log-detail {
+    flex-shrink: 0;
+    height: 40%;
+    min-height: 120px;
+    margin-top: 0;
+    margin-right: var(--od-space-6);
+    margin-bottom: var(--od-space-6);
+    margin-left: var(--od-space-6);
+    background-color: var(--od-color-card);
+    border-width: var(--od-border-width);
+    border-color: var(--od-color-card-edge);
+    border-radius: var(--od-radius-md);
+}
+
+.od-log-detail__header {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    padding-top: var(--od-space-2);
+    padding-right: var(--od-space-2);
+    padding-bottom: var(--od-space-2);
+    padding-left: var(--od-space-4);
+    border-bottom-width: var(--od-border-width);
+    border-bottom-color: var(--od-color-divider);
+}
+
+.od-log-detail__header > .od-log__meta {
+    flex-grow: 1;
+    flex-shrink: 1;
+    align-items: center;
+}
+
+.od-log-detail--warning .od-log__type {
+    color: var(--od-color-warning);
+}
+
+.od-log-detail--error .od-log__type {
+    color: var(--od-color-danger);
+}
+
+.od-root .od-log-detail .od-icon-button {
+    width: var(--od-log-button-size);
+    height: var(--od-log-button-size);
+    min-width: var(--od-log-button-size);
+    margin-left: var(--od-space-2);
+    color: var(--od-color-text-faint);
+}
+
+.od-log-detail__scroll .od-scroll__content {
+    padding: var(--od-space-4);
+}
+
+.od-log-detail__message {
+    margin-bottom: var(--od-space-3);
+    color: var(--od-color-text);
+    white-space: normal;
+    font-size: var(--od-font-size-sm);
+}
+
+.od-log-detail__stack {
+    color: var(--od-color-text-muted);
+    white-space: normal;
+    font-size: var(--od-font-size-xs);
 }
 
 .od-root .od-logs-follow,

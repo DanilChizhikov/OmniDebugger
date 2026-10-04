@@ -35,6 +35,7 @@ namespace DTech.OmniDebugger.UI
 		private readonly VisualElement _root;
 		private readonly VisualElement _listPage;
 		private readonly VisualElement _toolbar;
+		private readonly VisualElement _listArea;
 		private readonly ChipBar _chips;
 		private readonly TextField _search;
 		private readonly Button _logFilter;
@@ -43,6 +44,7 @@ namespace DTech.OmniDebugger.UI
 		private readonly ListView _list;
 		private readonly ScrollView _listScroll;
 		private readonly DragScroll _drag;
+		private readonly LogDetail _detail;
 		private readonly Label _empty;
 		private readonly Button _follow;
 		private readonly Label _toast;
@@ -54,6 +56,7 @@ namespace DTech.OmniDebugger.UI
 		public VisualElement Root => _root;
 
 		private long _seenVersion = -1;
+		private long _selectedId = -1;
 		private int _settleTicks;
 		private bool _wideToolbar;
 		private bool _following = true;
@@ -100,7 +103,13 @@ namespace DTech.OmniDebugger.UI
 			};
 
 			_list.AddToClassList(OmniDebuggerUiClasses.LogsList);
-			_listPage.Add(_list);
+			_listArea = UiBuild.Element(OmniDebuggerUiClasses.LogsArea);
+			_listArea.Add(_list);
+			_listPage.Add(_listArea);
+
+			_detail = new LogDetail(Copy, CloseDetail);
+			UiBuild.SetVisible(_detail, false);
+			_listPage.Add(_detail);
 
 			_listScroll = _list.Q<ScrollView>();
 			_drag = UiBuild.MakeDraggable(_listScroll);
@@ -110,13 +119,13 @@ namespace DTech.OmniDebugger.UI
 			_listScroll.RegisterCallback<WheelEvent>(OnWheel);
 
 			_empty = UiBuild.Label(NoLogsMessage, OmniDebuggerUiClasses.Empty);
-			_listPage.Add(_empty);
+			_listArea.Add(_empty);
 
 			_follow = UiBuild.IconButton(IconGlyph.ArrowDown, FollowNewest, "Jump to the newest");
 			_follow.AddToClassList(OmniDebuggerUiClasses.LogsFollow);
 			_follow.AddManipulator(new Halo());
 			UiBuild.SetVisible(_follow, false);
-			_listPage.Add(_follow);
+			_listArea.Add(_follow);
 
 			_toast = UiBuild.Label(string.Empty, OmniDebuggerUiClasses.Toast);
 			_toast.pickingMode = PickingMode.Ignore;
@@ -236,14 +245,73 @@ namespace DTech.OmniDebugger.UI
 			_toolbar.EnableInClassList(OmniDebuggerUiClasses.LogsToolbarWide, wide);
 		}
 
-		private VisualElement MakeRow() => new LogRow(Copy);
+		private VisualElement MakeRow() => new LogRow(Copy, Select);
 
 		private void BindRow(VisualElement element, int index)
 		{
 			if (element is LogRow row && index >= 0 && index < _items.Count)
 			{
-				row.Bind(_items[index]);
+				LogRecord record = _items[index];
+				row.Bind(record, record.Id == _selectedId);
 			}
+		}
+
+		private void Select(LogRecord record)
+		{
+			if (record.Id == _selectedId)
+			{
+				CloseDetail();
+				return;
+			}
+
+			bool opening = _selectedId < 0;
+			_selectedId = record.Id;
+			_detail.Show(record);
+			SetDetailVisible(true);
+			_list.RefreshItems();
+
+			if (opening && !_following)
+			{
+				int index = IndexOf(record.Id);
+				_list.schedule.Execute(() =>
+				{
+					if (!_disposed && index >= 0 && index < _items.Count)
+					{
+						_list.ScrollToItem(index);
+					}
+				});
+			}
+		}
+
+		private void CloseDetail()
+		{
+			if (_selectedId < 0)
+			{
+				return;
+			}
+
+			_selectedId = -1;
+			SetDetailVisible(false);
+			_list.RefreshItems();
+		}
+
+		private void SetDetailVisible(bool visible)
+		{
+			UiBuild.SetVisible(_detail, visible);
+			_list.EnableInClassList(OmniDebuggerUiClasses.LogsListWithDetail, visible);
+		}
+
+		private int IndexOf(long id)
+		{
+			for (int i = _items.Count - 1; i >= 0; i--)
+			{
+				if (_items[i].Id == id)
+				{
+					return i;
+				}
+			}
+
+			return -1;
 		}
 
 		private void Poll()
@@ -311,6 +379,12 @@ namespace DTech.OmniDebugger.UI
 			{
 				repeated = _page[0].RepeatCount != last.RepeatCount;
 				_items[_items.Count - 1] = _page[0];
+
+				if (repeated && last.Id == _selectedId)
+				{
+					_detail.Show(_page[0]);
+				}
+
 				_page.RemoveAt(0);
 			}
 
@@ -597,6 +671,7 @@ namespace DTech.OmniDebugger.UI
 		{
 			_feed.Clear();
 			_seenVersion = -1;
+			CloseDetail();
 			Poll();
 		}
 

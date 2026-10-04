@@ -11,6 +11,12 @@
   `ArgumentBuilder.Options`, `CommandBuilder.Dropdown<T>(name, options, get, set)` and `ArgumentFieldRequest.Options`.
 - The source generator DLL carries its own version (2.2.0, `<Version>` in its project) and stamps it into the
   `[GeneratedCode]` attribute of the code it writes.
+- Logs tab: tapping a log (or *Submit* on it) opens a pane under the list with the full message and stack trace;
+  tapping it again or *Close* hides it. The selected row is highlighted.
+
+### Fixed
+- Logs tab: every message was drawn in the error colour. Messages now use the regular text colour; the type is shown by
+  the stripe, the type label and a faint tint on warning and error cards.
 
 ## [2.1.0] - 2026-10-03
 
