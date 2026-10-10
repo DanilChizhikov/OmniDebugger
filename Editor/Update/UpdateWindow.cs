@@ -17,26 +17,34 @@ namespace DTech.OmniDebugger.Editor.Update
 			set => SessionState.SetBool(UpdateWindowShownKey, value);
 		}
 
+		private Version _currentVersion;
 		private Version _lastVersion;
 
 		[MenuItem("Tools/DTech/OmniDebugger/Check Update")]
 		private static void ForceCheckUpdate()
 		{
-			if (VersionUpdateChecker.NeedUpdate(OmniDebuggerHost.Version, true))
+			if (!VersionUpdateChecker.TryGetCurrentVersion(out Version currentVersion))
+			{
+				Debug.Log("OmniDebugger update check works only for a package installed through Package Manager");
+				return;
+			}
+
+			if (VersionUpdateChecker.NeedUpdate(currentVersion, true))
 			{
 				WasShownThisSession = false;
 				ShowWindow();
 			}
 			else
 			{
-				Debug.Log($"OmniDebugger already up to actual version '{OmniDebuggerHost.Version}'");
+				Debug.Log($"OmniDebugger already up to actual version '{currentVersion}'");
 			}
 		}
-		
+
 		[InitializeOnLoadMethod]
 		private static void CheckUpdate()
 		{
-			if (!VersionUpdateChecker.NeedUpdate(OmniDebuggerHost.Version, false))
+			if (!VersionUpdateChecker.TryGetCurrentVersion(out Version currentVersion) ||
+				!VersionUpdateChecker.NeedUpdate(currentVersion, false))
 			{
 				return;
 			}
@@ -61,6 +69,7 @@ namespace DTech.OmniDebugger.Editor.Update
 		private void CreateGUI()
 		{
 			rootVisualElement.Clear();
+			VersionUpdateChecker.TryGetCurrentVersion(out _currentVersion);
 			_lastVersion = VersionUpdateChecker.GetLastVersion();
 
 			rootVisualElement.style.paddingLeft = 20;
@@ -133,7 +142,7 @@ namespace DTech.OmniDebugger.Editor.Update
 				}
 			};
 			
-			var currentVersionLabel = new Label($"Current version: {OmniDebuggerHost.Version}")
+			var currentVersionLabel = new Label($"Current version: {_currentVersion}")
 			{
 				style =
 				{

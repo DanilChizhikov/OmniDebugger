@@ -20,7 +20,16 @@ namespace DTech.OmniDebugger.Editor.Update
 			IsSkipAlways = false,
 			Version = "0.0.0",
 		};
-		
+
+		public static bool TryGetCurrentVersion(out Version version)
+		{
+			UnityEditor.PackageManager.PackageInfo info =
+				UnityEditor.PackageManager.PackageInfo.FindForAssembly(typeof(VersionUpdateChecker).Assembly);
+
+			version = null;
+			return info != null && Version.TryParse(info.version, out version);
+		}
+
 		public static Version GetLastVersion()
 		{
 			VersionParser parser = GetVersionParser();
