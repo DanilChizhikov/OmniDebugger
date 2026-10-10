@@ -91,9 +91,9 @@ _debugger.Commands.Build()
     ```
 3. Unity will automatically import the package.
 
-If you want to set a target version, OmniDebugger uses the `v*.*.*` release tag so you can specify a version like #v2.2.0.
+If you want to set a target version, OmniDebugger uses the `v*.*.*` release tag so you can specify a version like #v2.2.1.
 
-For example `https://github.com/DanilChizhikov/OmniDebugger.git#v2.2.0`.
+For example `https://github.com/DanilChizhikov/OmniDebugger.git#v2.2.1`.
 
 ## Enabling the Debugger
 
