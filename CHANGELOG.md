@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.1] - 2026-10-10
+
+### Fixed
+- The editor assembly failed to compile while `OMNI_DEBUGGER` was not defined, as on a fresh install
+  (`error CS0103: The name 'OmniDebuggerHost' does not exist in the current context` in `UpdateWindow.cs`). The update
+  check now reads the installed version from Package Manager and no longer depends on the runtime assembly.
+
 ## [2.2.0] - 2026-10-04
 
 ### Added
